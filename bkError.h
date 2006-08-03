@@ -40,7 +40,7 @@
 #define BKERROR_MANGLE_TOO_MANY_COL              -1014
 #define BKERROR_MANGLE_TOO_MANY_COL_TEXT         "Too many collisons while mangling filenames"
 #define BKERROR_MISFORMED_PATH                   -1015
-#define BKERROR_MISFORMED_PATH_TEXT              "Misfrmed path"
+#define BKERROR_MISFORMED_PATH_TEXT              "Misformed path"
 #define BKERROR_INVALID_UCS2                     -1016
 #define BKERROR_INVALID_UCS2_TEXT                "Invalid UCS-2 string"
 #define BKERROR_UNKNOWN_FILENAME_TYPE            -1017
@@ -53,6 +53,8 @@
 #define BKERROR_SANITY_TEXT                      "Internal library failure (sanity check)"
 #define BKERROR_OPEN_READ_FAILED                 -1021
 #define BKERROR_OPEN_READ_FAILED_TEXT            "Failed to open file on the filesystem for reading"
+#define BKERROR_DIRNAME_NEED_TRAILING_SLASH      -1022
+#define BKERROR_DIRNAME_NEED_TRAILING_SLASH_TEXT "String specifying directory name must end with '/'"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000

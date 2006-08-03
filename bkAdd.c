@@ -20,7 +20,7 @@
 * Returns:
 * - 
 * Notes:
-*  when working on this make sure tree is not modified if cannot opendir()
+*  need to make sure tree is not modified if cannot opendir()
 */
 int addDir(Dir* tree, char* srcPath, Path* destDir)
 {
@@ -47,7 +47,7 @@ int addDir(Dir* tree, char* srcPath, Path* destDir)
     
     if(srcPath[strlen(srcPath) - 1] != '/')
     /* must have trailing slash */
-        return -9;
+        return BKERROR_DIRNAME_NEED_TRAILING_SLASH;
     
     /* FIND dir to add to */
     destDirInTree = tree;
