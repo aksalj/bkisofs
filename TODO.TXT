@@ -1,0 +1,4 @@
+gui
+boot record
+rock ridge special files
+error handling
