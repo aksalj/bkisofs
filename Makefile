@@ -1,8 +1,7 @@
-testread2: testread2.c bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o
-	cc testread2.c bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o -Wall -o testread2
+OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o
 
-clean: 
-	rm -f *.o testread2
+bk.a: $(OBJECTS)
+	ar -cr bk.a $(OBJECTS)
 
 bkRead7x.o: bkRead7x.c bkRead7x.h bk.h
 	cc bkRead7x.c -Wall -c
@@ -28,3 +27,6 @@ bkSort.o: bkSort.c bkSort.h bk.h
 	cc bkSort.c -Wall -c
 bkError.o: bkError.c bkError.h
 	cc bkError.c -Wall -c
+
+clean: 
+	rm -f *.o *.a
