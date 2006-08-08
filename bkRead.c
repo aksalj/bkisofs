@@ -767,7 +767,7 @@ int readVolInfo(int image, VolInfo* volInfo)
     }
     /* END TRY read svd */
     
-    return 0;
+    return 1;
 }
 
 /*
