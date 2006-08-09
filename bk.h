@@ -180,4 +180,7 @@ typedef struct
     
 } FilePath;
 
+int bk_read_vol_info(int image, VolInfo* volInfo);
+int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr);
+
 #endif

@@ -550,9 +550,10 @@ int readRockridgeFilename(int image, char* dest, int lenSU)
 }
 
 /*
+* public function
 * assumes pvd is first descriptor in set
 */
-int readVolInfo(int image, VolInfo* volInfo)
+int bk_read_vol_info(int image, VolInfo* volInfo)
 {
     int rc;
     unsigned char vdType; /* to check what descriptor follows */

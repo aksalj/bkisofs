@@ -1,4 +1,4 @@
-OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o
+OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o bkGet.o
 
 bk.a: $(OBJECTS)
 	ar -cr bk.a $(OBJECTS)
@@ -27,6 +27,8 @@ bkSort.o: bkSort.c bkSort.h bk.h
 	cc bkSort.c -Wall -c
 bkError.o: bkError.c bkError.h
 	cc bkError.c -Wall -c
+bkGet.o: bkGet.c
+	cc bkGet.c -Wall -c
 
 clean: 
 	rm -f *.o *.a
