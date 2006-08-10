@@ -265,6 +265,8 @@ int readDirContents(int image, Dir* dir, unsigned size, int filenameType, bool r
     bytesRead += skipDR(image);
     bytesRead += skipDR(image);
     
+    dir->directories = NULL;
+    dir->files = NULL;
     nextDir = &(dir->directories);
     nextFile = &(dir->files);
     childrenBytesRead = 0;
@@ -429,7 +431,7 @@ int readFileInfo(int image, File* file, int filenameType, bool readPosix)
         /* skip padding field */
         if(lenFileId9660 % 2 == 0)
             lseek(image, 1, SEEK_CUR);
-
+        
         rc = readRockridgeFilename(image, file->name, lenSU);
         if(rc < 0)
             return rc;
