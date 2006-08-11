@@ -162,7 +162,8 @@ typedef struct FileToWriteLL
 
 /*******************************************************************************
 * Path
-* full path of a directory on the image */
+* full path of a directory on the image
+* to add to root, set numDirs to 0 */
 typedef struct
 {
     unsigned numDirs;

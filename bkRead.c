@@ -551,10 +551,11 @@ int readRockridgeFilename(int image, char* dest, int lenSU)
         return 1;
 }
 
-/*
-* public function
+/*******************************************************************************
+* bk_read_vol_info()
+* public function to read volume information
 * assumes pvd is first descriptor in set
-*/
+* */
 int bk_read_vol_info(int image, VolInfo* volInfo)
 {
     int rc;

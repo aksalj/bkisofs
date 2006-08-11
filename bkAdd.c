@@ -10,6 +10,73 @@
 #include "bkError.h"
 
 /*******************************************************************************
+* bk_add_dir()
+* public interface for addDir()
+* */
+int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
+{
+    int rc;
+    Path destPath;
+    int pathStrLen;
+    int count;
+    char* nextDir;
+    int nextDirLen;
+    
+    pathStrLen = strlen(destPathAndName);
+    
+    if(pathStrLen == 1 && destPathAndName[0] == '/')
+    /* root, special case */
+    {
+        destPath.numDirs = 0;
+        destPath.dirs = NULL;
+        
+        rc = addDir(tree, srcPathAndName, &destPath);
+        if(rc <= 0)
+            return rc;
+        else
+            return 1;
+    }
+    
+    if(pathStrLen < 3 || destPathAndName[0] != '/' || destPathAndName[1] == '/' || 
+       destPathAndName[pathStrLen - 1] != '/')
+        return BKERROR_MISFORMED_PATH;
+    
+    destPath.numDirs = 0;
+    for(count = 0; count < pathStrLen; count++)
+    {
+        if(destPathAndName[count] == '/')
+            destPath.numDirs++;
+    }
+    
+    /* substract one slash (checking done above insures there's one extra */
+    destPath.numDirs--;
+    
+    destPath.dirs = (char**)malloc(sizeof(char*) * destPath.numDirs);
+    if(destPath.dirs == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    for(count = 0; count < destPath.numDirs; count++)
+    {
+        if(destPathAndName[count] == '/')
+        {
+            if(!counting)
+            {
+                nextDirLen = 0;
+                nextDir = &(destPathAndName[count + 1]);
+            }
+            else
+            {
+                conting = false;
+            }
+        }
+        else
+        {
+            
+        }
+    }
+}
+
+/*******************************************************************************
 * addDir()
 * adds a directory from the filesystem to the image
 *

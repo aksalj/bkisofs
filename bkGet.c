@@ -3,6 +3,11 @@
 #include "bk.h"
 #include "bkError.h"
 
+/*******************************************************************************
+* bk_get_dir_from_string()
+* public function
+* gets a pointer to a Dir in tree described by the string pathStr
+* */
 int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr)
 {
     int count;
