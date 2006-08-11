@@ -1,5 +1,4 @@
-public functions:
-
+check for duplicates when adding dirs/files
 
 boot record
 rock ridge special files
