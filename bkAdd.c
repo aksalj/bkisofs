@@ -10,97 +10,6 @@
 #include "bkError.h"
 
 /*******************************************************************************
-* bk_add_dir()
-* public interface for addDir()
-* */
-int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
-{
-    int rc;
-    Path destPath;
-    int pathStrLen;
-    int count;
-    
-    pathStrLen = strlen(destPathAndName);
-    
-    destPath.numDirs = 0;
-    destPath.dirs = NULL;
-    
-    if(pathStrLen == 1 && destPathAndName[0] == '/')
-    /* root, special case */
-    {
-        rc = addDir(tree, srcPathAndName, &destPath);
-        if(rc <= 0)
-            return rc;
-        else
-            return 1;
-    }
-    
-    if(pathStrLen < 3 || destPathAndName[0] != '/' || destPathAndName[1] == '/' || 
-       destPathAndName[pathStrLen - 1] != '/')
-        return BKERROR_MISFORMED_PATH;
-    
-    destPath.numDirs = 0;
-    for(count = 0; count < pathStrLen; count++)
-    {
-        if(destPathAndName[count] == '/')
-            destPath.numDirs++;
-    }
-    /* substract one slash (checking done above insures there's one extra) */
-    destPath.numDirs--;
-    
-    destPath.dirs = (char**)malloc(sizeof(char*) * destPath.numDirs);
-    if(destPath.dirs == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    bool justStarted = true;
-    int numDirsDone = 0;
-    int nextDirLen = 0;
-    char* nextDir = &(destPathAndName[1]);
-    for(count = 0; count < pathStrLen; count++)
-    {
-        if(destPathAndName[count] == '/')
-        {
-            if(justStarted)
-                justStarted = false;
-                /* do nothing else */
-            else
-            /* this is the slash following a dir name */
-            {
-                if(nextDirLen == 0)
-                /* double slash */
-                    return BKERROR_MISFORMED_PATH;
-                
-                destPath.dirs[numDirsDone] = (char*)malloc(nextDirLen);
-                if(destPath.dirs[numDirsDone] == NULL)
-                    return BKERROR_OUT_OF_MEMORY;
-                
-                strncpy(destPath.dirs[numDirsDone], nextDir, nextDirLen);
-                destPath.dirs[numDirsDone][nextDirLen] = '\0';
-                
-                numDirsDone++;
-                nextDirLen = 0;
-                nextDir = &(destPathAndName[count + 1]);
-            }
-        }
-        else
-        {
-            nextDirLen++;
-        }
-    }
-    
-    if(numDirsDone != destPath.numDirs)
-        return BKERROR_SANITY;
-    
-    rc = addDir(tree, srcPathAndName, &destPath);
-    if(rc <= 0)
-        return rc;
-    else
-        return 1;
-    
-    return 2;
-}
-
-/*******************************************************************************
 * addDir()
 * adds a directory from the filesystem to the image
 *
@@ -356,4 +265,187 @@ int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
     /* END ADD file */
     
     return 1;
+}
+
+/*******************************************************************************
+* bk_add_dir()
+* public interface for addDir()
+* */
+int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
+{
+    int rc;
+    Path destPath;
+    int pathStrLen;
+    int count;
+    
+    pathStrLen = strlen(destPathAndName);
+    
+    destPath.numDirs = 0;
+    destPath.dirs = NULL;
+    
+    if(pathStrLen == 1 && destPathAndName[0] == '/')
+    /* root, special case */
+    {
+        rc = addDir(tree, srcPathAndName, &destPath);
+        if(rc <= 0)
+            return rc;
+        else
+            return 1;
+    }
+    
+    if(pathStrLen < 3 || destPathAndName[0] != '/' || destPathAndName[1] == '/' || 
+       destPathAndName[pathStrLen - 1] != '/')
+        return BKERROR_MISFORMED_PATH;
+    
+    destPath.numDirs = 0;
+    for(count = 0; count < pathStrLen; count++)
+    {
+        if(destPathAndName[count] == '/')
+            destPath.numDirs++;
+    }
+    /* substract one slash (checking done above insures there's one extra) */
+    destPath.numDirs--;
+    
+    destPath.dirs = (char**)malloc(sizeof(char*) * destPath.numDirs);
+    if(destPath.dirs == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    bool justStarted = true;
+    int numDirsDone = 0;
+    int nextDirLen = 0;
+    char* nextDir = &(destPathAndName[1]);
+    for(count = 0; count < pathStrLen; count++)
+    {
+        if(destPathAndName[count] == '/')
+        {
+            if(justStarted)
+                justStarted = false;
+                /* do nothing else */
+            else
+            /* this is the slash following a dir name */
+            {
+                if(nextDirLen == 0)
+                /* double slash */
+                    return BKERROR_MISFORMED_PATH;
+                
+                destPath.dirs[numDirsDone] = (char*)malloc(nextDirLen);
+                if(destPath.dirs[numDirsDone] == NULL)
+                    return BKERROR_OUT_OF_MEMORY;
+                
+                strncpy(destPath.dirs[numDirsDone], nextDir, nextDirLen);
+                destPath.dirs[numDirsDone][nextDirLen] = '\0';
+                
+                numDirsDone++;
+                nextDirLen = 0;
+                nextDir = &(destPathAndName[count + 1]);
+            }
+        }
+        else
+        {
+            nextDirLen++;
+        }
+    }
+    
+    if(numDirsDone != destPath.numDirs)
+        return BKERROR_SANITY;
+    
+    rc = addDir(tree, srcPathAndName, &destPath);
+    if(rc <= 0)
+        return rc;
+    else
+        return 1;
+    
+    return 2;
+}
+
+
+/*******************************************************************************
+* bk_add_file()
+* public interface for addFile()
+* */
+int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName)
+{
+    int rc;
+    Path destPath;
+    int pathStrLen;
+    int count;
+    
+    pathStrLen = strlen(destPathAndName);
+    
+    destPath.numDirs = 0;
+    destPath.dirs = NULL;
+    
+    if(pathStrLen == 1 && destPathAndName[0] == '/')
+    /* root, special case */
+    {
+        rc = addFile(tree, srcPathAndName, &destPath);
+        if(rc <= 0)
+            return rc;
+        else
+            return 1;
+    }
+    
+    if(pathStrLen < 3 || destPathAndName[0] != '/' || destPathAndName[1] == '/' || 
+       destPathAndName[pathStrLen - 1] != '/')
+        return BKERROR_MISFORMED_PATH;
+    
+    destPath.numDirs = 0;
+    for(count = 0; count < pathStrLen; count++)
+    {
+        if(destPathAndName[count] == '/')
+            destPath.numDirs++;
+    }
+    /* substract one slash (checking done above insures there's one extra) */
+    destPath.numDirs--;
+    
+    destPath.dirs = (char**)malloc(sizeof(char*) * destPath.numDirs);
+    if(destPath.dirs == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    bool justStarted = true;
+    int numDirsDone = 0;
+    int nextDirLen = 0;
+    char* nextDir = &(destPathAndName[1]);
+    for(count = 0; count < pathStrLen; count++)
+    {
+        if(destPathAndName[count] == '/')
+        {
+            if(justStarted)
+                justStarted = false;
+                /* do nothing else */
+            else
+            /* this is the slash following a dir name */
+            {
+                if(nextDirLen == 0)
+                /* double slash */
+                    return BKERROR_MISFORMED_PATH;
+                
+                destPath.dirs[numDirsDone] = (char*)malloc(nextDirLen);
+                if(destPath.dirs[numDirsDone] == NULL)
+                    return BKERROR_OUT_OF_MEMORY;
+                
+                strncpy(destPath.dirs[numDirsDone], nextDir, nextDirLen);
+                destPath.dirs[numDirsDone][nextDirLen] = '\0';
+                
+                numDirsDone++;
+                nextDirLen = 0;
+                nextDir = &(destPathAndName[count + 1]);
+            }
+        }
+        else
+        {
+            nextDirLen++;
+        }
+    }
+    
+    if(numDirsDone != destPath.numDirs)
+        return BKERROR_SANITY;
+    
+    rc = addFile(tree, srcPathAndName, &destPath);
+    if(rc <= 0)
+        return rc;
+    else
+        return 1;
+    
+    return 2;
 }
