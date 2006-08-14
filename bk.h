@@ -185,5 +185,10 @@ int bk_read_vol_info(int image, VolInfo* volInfo);
 int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr);
 int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName);
 int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName);
-
+int bk_delete_dir(Dir* tree, char* srcDir);
+int bk_delete_file(Dir* tree, char* fileStr);
+int bk_extract_dir(int image, Dir* tree, char* srcDir, char* destDir,
+                   bool keepPermissions);
+int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
+                    bool keepPermissions);
 #endif

@@ -1,4 +1,7 @@
 check for duplicates when adding dirs/files
+add const to function parameters
+add frepath() to all interface functions
+
 
 boot record
 rock ridge special files

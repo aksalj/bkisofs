@@ -13,6 +13,36 @@
 const unsigned posixFileDefaults = 33188; /* octal 100644 */
 const unsigned posixDirDefaults = 16877; /* octal 40711 */
 
+int bk_extract_dir(int image, Dir* tree, char* srcDir, char* destDir,
+                   bool keepPermissions)
+{
+    int rc;
+    Path srcPath;
+    
+    if(srcDir[0] == '/' && srcDir[1] == '\0')
+    /* root, not allowed */
+        return BKERROR_EXTRACT_ROOT;
+    
+    rc = makePathFromString(srcDir, &srcPath);
+    if(rc <= 0)
+        return rc;
+    
+    return extractDir(image, tree, &srcPath, destDir, keepPermissions);
+}
+
+int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
+                    bool keepPermissions)
+{
+    int rc;
+    FilePath srcPath;
+    
+    rc = makeFilePathFromString(srcFile, &srcPath);
+    if(rc <= 0)
+        return rc;
+    
+    return extractFile(image, tree, &srcPath, destDir, keepPermissions);
+}
+
 /*
 * don't try to extract root, don't know what will happen
 */

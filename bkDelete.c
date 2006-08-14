@@ -5,6 +5,35 @@
 #include "bk.h"
 #include "bkPath.h"
 #include "bkError.h"
+#include "bkDelete.h"
+
+int bk_delete_dir(Dir* tree, char* dirStr)
+{
+    int rc;
+    Path dirPath;
+    
+    if(dirStr[0] == '/' && dirStr[1] == '\0')
+    /* root, not allowed */
+        return BKERROR_DELETE_ROOT;
+    
+    rc = makePathFromString(dirStr, &dirPath);
+    if(rc <= 0)
+        return rc;
+    
+    return deleteDir(tree, &dirPath);
+}
+
+int bk_delete_file(Dir* tree, char* fileStr)
+{
+    int rc;
+    FilePath filePath;
+    
+    rc = makeFilePathFromString(fileStr, &filePath);
+    if(rc <= 0)
+        return rc;
+    
+    return deleteFile(tree, &filePath);
+}
 
 int deleteDir(Dir* tree, Path* srcDir)
 {
