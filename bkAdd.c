@@ -77,6 +77,9 @@ int addDir(Dir* tree, char* srcPath, Path* destDir)
     if(rc <= 0)
         return rc;
     
+    if(itemIsInDir(srcDirName, destDirInTree))
+        return BKERROR_DUPLICATE_ADD;
+    
     //!! max len on fs
     if(strlen(srcDirName) > NCHARS_FILE_ID_MAX - 1)
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
@@ -232,6 +235,9 @@ int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
     }
     /* END FIND dir to add to */
     
+    if(itemIsInDir(filename, destDirInTree))
+        return BKERROR_DUPLICATE_ADD;
+    
     oldHead = destDirInTree->files;
     
     /* ADD file */
@@ -302,7 +308,6 @@ int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
     return 2;
 }
 
-
 /*******************************************************************************
 * bk_add_file()
 * public interface for addFile()
@@ -336,4 +341,35 @@ int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName)
         return 1;
     
     return 2;
+}
+
+/*******************************************************************************
+* itemIsInDir()
+* checks the contents of a directory (files and dirs) to see whether it
+* has an item named 
+* */
+bool itemIsInDir(char* name, Dir* dir)
+{
+    DirLL* searchDir;
+    FileLL* searchFile;
+    
+    /* check the directories list */
+    searchDir = dir->directories;
+    while(searchDir != NULL)
+    {
+        if(strcmp(searchDir->dir.name, name) == 0)
+            return true;
+        searchDir = searchDir->next;
+    }
+
+    /* check the files list */
+    searchFile = dir->files;
+    while(searchFile != NULL)
+    {
+        if(strcmp(searchFile->file.name, name) == 0)
+            return true;
+        searchFile = searchFile->next;
+    }
+    
+    return false;
 }

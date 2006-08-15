@@ -3,5 +3,6 @@
 
 int addDir(Dir* tree, char* srcPath, Path* destDir);
 int addFile(Dir* tree, char* srcPathAndName, Path* destDir);
+bool itemIsInDir(char* name, Dir* dir);
 
 #endif
