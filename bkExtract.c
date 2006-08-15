@@ -105,9 +105,19 @@ int extractDir(int image, Dir* tree, Path* srcDir, char* destDir,
         destDirPerms = srcDirInTree->posixFileMode;
     else
         destDirPerms = posixDirDefaults;
+    
+    if(access(newDestDir, F_OK) == 0)
+    {
+        free(newDestDir);
+        return BKERROR_DUPLICATE_EXTRACT;
+    }
+    
     rc = mkdir(newDestDir, destDirPerms);
     if(rc == -1)
+    {
+        free(newDestDir);
         return BKERROR_MKDIR_FAILED;
+    }
     /* END CREATE destination dir */
     
     /* BEGIN extract each file in directory */
@@ -119,7 +129,10 @@ int extractDir(int image, Dir* tree, Path* srcDir, char* destDir,
         
         rc = extractFile(image, tree, &filePath, newDestDir, keepPermissions);
         if(rc < 0) /* returns size of file extracted */
+        {
+            free(newDestDir);
             return rc;
+        }
         
         currentFile = currentFile->next;
     }
@@ -131,11 +144,17 @@ int extractDir(int image, Dir* tree, Path* srcDir, char* destDir,
     {
         rc = makeLongerPath(srcDir, currentDir->dir.name, &newSrcDir);
         if(rc <= 0)
+        {
+            free(newDestDir);
             return rc;
+        }
         
         rc = extractDir(image, tree, newSrcDir, newDestDir, keepPermissions);
         if(rc <= 0)
+        {
+            free(newDestDir);
             return rc;
+        }
         
         freePath(newSrcDir);
         
@@ -218,6 +237,12 @@ int extractFile(int image, Dir* tree, FilePath* pathAndName, char* destDir,
                 return BKERROR_OUT_OF_MEMORY;
             strcpy(destPathAndName, destDir);
             strcat(destPathAndName, pathAndName->filename);
+            
+            if(access(destPathAndName, F_OK) == 0)
+            {
+                free(destPathAndName);
+                return BKERROR_DUPLICATE_EXTRACT;
+            }
             
             /* WRITE file */
             if(keepPermissions)

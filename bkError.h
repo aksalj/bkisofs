@@ -60,7 +60,9 @@
 #define BKERROR_DELETE_ROOT                      -1024
 #define BKERROR_DELETE_ROOT_TEXT                 "Deleting root of iso not allowed"
 #define BKERROR_DUPLICATE_ADD                    -1025
-#define BKERROR_DUPLICATE_ADD_TEXT               "Cannot add directory because another item with the same name already exists"
+#define BKERROR_DUPLICATE_ADD_TEXT               "Cannot add item because another item with the same name already exists in this directory"
+#define BKERROR_DUPLICATE_EXTRACT                -1026
+#define BKERROR_DUPLICATE_EXTRACT_TEXT           "Cannot extract item because another item with the same name already exists in this directory"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000

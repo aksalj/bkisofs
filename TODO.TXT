@@ -1,6 +1,7 @@
 check for duplicates when adding dirs/files
 add const to function parameters
 add frepath() to all interface functions
+check if free() needed before any error return
 
 
 boot record
