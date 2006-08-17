@@ -10,6 +10,7 @@
 #include "bkWrite.h"
 #include "bkMangle.h"
 #include "bkError.h"
+#include "bkSort.h"
 
 int copyByteBlock(int src, int dest, unsigned numBytes)
 {
@@ -637,7 +638,7 @@ int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir,
 }
 
 int writeFileContents(int oldImage, int newImage, DirToWrite* dir, 
-                      int filenameTypes)
+                      int filenameTypes, void(*progressFunction)(void))
 {
     int rc;
     
@@ -652,6 +653,9 @@ int writeFileContents(int oldImage, int newImage, DirToWrite* dir,
     /* each file in current directory */
     {
         nextFile->file.extentNumber = lseek(newImage, 0, SEEK_CUR) / NBYTES_LOGICAL_BLOCK;
+        
+        if(progressFunction != NULL)
+            progressFunction();
         
         if(nextFile->file.onImage)
         /* copy file from original image to new one */
@@ -721,18 +725,183 @@ int writeFileContents(int oldImage, int newImage, DirToWrite* dir,
         /* END WRITE file location and size */
         
         nextFile = nextFile->next;
-    }
+        
+    } /* while(nextFile != NULL) */
     
     /* now write all files in subdirectories */
     nextDir = dir->directories;
     while(nextDir != NULL)
     {
-        rc = writeFileContents(oldImage, newImage, &(nextDir->dir), filenameTypes);
+        rc = writeFileContents(oldImage, newImage, &(nextDir->dir), 
+                               filenameTypes, progressFunction);
         if(rc < 0)
             return rc;
         
         nextDir = nextDir->next;
     }
+    
+    return 1;
+}
+
+int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
+                   time_t creationTime, int filenameTypes, 
+                   void(*progressFunction)(void))
+{
+    int rc;
+    DirToWrite newTree;
+    off_t pRealRootDrOffset;
+    int pRootDirSize;
+    off_t sRealRootDrOffset;
+    int sRootDirSize;
+    off_t lPathTable9660Loc;
+    off_t mPathTable9660Loc;
+    int pathTable9660Size;
+    off_t lPathTableJolietLoc;
+    off_t mPathTableJolietLoc;
+    int pathTableJolietSize;
+    
+    /* because mangleDir works on dir's children i need to copy the root manually */
+    bzero(&newTree, sizeof(DirToWrite));
+    newTree.name9660[0] = 0;
+    newTree.nameRock[0] = '\0';
+    newTree.nameJoliet[0] = '\0';
+    newTree.posixFileMode = oldTree->posixFileMode;
+    
+    printf("mangling\n");fflush(NULL);
+    /* create tree to write */
+    rc = mangleDir(oldTree, &newTree, filenameTypes);
+    if(rc <= 0)
+        return rc;
+    
+    if(progressFunction != NULL)
+        progressFunction();
+    
+    printf("writing blank at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    /* system area, always zeroes */
+    rc = writeByteBlock(newImage, 0, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA);
+    if(rc <= 0)
+        return rc;
+    
+    /* skip pvd (1 block), write it after files */
+    lseek(newImage, NBYTES_LOGICAL_BLOCK, SEEK_CUR);
+    
+    if(filenameTypes & FNTYPE_JOLIET)
+    /* skip svd (1 block), write it after pvd */
+        lseek(newImage, NBYTES_LOGICAL_BLOCK, SEEK_CUR);
+    
+    if(progressFunction != NULL)
+        progressFunction();
+    
+    printf("writing terminator at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    rc = writeVdsetTerminator(newImage);
+    if(rc <= 0)
+        return rc;
+    
+    printf("sorting 9660\n");
+    sortDir(&newTree, FNTYPE_9660);
+    //showNewDir(&newTree, 0);
+    
+    pRealRootDrOffset = lseek(newImage, 0, SEEK_CUR);
+    
+    if(progressFunction != NULL)
+        progressFunction();
+    
+    printf("writing primary directory tree at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    /* 9660 and maybe rockridge dir tree */
+    rc = writeDir(newImage, &newTree, 0, 0, 0, creationTime, 
+                  filenameTypes & (FNTYPE_9660 | FNTYPE_ROCKRIDGE), true);
+    if(rc <= 0)
+        return rc;
+    
+    pRootDirSize = rc;
+    
+    /* joliet dir tree */
+    if(filenameTypes & FNTYPE_JOLIET)
+    {
+        printf("sorting joliet\n");
+        sortDir(&newTree, FNTYPE_JOLIET);
+        //showNewDir(&newTree, 0);
+        
+        printf("writing supplementary directory tree at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+        sRealRootDrOffset = lseek(newImage, 0, SEEK_CUR);
+        
+        if(progressFunction != NULL)
+            progressFunction();
+        
+        rc = writeDir(newImage, &newTree, 0, 0, 0, creationTime, 
+                      FNTYPE_JOLIET, true);
+        if(rc <= 0)
+            return rc;
+        
+        sRootDirSize = rc;
+    }
+    
+    printf("writing 9660 path tables at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    
+    if(progressFunction != NULL)
+        progressFunction();
+    
+    lPathTable9660Loc = lseek(newImage, 0, SEEK_CUR);
+    rc = writePathTable(newImage, &newTree, true, FNTYPE_9660);
+    if(rc <= 0)
+        return rc;
+    pathTable9660Size = rc;
+    
+    mPathTable9660Loc = lseek(newImage, 0, SEEK_CUR);
+    rc = writePathTable(newImage, &newTree, false, FNTYPE_9660);
+    if(rc <= 0)
+        return rc;
+    
+    if(filenameTypes & FNTYPE_JOLIET)
+    {
+        printf("writing joliet path tables at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+        lPathTableJolietLoc = lseek(newImage, 0, SEEK_CUR);
+        rc = writePathTable(newImage, &newTree, true, FNTYPE_JOLIET);
+        if(rc <= 0)
+            return rc;
+        pathTableJolietSize = rc;
+        
+        mPathTableJolietLoc = lseek(newImage, 0, SEEK_CUR);
+        rc = writePathTable(newImage, &newTree, false, FNTYPE_JOLIET);
+        if(rc <= 0)
+            return rc;
+    }
+    
+    if(progressFunction != NULL)
+        progressFunction();
+    
+    printf("writing files at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    /* all files and offsets/sizes */
+    rc = writeFileContents(oldImage, newImage, &newTree, filenameTypes, progressFunction);
+    if(rc <= 0)
+        return rc;
+    
+    lseek(newImage, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA, SEEK_SET);
+    
+    if(progressFunction != NULL)
+        progressFunction();
+    
+    printf("writing pvd at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    rc = writeVolDescriptor(newImage, volInfo, pRealRootDrOffset, 
+                            pRootDirSize, lPathTable9660Loc, mPathTable9660Loc, 
+                            pathTable9660Size, creationTime, true);
+    if(rc <= 0)
+        return rc;
+    
+    if(filenameTypes & FNTYPE_JOLIET)
+    {
+        if(progressFunction != NULL)
+            progressFunction();
+        
+        printf("writing svd at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+        rc = writeVolDescriptor(newImage, volInfo, sRealRootDrOffset, 
+                                sRootDirSize, lPathTableJolietLoc, mPathTableJolietLoc, 
+                                pathTableJolietSize, creationTime, false);
+        if(rc <= 0)
+            return rc;
+    }
+    
+    freeDirToWriteContents(&newTree);
     
     return 1;
 }
@@ -887,7 +1056,7 @@ int writePathTableRecordsOnLevel(int image, DirToWrite* dir, bool isTypeL,
             rc = write731(image, &exentLocation);
         else
             rc = write732(image, &exentLocation);
-        if(rc != 8)
+        if(rc != 4)
             return BKERROR_WRITE_GENERIC;
         /* END LOCATION of extent */
         
@@ -898,7 +1067,8 @@ int writePathTableRecordsOnLevel(int image, DirToWrite* dir, bool isTypeL,
             rc = write721(image, &parentDirId);
         else
             rc = write722(image, &parentDirId);
-        if(rc < 4)
+        
+        if(rc < 2)
             return BKERROR_WRITE_GENERIC;
         /* END PARENT directory number */
         
@@ -921,7 +1091,7 @@ int writePathTableRecordsOnLevel(int image, DirToWrite* dir, bool isTypeL,
             else
             {
                 rc = write(image, dir->name9660, fileIdLen);
-                if(rc != 1)
+                if(rc != fileIdLen)
                     return BKERROR_WRITE_GENERIC;
             }
         }
@@ -935,7 +1105,7 @@ int writePathTableRecordsOnLevel(int image, DirToWrite* dir, bool isTypeL,
             if(rc != 1)
                 return BKERROR_WRITE_GENERIC;
         }
-
+        
     }
     else /* if(thisLevel < targetLevel) */
     {

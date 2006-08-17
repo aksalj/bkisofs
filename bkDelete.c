@@ -51,6 +51,7 @@ int deleteDir(Dir* tree, Path* srcDir)
     
     /* vars to delete subdirectories */
     DirLL* currentDir;
+    DirLL* nextDir;
     Path* newSrcDir;
     
     /* vars to delete the directory */
@@ -101,6 +102,8 @@ int deleteDir(Dir* tree, Path* srcDir)
     currentDir = srcDirInTree->directories;
     while(currentDir != NULL)
     {
+        nextDir = currentDir->next;
+        
         rc = makeLongerPath(srcDir, currentDir->dir.name, &newSrcDir);
         if(rc <= 0)
             return rc;
@@ -111,7 +114,7 @@ int deleteDir(Dir* tree, Path* srcDir)
         
         freePath(newSrcDir);
         
-        currentDir = currentDir->next;
+        currentDir = nextDir;
     }
     /* END DELETE all directories */
     
@@ -158,7 +161,7 @@ int deleteDir(Dir* tree, Path* srcDir)
     }
     if(!dirFound)
     /* should not happen since i already found this dir above */
-        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
+        return BKERROR_SANITY;
     /* END DELETE self */
     
     return 1;

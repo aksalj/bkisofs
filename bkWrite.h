@@ -12,9 +12,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum, int parentNumBytes,
 int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir, 
             bool isSelfOrParent, bool isFirstRecord, int filenameTypes);
 int writeFileContents(int oldImage, int newImage, DirToWrite* dir, 
-                      int filenameTypes);
-int writeImage(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
-               time_t creationTime, int filenameTypes);
+                      int filenameTypes, void(*progressFunction)(void));
 int writeJolietStringField(int image, char* name, int fieldSize);
 int writePathTable(int image, DirToWrite* tree, bool isTypeL, int filenameType);
 int writePathTableRecordsOnLevel(int image, DirToWrite* dir, bool isTypeL, 

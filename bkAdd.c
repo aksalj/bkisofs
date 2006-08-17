@@ -147,12 +147,16 @@ int addDir(Dir* tree, char* srcPath, Path* destDir)
             {
                 strcat(newSrcPathAndName, "/");
                 
-                addDir(tree, newSrcPathAndName, newDestDir);
+                rc = addDir(tree, newSrcPathAndName, newDestDir);
+                if(rc <= 0)
+                    return rc;
             }
             else if(anEntry.st_mode & S_IFREG)
             /* regular file */
             {
-                addFile(tree, newSrcPathAndName, newDestDir);
+                rc = addFile(tree, newSrcPathAndName, newDestDir);
+                if(rc <= 0)
+                    return rc;
             }
             else
             /* not regular file or directory */
