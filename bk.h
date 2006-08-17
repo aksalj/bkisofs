@@ -192,6 +192,7 @@ int bk_extract_dir(int image, Dir* tree, char* srcDir, char* destDir,
                    bool keepPermissions);
 int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
                     bool keepPermissions);
+char* bk_get_error_string(int errorId);
 int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
                    time_t creationTime, int filenameTypes, 
                    void(*progressFunction)(void));

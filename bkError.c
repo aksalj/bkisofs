@@ -32,13 +32,27 @@ const struct MessageStruct messageStructs[] =
     { BKERROR_VD_NOT_PRIMARY, BKERROR_VD_NOT_PRIMARY_TEXT },
     { BKERROR_SANITY, BKERROR_SANITY_TEXT },
     { BKERROR_OPEN_READ_FAILED, BKERROR_OPEN_READ_FAILED_TEXT },
-    {  },
-    {  },
-    {
-        BKERROR_END,
-        BKERROR_END_TEXT
-    }
+    { BKERROR_DIRNAME_NEED_TRAILING_SLASH, BKERROR_DIRNAME_NEED_TRAILING_SLASH_TEXT },
+    { BKERROR_EXTRACT_ROOT, BKERROR_EXTRACT_ROOT_TEXT },
+    { BKERROR_DELETE_ROOT, BKERROR_DELETE_ROOT_TEXT },
+    { BKERROR_DUPLICATE_ADD, BKERROR_DUPLICATE_ADD_TEXT },
+    { BKERROR_DUPLICATE_EXTRACT, BKERROR_DUPLICATE_EXTRACT_TEXT },
+    
+    { BKERROR_END, BKERROR_END_TEXT }
 };
+
+char* bk_get_error_string(int errorId)
+{
+    int count;
+    
+    for(count = 0; messageStructs[count].number != BKERROR_END; count++)
+    {
+        if(messageStructs[count].number == errorId)
+            break;
+    }
+    
+    return messageStructs[count].text;
+}
 
 void outputError(int errorNumIn)
 {
