@@ -89,38 +89,6 @@ int getLastDirFromString(char* srcPath, char* dirName)
     return 1;
 }
 
-int makeLongerPath(Path* origPath, char* newDir, Path** newPath)
-{
-    int count;
-    
-    *newPath  = malloc(sizeof(Path));
-    if(*newPath == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    (*newPath)->numDirs = origPath->numDirs + 1;
-    
-    (*newPath)->dirs = malloc(sizeof(char*) * (*newPath)->numDirs);
-    if((*newPath)->dirs == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    /* copy original */
-    for(count = 0; count < origPath->numDirs; count++)
-    {
-        (*newPath)->dirs[count] = malloc(strlen((origPath->dirs)[count]) + 1);
-        if((*newPath)->dirs[count] == NULL)
-            return BKERROR_OUT_OF_MEMORY;
-        strcpy((*newPath)->dirs[count], (origPath->dirs)[count]);
-    }
-    
-    /* new dir */
-    (*newPath)->dirs[count] = malloc(strlen(newDir) + 1);
-    if((*newPath)->dirs[count] == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    strcpy((*newPath)->dirs[count], newDir);
-    
-    return 1;
-}
-
 int makeFilePathFromString(char* srcFile, FilePath* pathPath)
 {
     int rc;
@@ -167,6 +135,38 @@ int makeFilePathFromString(char* srcFile, FilePath* pathPath)
     
     srcFile[fileIndex] = origFilenameFirstChar;
     strcpy(pathPath->filename, &(srcFile[fileIndex]));
+    
+    return 1;
+}
+
+int makeLongerPath(Path* origPath, char* newDir, Path** newPath)
+{
+    int count;
+    
+    *newPath = malloc(sizeof(Path));
+    if(*newPath == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    (*newPath)->numDirs = origPath->numDirs + 1;
+    
+    (*newPath)->dirs = malloc(sizeof(char*) * (*newPath)->numDirs);
+    if((*newPath)->dirs == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    /* copy original */
+    for(count = 0; count < origPath->numDirs; count++)
+    {
+        (*newPath)->dirs[count] = malloc(strlen((origPath->dirs)[count]) + 1);
+        if((*newPath)->dirs[count] == NULL)
+            return BKERROR_OUT_OF_MEMORY;
+        strcpy((*newPath)->dirs[count], (origPath->dirs)[count]);
+    }
+    
+    /* new dir */
+    (*newPath)->dirs[count] = malloc(strlen(newDir) + 1);
+    if((*newPath)->dirs[count] == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    strcpy((*newPath)->dirs[count], newDir);
     
     return 1;
 }

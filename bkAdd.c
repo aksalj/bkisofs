@@ -284,32 +284,37 @@ int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
 int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
 {
     int rc;
-    Path destPath;
+    Path* destPath;
     
-    destPath.numDirs = 0;
-    destPath.dirs = NULL;
+    destPath = malloc(sizeof(Path));
+    if(destPath == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    destPath->numDirs = 0;
+    destPath->dirs = NULL;
     
     if(destPathAndName[0] == '/' && destPathAndName[1] == '\0')
     /* root, special case */
     {
-        rc = addDir(tree, srcPathAndName, &destPath);
+        rc = addDir(tree, srcPathAndName, destPath);
         if(rc <= 0)
             return rc;
-        else
-            return 1;
+    }
+    else
+    /* not root */
+    {
+        rc = makePathFromString(destPathAndName, destPath);
+        if(rc <= 0)
+            return rc;
+        
+        rc = addDir(tree, srcPathAndName, destPath);
+        if(rc <= 0)
+            return rc;
     }
     
-    rc = makePathFromString(destPathAndName, &destPath);
-    if(rc <= 0)
-        return rc;
+    freePath(destPath);
     
-    rc = addDir(tree, srcPathAndName, &destPath);
-    if(rc <= 0)
-        return rc;
-    else
-        return 1;
-    
-    return 2;
+    return 1;
 }
 
 /*******************************************************************************
@@ -319,32 +324,36 @@ int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
 int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName)
 {
     int rc;
-    Path destPath;
+    Path* destPath;
     
-    destPath.numDirs = 0;
-    destPath.dirs = NULL;
+    destPath = malloc(sizeof(Path));
+    if(destPath == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    destPath->numDirs = 0;
+    destPath->dirs = NULL;
     
     if(destPathAndName[0] == '/' && destPathAndName[1] == '\0')
     /* root, special case */
     {
-        rc = addFile(tree, srcPathAndName, &destPath);
+        rc = addFile(tree, srcPathAndName, destPath);
         if(rc <= 0)
             return rc;
-        else
-            return 1;
+    }
+    else
+    {
+        rc = makePathFromString(destPathAndName, destPath);
+        if(rc <= 0)
+            return rc;
+        
+        rc = addFile(tree, srcPathAndName, destPath);
+        if(rc <= 0)
+            return rc;
     }
     
-    rc = makePathFromString(destPathAndName, &destPath);
-    if(rc <= 0)
-        return rc;
+    freePath(destPath);
     
-    rc = addFile(tree, srcPathAndName, &destPath);
-    if(rc <= 0)
-        return rc;
-    else
-        return 1;
-    
-    return 2;
+    return 1;
 }
 
 /*******************************************************************************

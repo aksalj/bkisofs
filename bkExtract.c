@@ -17,17 +17,27 @@ int bk_extract_dir(int image, Dir* tree, char* srcDir, char* destDir,
                    bool keepPermissions)
 {
     int rc;
-    Path srcPath;
+    Path* srcPath;
+    
+    srcPath = malloc(sizeof(Path));
+    if(srcPath == NULL)
+        return BKERROR_OUT_OF_MEMORY;
     
     if(srcDir[0] == '/' && srcDir[1] == '\0')
     /* root, not allowed */
         return BKERROR_EXTRACT_ROOT;
     
-    rc = makePathFromString(srcDir, &srcPath);
+    rc = makePathFromString(srcDir, srcPath);
     if(rc <= 0)
         return rc;
     
-    return extractDir(image, tree, &srcPath, destDir, keepPermissions);
+    rc = extractDir(image, tree, srcPath, destDir, keepPermissions);
+    if(rc <= 0)
+        return rc;
+    
+    freePath(srcPath);
+    
+    return 1;
 }
 
 int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
@@ -40,7 +50,16 @@ int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
     if(rc <= 0)
         return rc;
     
-    return extractFile(image, tree, &srcPath, destDir, keepPermissions);
+    rc = extractFile(image, tree, &srcPath, destDir, keepPermissions);
+    if(rc <= 0)
+        return rc;
+    
+    int count;
+    for(count = 0; count < srcPath.path.numDirs; count++)
+        free(srcPath.path.dirs[count]);
+    free(srcPath.path.dirs);
+    
+    return 1;
 }
 
 /*

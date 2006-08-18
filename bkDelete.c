@@ -10,17 +10,27 @@
 int bk_delete_dir(Dir* tree, char* dirStr)
 {
     int rc;
-    Path dirPath;
+    Path* dirPath;
+    
+    dirPath = malloc(sizeof(Path));
+    if(dirPath == NULL)
+        return BKERROR_OUT_OF_MEMORY;
     
     if(dirStr[0] == '/' && dirStr[1] == '\0')
     /* root, not allowed */
         return BKERROR_DELETE_ROOT;
     
-    rc = makePathFromString(dirStr, &dirPath);
+    rc = makePathFromString(dirStr, dirPath);
     if(rc <= 0)
         return rc;
     
-    return deleteDir(tree, &dirPath);
+    rc = deleteDir(tree, dirPath);
+    if(rc <= 0)
+        return rc;
+    
+    freePath(dirPath);
+    
+    return 1;
 }
 
 int bk_delete_file(Dir* tree, char* fileStr)
@@ -32,7 +42,16 @@ int bk_delete_file(Dir* tree, char* fileStr)
     if(rc <= 0)
         return rc;
     
-    return deleteFile(tree, &filePath);
+    rc = deleteFile(tree, &filePath);
+    if(rc <= 0)
+        return rc;
+    
+    int count;
+    for(count = 0; count < filePath.path.numDirs; count++)
+        free(filePath.path.dirs[count]);
+    free(filePath.path.dirs); 
+    
+    return 1;
 }
 
 int deleteDir(Dir* tree, Path* srcDir)
