@@ -12,9 +12,15 @@ void freePath(Path* path)
     
     for(count = 0; count < path->numDirs; count++)
     {
+        /* if the path was not allocated properly (maybe ran out of memory)
+        * the first unallocated item is null */
+        if(path->dirs[count] == NULL)
+            break;
         free(path->dirs[count]);
     }
-    free(path->dirs);   
+    /* this array may also have failed to be allocated */
+    if(path->dirs != NULL)
+        free(path->dirs);
     free(path);
 }
 
@@ -56,7 +62,7 @@ int getFilenameFromPath(char* srcPathAndName, char* filename)
 * srcPath must have trailing slash
 * dirName will not have a slash
 */
-int getLastDirFromString(char* srcPath, char* dirName)
+int getLastDirFromString(const char* srcPath, char* dirName)
 {
     int prevSlashIndex = 0;
     int lastSlashIndex = 0;
@@ -78,6 +84,9 @@ int getLastDirFromString(char* srcPath, char* dirName)
             lastSlashIndex = count;
         }
     }
+    
+    if(lastSlashIndex - prevSlashIndex - 1 > NCHARS_FILE_ID_MAX - 1)
+        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     
     /* copy all characters in between the slashes found */
     for(count = 0; count < lastSlashIndex - prevSlashIndex - 1; count++)
@@ -139,7 +148,7 @@ int makeFilePathFromString(char* srcFile, FilePath* pathPath)
     return 1;
 }
 
-int makeLongerPath(Path* origPath, char* newDir, Path** newPath)
+int makeLongerPath(const Path* origPath, const char* newDir, Path** newPath)
 {
     int count;
     
@@ -151,7 +160,11 @@ int makeLongerPath(Path* origPath, char* newDir, Path** newPath)
     
     (*newPath)->dirs = malloc(sizeof(char*) * (*newPath)->numDirs);
     if((*newPath)->dirs == NULL)
+    {
+        /* set to 0 to make sure freePath() still works */
+        (*newPath)->numDirs = 0;
         return BKERROR_OUT_OF_MEMORY;
+    }
     
     /* copy original */
     for(count = 0; count < origPath->numDirs; count++)
@@ -171,7 +184,7 @@ int makeLongerPath(Path* origPath, char* newDir, Path** newPath)
     return 1;
 }
 
-int makePathFromString(char* strPath, Path* pathPath)
+int makePathFromString(const char* const strPath, Path* pathPath)
 {
     int count;
     int pathStrLen;
@@ -211,7 +224,12 @@ int makePathFromString(char* strPath, Path* pathPath)
             {
                 if(nextDirLen == 0)
                 /* double slash */
+                {
+                    /* first item that failed to allocate must be set to NULL
+                    * so that freePath() still works */
+                    pathPath->dirs[numDirsDone] = NULL;
                     return BKERROR_MISFORMED_PATH;
+                }
                 
                 pathPath->dirs[numDirsDone] = (char*)malloc(nextDirLen);
                 if(pathPath->dirs[numDirsDone] == NULL)

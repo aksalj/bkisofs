@@ -20,7 +20,7 @@
 #define BKERROR_STAT_FAILED                      -1004
 #define BKERROR_STAT_FAILED_TEXT                 "Failed to stat file/directory"
 #define BKERROR_TARGET_NOT_A_DIR                 -1005
-#define BKERROR_TARGET_NOT_A_DIR_TEXT            "Target not a directory"
+#define BKERROR_TARGET_NOT_A_DIR_TEXT            "Target not a directory (UI problem)"
 #define BKERROR_OUT_OF_MEMORY                    -1006
 #define BKERROR_OUT_OF_MEMORY_TEXT               "Out of memory"
 #define BKERROR_OPENDIR_FAILED                   -1007

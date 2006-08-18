@@ -19,25 +19,27 @@
 #define FNTYPE_ROCKRIDGE 2
 #define FNTYPE_JOLIET 4
 
-/* long note on maximum file/directory name lengths:
-* max 128 (joliet)
+/* Long note on maximum file/directory name lengths:
+* Joliet allows max 128 bytes
 *     + 2 separator1 (9660, just in case)
 *     + 2 separator2 (9660, just in case)
 *     + 10 version (9660, just in case)
 *     = 142 bytes (71 characters)
-* rockridge allows unlimited file name lengths but i would need to have the
-* 'continue' su entry implemented. doubt it will ever happen
 *
-* the 71 maximum is for reading the record,
-* i will want to store the 64 characters + 1 for '\0' (the rest is nonsense)
+* Rockridge allows unlimited file name lengths but i would need to have the
+* 'continue' su entry implemented, doubt it will ever happen.
 *
-* max filename length on the filesystem is 255 bytes on almost every kind of
-* file system. reiserfs is an exception in that it supports a max of 255 
-* characters (4032 bytes)
+* The 71 maximum is only for reading the record,
+* i will want to store the 64 characters + 1 for '\0' (the rest is nonsense).
+*
+* On almost every kind the filesystem the max filename length is 255 bytes.
+* Reiserfs is an exception in that it supports a max of 255 .
+* characters (4032 bytes).
+* However, since i don't want to bother with mangling filenames from the
+* filesystem (yet) i will limit it to the same maximum as names from the iso.
 * i will want to add a '\0' at the end */
 #define NCHARS_FILE_ID_MAX_READ 71
 #define NCHARS_FILE_ID_MAX 65
-#define NCHARS_FILE_ID_FS_MAX 256
 
 /*******************************************************************************
 * VolInfo
@@ -184,7 +186,8 @@ typedef struct
 /* public bkisofs functions */
 int bk_read_vol_info(int image, VolInfo* volInfo);
 int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr);
-int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName);
+int bk_add_dir(Dir* tree, const char* srcPathAndName, 
+               const char* destPathAndName);
 int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName);
 int bk_delete_dir(Dir* tree, char* srcDir);
 int bk_delete_file(Dir* tree, char* fileStr);

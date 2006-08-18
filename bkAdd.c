@@ -22,13 +22,13 @@
 * Notes:
 *  need to make sure tree is not modified if cannot opendir()
 */
-int addDir(Dir* tree, char* srcPath, Path* destDir)
+int addDir(Dir* tree, const char* srcPath, const Path* destDir)
 {
     int count;
     int rc;
     
     /* vars to add dir to tree */
-    char srcDirName[NCHARS_FILE_ID_FS_MAX];
+    char srcDirName[NCHARS_FILE_ID_MAX];
     Dir* destDirInTree;
     DirLL* searchDir;
     bool dirFound;
@@ -80,10 +80,6 @@ int addDir(Dir* tree, char* srcPath, Path* destDir)
     if(itemIsInDir(srcDirName, destDirInTree))
         return BKERROR_DUPLICATE_ADD;
     
-    //!! max len on fs
-    if(strlen(srcDirName) > NCHARS_FILE_ID_MAX - 1)
-        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
-    
     oldHead = destDirInTree->directories;
     
     /* ADD directory to tree */
@@ -96,7 +92,10 @@ int addDir(Dir* tree, char* srcPath, Path* destDir)
     
     destDirInTree->directories = malloc(sizeof(DirLL));
     if(destDirInTree->directories == NULL)
+    {
+        destDirInTree->directories = oldHead;
         return BKERROR_OUT_OF_MEMORY;
+    }
     
     destDirInTree->directories->next = oldHead;
     
@@ -112,16 +111,23 @@ int addDir(Dir* tree, char* srcPath, Path* destDir)
     newSrcPathLen = strlen(srcPath);
     
     /* including the file/dir name and the trailing '/' and the '\0' */
-    newSrcPathAndName = malloc(newSrcPathLen + 257);
+    newSrcPathAndName = malloc(newSrcPathLen + NCHARS_FILE_ID_MAX + 1);
     if(newSrcPathAndName == NULL)
+    {
+        destDirInTree->directories = oldHead;
         return BKERROR_OUT_OF_MEMORY;
+    }
     
     strcpy(newSrcPathAndName, srcPath);
     
     /* destination for children */
     rc = makeLongerPath(destDir, srcDirName, &newDestDir);
     if(rc <= 0)
+    {
+        destDirInTree->directories = oldHead;
+        freePath(newDestDir);
         return rc;
+    }
     
     /* ADD contents of directory */
     srcDir = opendir(srcPath);
@@ -281,7 +287,8 @@ int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
 * bk_add_dir()
 * public interface for addDir()
 * */
-int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
+int bk_add_dir(Dir* tree, const char* srcPathAndName, 
+               const char* destPathAndName)
 {
     int rc;
     Path* destPath;
@@ -298,18 +305,27 @@ int bk_add_dir(Dir* tree, char* srcPathAndName, char* destPathAndName)
     {
         rc = addDir(tree, srcPathAndName, destPath);
         if(rc <= 0)
+        {
+            freePath(destPath);
             return rc;
+        }
     }
     else
     /* not root */
     {
         rc = makePathFromString(destPathAndName, destPath);
         if(rc <= 0)
+        {
+            freePath(destPath);
             return rc;
+        }
         
         rc = addDir(tree, srcPathAndName, destPath);
         if(rc <= 0)
+        {
+            freePath(destPath);
             return rc;
+        }
     }
     
     freePath(destPath);
