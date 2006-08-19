@@ -1,9 +1,8 @@
 add const to function parameters
-add frepath() to all interface functions
 check if free() needed before any error return
-adding kill bill soundtrack causes corruption, probably because of very long filenames
 statusbar messages
 
 
+count size
 boot record
 rock ridge special files

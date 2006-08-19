@@ -7,54 +7,63 @@
 #include "bkError.h"
 #include "bkDelete.h"
 
-int bk_delete_dir(Dir* tree, char* dirStr)
+int bk_delete_dir(Dir* tree, const char* dirStr)
 {
     int rc;
     Path* dirPath;
-    
-    dirPath = malloc(sizeof(Path));
-    if(dirPath == NULL)
-        return BKERROR_OUT_OF_MEMORY;
     
     if(dirStr[0] == '/' && dirStr[1] == '\0')
     /* root, not allowed */
         return BKERROR_DELETE_ROOT;
     
+    dirPath = malloc(sizeof(Path));
+    if(dirPath == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
     rc = makePathFromString(dirStr, dirPath);
     if(rc <= 0)
+    {
+        freePath(dirPath);
         return rc;
+    }
     
     rc = deleteDir(tree, dirPath);
     if(rc <= 0)
+    {
+        freePath(dirPath);
         return rc;
+    }
     
     freePath(dirPath);
     
     return 1;
 }
 
-int bk_delete_file(Dir* tree, char* fileStr)
+int bk_delete_file(Dir* tree, const char* fileStr)
 {
     int rc;
     FilePath filePath;
-    
+
     rc = makeFilePathFromString(fileStr, &filePath);
     if(rc <= 0)
+    {
+        freePathDirs(&(filePath.path));
         return rc;
+    }
     
     rc = deleteFile(tree, &filePath);
     if(rc <= 0)
+    {
+        freePathDirs(&(filePath.path));
         return rc;
+    }
     
-    int count;
-    for(count = 0; count < filePath.path.numDirs; count++)
-        free(filePath.path.dirs[count]);
-    free(filePath.path.dirs); 
+    freePathDirs(&(filePath.path));
     
     return 1;
 }
 
-int deleteDir(Dir* tree, Path* srcDir)
+int deleteDir(Dir* tree, const Path* srcDir)
 {
     int count;
     int rc;
@@ -115,6 +124,8 @@ int deleteDir(Dir* tree, Path* srcDir)
         
         currentFile = nextFile;
     }
+    /* in case deleting directories below fails */
+    srcDirInTree->files = NULL;
     /* END DELETE all files */
     
     /* DELETE all directories */
@@ -125,11 +136,18 @@ int deleteDir(Dir* tree, Path* srcDir)
         
         rc = makeLongerPath(srcDir, currentDir->dir.name, &newSrcDir);
         if(rc <= 0)
+        {
+            srcDirInTree->directories = currentDir;
             return rc;
+        }
         
         rc = deleteDir(tree, newSrcDir);
         if(rc <= 0)
+        {
+            srcDirInTree->directories = currentDir;
+            freePath(newSrcDir);
             return rc;
+        }
         
         freePath(newSrcDir);
         
@@ -186,7 +204,7 @@ int deleteDir(Dir* tree, Path* srcDir)
     return 1;
 }
 
-int deleteFile(Dir* tree, FilePath* pathAndName)
+int deleteFile(Dir* tree, const FilePath* pathAndName)
 {
     Dir* parentDir;
     DirLL* searchDir;

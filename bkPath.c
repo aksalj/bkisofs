@@ -8,6 +8,13 @@
 
 void freePath(Path* path)
 {
+    freePathDirs(path);
+    
+    free(path);
+}
+
+void freePathDirs(Path* path)
+{
     int count;
     
     for(count = 0; count < path->numDirs; count++)
@@ -16,15 +23,15 @@ void freePath(Path* path)
         * the first unallocated item is null */
         if(path->dirs[count] == NULL)
             break;
+
         free(path->dirs[count]);
     }
-    /* this array may also have failed to be allocated */
+    
     if(path->dirs != NULL)
         free(path->dirs);
-    free(path);
 }
 
-int getFilenameFromPath(char* srcPathAndName, char* filename)
+int getFilenameFromPath(const char* srcPathAndName, char* filename)
 {
     int count;
     int srcLen;
@@ -34,6 +41,7 @@ int getFilenameFromPath(char* srcPathAndName, char* filename)
     
     srcLen = strlen(srcPathAndName);
     
+    /* find index of the last slash in path */
     for(count = 0; count < srcLen; count++)
     {
         if(srcPathAndName[count] == '/')
@@ -48,6 +56,9 @@ int getFilenameFromPath(char* srcPathAndName, char* filename)
     if(indexLastSlash == srcLen - 1)
     /* string ended with '/' */
         return BKERROR_MISFORMED_PATH;
+    
+    if(srcLen - indexLastSlash - 1 > NCHARS_FILE_ID_MAX - 1)
+        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     
     /* this loop copies null byte also */
     for(count = indexLastSlash + 1, count2 = 0; count <= srcLen; count++, count2++)
@@ -98,10 +109,12 @@ int getLastDirFromString(const char* srcPath, char* dirName)
     return 1;
 }
 
-int makeFilePathFromString(char* srcFile, FilePath* pathPath)
+int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
 {
     int rc;
     int srcFileLen;
+    /* because i need to modify it and the parameter needs to be const */
+    char* srcFile; 
     /* index of the first character in the filename part of srcFile */
     int fileIndex;
     char origFilenameFirstChar;
@@ -110,6 +123,12 @@ int makeFilePathFromString(char* srcFile, FilePath* pathPath)
     pathPath->path.dirs = NULL;
     
     srcFileLen = strlen(srcFile);
+    
+    srcFile = malloc(srcFileLen + 1);
+    if(srcFile == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    strcpy(srcFile, srcFileIn);
     
     if(srcFile[0] != '/' || srcFile[srcFileLen] == '/')
         return BKERROR_MISFORMED_PATH;
@@ -184,7 +203,7 @@ int makeLongerPath(const Path* origPath, const char* newDir, Path** newPath)
     return 1;
 }
 
-int makePathFromString(const char* const strPath, Path* pathPath)
+int makePathFromString(const char* strPath, Path* pathPath)
 {
     int count;
     int pathStrLen;
@@ -211,7 +230,7 @@ int makePathFromString(const char* const strPath, Path* pathPath)
     bool justStarted = true;
     int numDirsDone = 0;
     int nextDirLen = 0;
-    char* nextDir = &(strPath[1]);
+    const char* nextDir = &(strPath[1]);
     for(count = 0; count < pathStrLen; count++)
     {
         if(strPath[count] == '/')

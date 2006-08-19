@@ -17,11 +17,7 @@
 * - Dir*, root of tree to add to
 * - char*, path of directory to add, must end with trailing slash
 * - Path*, destination on image
-* Returns:
-* - 
-* Notes:
-*  need to make sure tree is not modified if cannot opendir()
-*/
+* */
 int addDir(Dir* tree, const char* srcPath, const Path* destDir)
 {
     int count;
@@ -114,6 +110,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     newSrcPathAndName = malloc(newSrcPathLen + NCHARS_FILE_ID_MAX + 1);
     if(newSrcPathAndName == NULL)
     {
+        free(destDirInTree->directories);
         destDirInTree->directories = oldHead;
         return BKERROR_OUT_OF_MEMORY;
     }
@@ -124,6 +121,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     rc = makeLongerPath(destDir, srcDirName, &newDestDir);
     if(rc <= 0)
     {
+        free(destDirInTree->directories);
         destDirInTree->directories = oldHead;
         free(newSrcPathAndName);
         freePath(newDestDir);
@@ -134,6 +132,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     srcDir = opendir(srcPath);
     if(srcDir == NULL)
     {
+        free(destDirInTree->directories);
         destDirInTree->directories = oldHead;
         free(newSrcPathAndName);
         freePath(newDestDir);
@@ -149,6 +148,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
         {
             if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX - 1)
             {
+                free(destDirInTree->directories);
                 destDirInTree->directories = oldHead;
                 free(newSrcPathAndName);
                 freePath(newDestDir);
@@ -161,6 +161,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
             rc = stat(newSrcPathAndName, &anEntry);
             if(rc == -1)
             {
+                free(destDirInTree->directories);
                 destDirInTree->directories = oldHead;
                 free(newSrcPathAndName);
                 freePath(newDestDir);
@@ -175,6 +176,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
                 rc = addDir(tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
                 {
+                    free(destDirInTree->directories);
                     destDirInTree->directories = oldHead;
                     free(newSrcPathAndName);
                     freePath(newDestDir);
@@ -187,6 +189,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
                 rc = addFile(tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
                 {
+                    free(destDirInTree->directories);
                     destDirInTree->directories = oldHead;
                     free(newSrcPathAndName);
                     freePath(newDestDir);
@@ -196,6 +199,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
             else
             /* not regular file or directory */
             {
+                free(destDirInTree->directories);
                 destDirInTree->directories = oldHead;
                 free(newSrcPathAndName);
                 freePath(newDestDir);
@@ -210,6 +214,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     if(rc != 0)
     /* exotic error */
     {
+        free(destDirInTree->directories);
         destDirInTree->directories = oldHead;
         free(newSrcPathAndName);
         freePath(newDestDir);
@@ -231,18 +236,15 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
 * - Dir*, root of tree to add to
 * - char*, path and name of file to add, must end with trailing slash
 * - Path*, destination on image
-* Returns:
-* - 
 * Notes:
-*  file gets appended to the end of the list (screw the 9660 sorting, it's stupid)
 *  will only add a regular file (symblic links are followed, see stat(2))
-*/
-int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
+* */
+int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
 {
     int count;
     int rc;
     FileLL* oldHead; /* of the files list */
-    char filename[NCHARS_FILE_ID_FS_MAX];
+    char filename[NCHARS_FILE_ID_MAX];
     struct stat statStruct;
     
     /* vars to find the dir in the tree */
@@ -253,10 +255,6 @@ int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
     rc = getFilenameFromPath(srcPathAndName, filename);
     if(rc <= 0)
         return rc;
-    
-    //!! max len on fs
-    if(strlen(filename) > NCHARS_FILE_ID_MAX - 1)
-        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     
     /* FIND dir to add to */
     destDirInTree = tree;
@@ -289,7 +287,10 @@ int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
     /* ADD file */
     destDirInTree->files = malloc(sizeof(FileLL));
     if(destDirInTree->files == NULL)
+    {
+        destDirInTree->files = oldHead;
         return BKERROR_OUT_OF_MEMORY;
+    }
     
     destDirInTree->files->next = oldHead;
     
@@ -297,12 +298,19 @@ int addFile(Dir* tree, char* srcPathAndName, Path* destDir)
     
     rc = stat(srcPathAndName, &statStruct);
     if(rc == -1)
+    {
+        free(destDirInTree->files);
+        destDirInTree->files = oldHead;
         return BKERROR_STAT_FAILED;
+    }
     
     if( !(statStruct.st_mode & S_IFREG) )
     /* not a regular file */
-    //!! i don't know, maybe ignore and move to the next file
-        return BKERROR_FIXME;
+    {
+        free(destDirInTree->files);
+        destDirInTree->files = oldHead;
+        return BKERROR_NO_SPECIAL_FILES;
+    }
     
     destDirInTree->files->file.posixFileMode = statStruct.st_mode;
     
@@ -373,7 +381,8 @@ int bk_add_dir(Dir* tree, const char* srcPathAndName,
 * bk_add_file()
 * public interface for addFile()
 * */
-int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName)
+int bk_add_file(Dir* tree, const char* srcPathAndName, 
+                const char* destPathAndName)
 {
     int rc;
     Path* destPath;
@@ -390,17 +399,26 @@ int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName)
     {
         rc = addFile(tree, srcPathAndName, destPath);
         if(rc <= 0)
+        {
+            freePath(destPath);
             return rc;
+        }
     }
     else
     {
         rc = makePathFromString(destPathAndName, destPath);
         if(rc <= 0)
+        {
+            freePath(destPath);
             return rc;
+        }
         
         rc = addFile(tree, srcPathAndName, destPath);
         if(rc <= 0)
+        {
+            freePath(destPath);
             return rc;
+        }
     }
     
     freePath(destPath);
@@ -413,7 +431,7 @@ int bk_add_file(Dir* tree, char* srcPathAndName, char* destPathAndName)
 * checks the contents of a directory (files and dirs) to see whether it
 * has an item named 
 * */
-bool itemIsInDir(char* name, Dir* dir)
+bool itemIsInDir(const char* name, const Dir* dir)
 {
     DirLL* searchDir;
     FileLL* searchFile;
