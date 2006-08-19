@@ -125,6 +125,7 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     if(rc <= 0)
     {
         destDirInTree->directories = oldHead;
+        free(newSrcPathAndName);
         freePath(newDestDir);
         return rc;
     }
@@ -132,7 +133,12 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     /* ADD contents of directory */
     srcDir = opendir(srcPath);
     if(srcDir == NULL)
+    {
+        destDirInTree->directories = oldHead;
+        free(newSrcPathAndName);
+        freePath(newDestDir);
         return BKERROR_OPENDIR_FAILED;
+    }
     
     /* it may be possible but in any case very unlikely that readdir() will fail
     * if it does, it returns NULL (same as end of dir) */
@@ -141,12 +147,25 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
         if( strcmp(dirEnt->d_name, ".") != 0 && strcmp(dirEnt->d_name, "..") != 0 )
         /* not "." or ".." (safely ignore those two) */
         {
+            if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX - 1)
+            {
+                destDirInTree->directories = oldHead;
+                free(newSrcPathAndName);
+                freePath(newDestDir);
+                return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+            }
+                
             /* append file/dir name */
             strcpy(newSrcPathAndName + newSrcPathLen, dirEnt->d_name);
             
             rc = stat(newSrcPathAndName, &anEntry);
             if(rc == -1)
+            {
+                destDirInTree->directories = oldHead;
+                free(newSrcPathAndName);
+                freePath(newDestDir);
                 return BKERROR_STAT_FAILED;
+            }
             
             if(anEntry.st_mode & S_IFDIR)
             /* directory */
@@ -155,20 +174,32 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
                 
                 rc = addDir(tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
+                {
+                    destDirInTree->directories = oldHead;
+                    free(newSrcPathAndName);
+                    freePath(newDestDir);
                     return rc;
+                }
             }
             else if(anEntry.st_mode & S_IFREG)
             /* regular file */
             {
                 rc = addFile(tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
+                {
+                    destDirInTree->directories = oldHead;
+                    free(newSrcPathAndName);
+                    freePath(newDestDir);
                     return rc;
+                }
             }
             else
             /* not regular file or directory */
             {
-                //!! i don't know, maybe ignore and move to the next file
-                return BKERROR_FIXME;
+                destDirInTree->directories = oldHead;
+                free(newSrcPathAndName);
+                freePath(newDestDir);
+                return BKERROR_NO_SPECIAL_FILES;
             }
             
         } /* if */
@@ -178,7 +209,12 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     rc = closedir(srcDir);
     if(rc != 0)
     /* exotic error */
+    {
+        destDirInTree->directories = oldHead;
+        free(newSrcPathAndName);
+        freePath(newDestDir);
         return BKERROR_EXOTIC;
+    }
     /* END ADD contents of directory */
     
     free(newSrcPathAndName);
