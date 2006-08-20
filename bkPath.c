@@ -122,7 +122,7 @@ int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
     pathPath->path.numDirs = 0;
     pathPath->path.dirs = NULL;
     
-    srcFileLen = strlen(srcFile);
+    srcFileLen = strlen(srcFileIn);
     
     srcFile = malloc(srcFileLen + 1);
     if(srcFile == NULL)
@@ -142,6 +142,7 @@ int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
         {
             origFilenameFirstChar = srcFile[fileIndex];
             srcFile[fileIndex] = '\0';
+            
             break;
         }
     }
@@ -212,7 +213,10 @@ int makePathFromString(const char* strPath, Path* pathPath)
     
     if(pathStrLen < 3 || strPath[0] != '/' || strPath[1] == '/' || 
        strPath[pathStrLen - 1] != '/')
+    {
+        printf("misformed 3 %d '%c' '%c' '%c'\n", pathStrLen, strPath[0], strPath[1], strPath[pathStrLen - 1]);
         return BKERROR_MISFORMED_PATH;
+    }
     
     pathPath->numDirs = 0;
     for(count = 0; count < pathStrLen; count++)

@@ -192,10 +192,10 @@ int bk_add_file(Dir* tree, const char* srcPathAndName,
                 const char* destPathAndName);
 int bk_delete_dir(Dir* tree, const char* dirStr);
 int bk_delete_file(Dir* tree, const char* fileStr);
-int bk_extract_dir(int image, Dir* tree, char* srcDir, char* destDir,
-                   bool keepPermissions);
-int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
-                    bool keepPermissions);
+int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
+                   const char* destDir, bool keepPermissions);
+int bk_extract_file(int image, const Dir* tree, const char* srcFile, 
+                    const char* destDir, bool keepPermissions);
 char* bk_get_error_string(int errorId);
 int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
                    time_t creationTime, int filenameTypes, 

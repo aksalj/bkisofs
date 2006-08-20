@@ -6,6 +6,7 @@
 /*******************************************************************************
 * bk_get_dir_from_string()
 * public function
+* recursive
 * gets a pointer to a Dir in tree described by the string pathStr
 * */
 int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr)
@@ -51,7 +52,7 @@ int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr)
             /* each child directory in tree */
             {
                 if( strcmp(dirNode->dir.name, currentDirName) == 0)
-                /* found the right child directory in tree */
+                /* found the right child directory */
                 {
                     if(pathStr[count + 1] == '\0')
                     /* this is the directory i'm looking for */
@@ -66,6 +67,11 @@ int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr)
                         rc = bk_get_dir_from_string(&(dirNode->dir), 
                                                     &(pathStr[count]), 
                                                     dirFoundPtr);
+                        if(rc <= 0)
+                        {
+                            free(currentDirName);
+                            return rc;
+                        }
                         stopLooking = true;
                     }
                         

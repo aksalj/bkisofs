@@ -13,51 +13,63 @@
 const unsigned posixFileDefaults = 33188; /* octal 100644 */
 const unsigned posixDirDefaults = 16877; /* octal 40711 */
 
-int bk_extract_dir(int image, Dir* tree, char* srcDir, char* destDir,
-                   bool keepPermissions)
+int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
+                   const char* destDir, bool keepPermissions)
 {
     int rc;
     Path* srcPath;
-    
-    srcPath = malloc(sizeof(Path));
-    if(srcPath == NULL)
-        return BKERROR_OUT_OF_MEMORY;
     
     if(srcDir[0] == '/' && srcDir[1] == '\0')
     /* root, not allowed */
         return BKERROR_EXTRACT_ROOT;
     
+    srcPath = malloc(sizeof(Path));
+    if(srcPath == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    srcPath->numDirs = 0;
+    srcPath->dirs = NULL;
+    
     rc = makePathFromString(srcDir, srcPath);
     if(rc <= 0)
+    {
+        freePath(srcPath);
         return rc;
+    }
     
     rc = extractDir(image, tree, srcPath, destDir, keepPermissions);
     if(rc <= 0)
+    {
+        freePath(srcPath);
         return rc;
+    }
     
     freePath(srcPath);
     
     return 1;
 }
 
-int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
-                    bool keepPermissions)
+int bk_extract_file(int image, const Dir* tree, const char* srcFile, 
+                    const char* destDir, bool keepPermissions)
 {
     int rc;
     FilePath srcPath;
     
     rc = makeFilePathFromString(srcFile, &srcPath);
     if(rc <= 0)
+    {
+        freePathDirs(&(srcPath.path));
         return rc;
+    }
     
     rc = extractFile(image, tree, &srcPath, destDir, keepPermissions);
     if(rc <= 0)
+    {
+        freePathDirs(&(srcPath.path));
         return rc;
+    }
     
-    int count;
-    for(count = 0; count < srcPath.path.numDirs; count++)
-        free(srcPath.path.dirs[count]);
-    free(srcPath.path.dirs);
+    freePathDirs(&(srcPath.path));
     
     return 1;
 }
@@ -65,14 +77,14 @@ int bk_extract_file(int image, Dir* tree, char* srcFile, char* destDir,
 /*
 * don't try to extract root, don't know what will happen
 */
-int extractDir(int image, Dir* tree, Path* srcDir, char* destDir,
-                                                        bool keepPermissions)
+int extractDir(int image, const Dir* tree, const Path* srcDir, 
+               const char* destDir, bool keepPermissions)
 {
     int rc;
     int count;
     
     /* vars to find file location on image */
-    Dir* srcDirInTree;
+    const Dir* srcDirInTree;
     DirLL* searchDir; /* to find a dir in the tree */
     bool dirFound;
     
@@ -116,6 +128,7 @@ int extractDir(int image, Dir* tree, Path* srcDir, char* destDir,
     newDestDir = malloc(strlen(destDir) + strlen( (srcDir->dirs)[srcDir->numDirs - 1] ) + 2);
     if(newDestDir == NULL)
         return BKERROR_OUT_OF_MEMORY;
+    
     strcpy(newDestDir, destDir);
     strcat(newDestDir, (srcDir->dirs)[srcDir->numDirs - 1]);
     strcat(newDestDir, "/");
@@ -140,14 +153,14 @@ int extractDir(int image, Dir* tree, Path* srcDir, char* destDir,
     /* END CREATE destination dir */
     
     /* BEGIN extract each file in directory */
-    filePath.path = *srcDir; /* filePath is readonly so pointer sharing is ok here */
+    filePath.path = *srcDir; /* filePath.path is readonly so pointer sharing is ok here */
     currentFile = srcDirInTree->files;
     while(currentFile != NULL)
     {
         strcpy(filePath.filename, currentFile->file.name);
         
         rc = extractFile(image, tree, &filePath, newDestDir, keepPermissions);
-        if(rc < 0) /* returns size of file extracted */
+        if(rc <= 0)
         {
             free(newDestDir);
             return rc;
@@ -190,13 +203,12 @@ int extractDir(int image, Dir* tree, Path* srcDir, char* destDir,
 * destDir must have trailing slash
 * read/write loop is waaay to slow when doing 1 byte at a time so changed it to
 *  do 100K at a time instead
-* !! am i overwriting files?
 */
-int extractFile(int image, Dir* tree, FilePath* pathAndName, char* destDir,
-                                                        bool keepPermissions)
+int extractFile(int image, const Dir* tree, const FilePath* pathAndName, 
+                const char* destDir, bool keepPermissions)
 {
     /* vars to find file location on image */
-    Dir* parentDir;
+    const Dir* parentDir;
     DirLL* searchDir;
     bool dirFound;
     FileLL* pointerToIt; /* pointer to the node with file to read */
@@ -254,6 +266,7 @@ int extractFile(int image, Dir* tree, FilePath* pathAndName, char* destDir,
             destPathAndName = malloc(strlen(destDir) + strlen(pathAndName->filename) + 1);
             if(destPathAndName == NULL)
                 return BKERROR_OUT_OF_MEMORY;
+            
             strcpy(destPathAndName, destDir);
             strcat(destPathAndName, pathAndName->filename);
             
@@ -271,7 +284,11 @@ int extractFile(int image, Dir* tree, FilePath* pathAndName, char* destDir,
             
             destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
             if(destFile == -1)
-              return BKERROR_OPEN_WRITE_FAILED;
+            {
+                free(destPathAndName);
+                return BKERROR_OPEN_WRITE_FAILED;
+            }
+            
             free(destPathAndName);
             
             lseek(image, pointerToIt->file.position, SEEK_SET);
@@ -283,22 +300,34 @@ int extractFile(int image, Dir* tree, FilePath* pathAndName, char* destDir,
             {
                 rc = read(image, block, 102400);
                 if(rc != 102400)
-                    return -3;
+                {
+                    close(destFile);
+                    return BKERROR_READ_GENERIC;
+                }
                 rc = write(destFile, block, 102400);
                 if(rc != 102400)
-                    return -4;
+                {
+                    close(destFile);
+                    return BKERROR_WRITE_GENERIC;
+                }
             }
             
             rc = read(image, block, sizeLastBlock);
             if(rc != sizeLastBlock)
-                    return BKERROR_READ_GENERIC;
+            {
+                close(destFile);
+                return BKERROR_READ_GENERIC;
+            }
             rc = write(destFile, block, sizeLastBlock);
             if(rc != sizeLastBlock)
-                    return BKERROR_WRITE_GENERIC;
+            {
+                close(destFile);
+                return BKERROR_WRITE_GENERIC;
+            }
             
             close(destFile);
             if(destFile == -1)
-              return BKERROR_EXOTIC;
+                return BKERROR_EXOTIC;
             /* END WRITE file */
         }
         else
@@ -309,5 +338,5 @@ int extractFile(int image, Dir* tree, FilePath* pathAndName, char* destDir,
     if(!fileFound)
         return BKERROR_FILE_NOT_FOUND_ON_IMAGE;
     
-    return pointerToIt->file.size;
+    return 1;
 }
