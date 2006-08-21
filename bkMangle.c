@@ -56,7 +56,7 @@ unsigned hashString(const char *str, unsigned int length)
 }
 
 /* filenametypes is all types required in the end */
-int mangleDir(Dir* origDir, DirToWrite* newDir, int filenameTypes)
+int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
 {
     int rc;
     bool haveCollisions;
@@ -82,11 +82,15 @@ int mangleDir(Dir* origDir, DirToWrite* newDir, int filenameTypes)
     {
         *currentNewDir = malloc(sizeof(DirToWriteLL));
         if(*currentNewDir == NULL)
+        {
+            newDir->files = NULL;
             return BKERROR_OUT_OF_MEMORY;
+        }
         
         bzero(*currentNewDir, sizeof(DirToWriteLL));
         
-        mangleNameFor9660(currentOrigDir->dir.name, (*currentNewDir)->dir.name9660, true);
+        mangleNameFor9660(currentOrigDir->dir.name, 
+                          (*currentNewDir)->dir.name9660, true);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
             strcpy((*currentNewDir)->dir.nameRock, currentOrigDir->dir.name);
@@ -100,9 +104,15 @@ int mangleDir(Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         (*currentNewDir)->dir.posixFileMode = currentOrigDir->dir.posixFileMode;
         
-        rc = mangleDir(&(currentOrigDir->dir), &((*currentNewDir)->dir), filenameTypes);
+        rc = mangleDir(&(currentOrigDir->dir), &((*currentNewDir)->dir), 
+                       filenameTypes);
         if(rc < 0)
+        {
+            newDir->files = NULL;
+            free(*currentNewDir);
+            *currentNewDir = NULL;
             return rc;
+        }
         
         currentOrigDir = currentOrigDir->next;
         
@@ -144,7 +154,11 @@ int mangleDir(Dir* origDir, DirToWrite* newDir, int filenameTypes)
         {
             (*currentNewFile)->file.pathAndName = malloc(strlen(currentOrigFile->file.pathAndName) + 1);
             if( (*currentNewFile)->file.pathAndName == NULL )
+            {
+                free(*currentNewFile);
+                *currentNewFile = NULL;
                 return BKERROR_OUT_OF_MEMORY;
+            }
             
             strcpy((*currentNewFile)->file.pathAndName, currentOrigFile->file.pathAndName);
         }

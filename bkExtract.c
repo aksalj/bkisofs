@@ -14,7 +14,8 @@ const unsigned posixFileDefaults = 33188; /* octal 100644 */
 const unsigned posixDirDefaults = 16877; /* octal 40711 */
 
 int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
-                   const char* destDir, bool keepPermissions)
+                   const char* destDir, bool keepPermissions,
+                   void(*progressFunction)(void))
 {
     int rc;
     Path* srcPath;
@@ -37,7 +38,7 @@ int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
         return rc;
     }
     
-    rc = extractDir(image, tree, srcPath, destDir, keepPermissions);
+    rc = extractDir(image, tree, srcPath, destDir, keepPermissions, progressFunction);
     if(rc <= 0)
     {
         freePath(srcPath);
@@ -50,7 +51,8 @@ int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
 }
 
 int bk_extract_file(int image, const Dir* tree, const char* srcFile, 
-                    const char* destDir, bool keepPermissions)
+                    const char* destDir, bool keepPermissions, 
+                    void(*progressFunction)(void))
 {
     int rc;
     FilePath srcPath;
@@ -62,7 +64,7 @@ int bk_extract_file(int image, const Dir* tree, const char* srcFile,
         return rc;
     }
     
-    rc = extractFile(image, tree, &srcPath, destDir, keepPermissions);
+    rc = extractFile(image, tree, &srcPath, destDir, keepPermissions, progressFunction);
     if(rc <= 0)
     {
         freePathDirs(&(srcPath.path));
@@ -78,7 +80,8 @@ int bk_extract_file(int image, const Dir* tree, const char* srcFile,
 * don't try to extract root, don't know what will happen
 */
 int extractDir(int image, const Dir* tree, const Path* srcDir, 
-               const char* destDir, bool keepPermissions)
+               const char* destDir, bool keepPermissions, 
+               void(*progressFunction)(void))
 {
     int rc;
     int count;
@@ -159,7 +162,8 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
     {
         strcpy(filePath.filename, currentFile->file.name);
         
-        rc = extractFile(image, tree, &filePath, newDestDir, keepPermissions);
+        rc = extractFile(image, tree, &filePath, newDestDir, keepPermissions, 
+                         progressFunction);
         if(rc <= 0)
         {
             free(newDestDir);
@@ -181,7 +185,8 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
             return rc;
         }
         
-        rc = extractDir(image, tree, newSrcDir, newDestDir, keepPermissions);
+        rc = extractDir(image, tree, newSrcDir, newDestDir, keepPermissions, 
+                        progressFunction);
         if(rc <= 0)
         {
             free(newDestDir);
@@ -205,7 +210,8 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
 *  do 100K at a time instead
 */
 int extractFile(int image, const Dir* tree, const FilePath* pathAndName, 
-                const char* destDir, bool keepPermissions)
+                const char* destDir, bool keepPermissions, 
+                void(*progressFunction)(void))
 {
     /* vars to find file location on image */
     const Dir* parentDir;
@@ -248,6 +254,9 @@ int extractFile(int image, const Dir* tree, const FilePath* pathAndName,
     }
     
     /* now i have parentDir pointing to the parent directory */
+    
+    if(progressFunction != NULL)
+        progressFunction();
     
     pointerToIt = parentDir->files;
     fileFound = false;

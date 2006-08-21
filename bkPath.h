@@ -1,6 +1,7 @@
 #ifndef bkPath_h
 #define bkPath_h
 
+void freeDirToWriteContents(DirToWrite* dir);
 void freePath(Path* path);
 void freePathDirs(Path* path);
 int getFilenameFromPath(const char* srcPathAndName, char* filename);

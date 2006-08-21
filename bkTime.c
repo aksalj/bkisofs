@@ -41,7 +41,7 @@ void epochToShortString(time_t epoch, char* shortString)
 }
 
 /* 8.4.26.1 -> epoch time */
-void longStringToEpoch(char* longString, time_t* epoch)
+void longStringToEpoch(const char* longString, time_t* epoch)
 {
     char str[5];
     int number;

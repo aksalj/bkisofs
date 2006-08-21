@@ -441,14 +441,18 @@ int readDir(int image, Dir* dir, int filenameType, bool readPosix)
             /* go to sys use fields */
             lseek(image, 33, SEEK_CUR);
             
-            readPosixInfo(image, &(dir->posixFileMode), realRootRecordLen - 34);
+            rc = readPosixInfo(image, &(dir->posixFileMode), realRootRecordLen - 34);
+            if(rc <= 0)
+                return rc;
             
             /* return */
             lseek(image, origPos, SEEK_SET);
         }
         else
         {
-            readPosixInfo(image, &(dir->posixFileMode), lenSU);
+            rc = readPosixInfo(image, &(dir->posixFileMode), lenSU);
+            if(rc <= 0)
+                return rc;
         }
     }
     else
@@ -715,6 +719,9 @@ int readPosixInfo(int image, unsigned* posixFileMode, int lenSU)
             count += suFields[count + 2];
         }
     }
+    
+    if(!foundPosix)
+        return BKERROR_NO_POSIX_PRESENT;
     
     return 1;
 }

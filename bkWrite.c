@@ -11,6 +11,7 @@
 #include "bkMangle.h"
 #include "bkError.h"
 #include "bkSort.h"
+#include "bkPath.h"
 
 int copyByteBlock(int src, int dest, unsigned numBytes)
 {
@@ -43,7 +44,7 @@ int copyByteBlock(int src, int dest, unsigned numBytes)
     return 1;
 }
 
-int countDirsOnLevel(DirToWrite* dir, int targetLevel, int thisLevel)
+int countDirsOnLevel(const DirToWrite* dir, int targetLevel, int thisLevel)
 {
     DirToWriteLL* nextDir;
     int sum;
@@ -68,7 +69,7 @@ int countDirsOnLevel(DirToWrite* dir, int targetLevel, int thisLevel)
     }
 }
 
-int countTreeHeight(DirToWrite* dir, int heightSoFar)
+int countTreeHeight(const DirToWrite* dir, int heightSoFar)
 {
     DirToWriteLL* nextDir;
     int maxHeight;
@@ -96,39 +97,6 @@ int countTreeHeight(DirToWrite* dir, int heightSoFar)
     }
 }
 
-void freeDirToWriteContents(DirToWrite* dir)
-{
-    DirToWriteLL* currentDir;
-    DirToWriteLL* nextDir;
-    FileToWriteLL* currentFile;
-    FileToWriteLL* nextFile;
-    
-    currentDir = dir->directories;
-    while(currentDir != NULL)
-    {
-        freeDirToWriteContents(&(currentDir->dir));
-        
-        nextDir = currentDir->next;
-        
-        free(currentDir);
-        
-        currentDir = nextDir;
-    }
-    
-    currentFile = dir->files;
-    while(currentFile != NULL)
-    {
-        nextFile = currentFile->next;
-        
-        if(!currentFile->file.onImage)
-            free(currentFile->file.pathAndName);
-        
-        free(currentFile);
-        
-        currentFile = nextFile;
-    }
-}
-
 int writeByteBlock(int image, unsigned char byteToWrite, int numBytes)
 {
     int rc;
@@ -145,9 +113,9 @@ int writeByteBlock(int image, unsigned char byteToWrite, int numBytes)
 }
 
 /* returns data length of the dir written */
-int writeDir(int image, DirToWrite* dir, int parentLbNum, int parentNumBytes, 
-             int parentPosix, time_t recordingTime, int filenameTypes,
-             bool isRoot)
+int writeDir(int image, DirToWrite* dir, int parentLbNum, 
+             int parentNumBytes, int parentPosix, time_t recordingTime, 
+             int filenameTypes, bool isRoot)
 {
     int rc;
     
@@ -743,8 +711,8 @@ int writeFileContents(int oldImage, int newImage, DirToWrite* dir,
     return 1;
 }
 
-int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
-                   time_t creationTime, int filenameTypes, 
+int bk_write_image(int oldImage, int newImage, const VolInfo* volInfo, 
+                   const Dir* oldTree, time_t creationTime, int filenameTypes, 
                    void(*progressFunction)(void))
 {
     int rc;
@@ -771,7 +739,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
     /* create tree to write */
     rc = mangleDir(oldTree, &newTree, filenameTypes);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     
     if(progressFunction != NULL)
         progressFunction();
@@ -780,7 +751,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
     /* system area, always zeroes */
     rc = writeByteBlock(newImage, 0, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     
     /* skip pvd (1 block), write it after files */
     lseek(newImage, NBYTES_LOGICAL_BLOCK, SEEK_CUR);
@@ -795,11 +769,13 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
     printf("writing terminator at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
     rc = writeVdsetTerminator(newImage);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     
     printf("sorting 9660\n");
     sortDir(&newTree, FNTYPE_9660);
-    //showNewDir(&newTree, 0);
     
     pRealRootDrOffset = lseek(newImage, 0, SEEK_CUR);
     
@@ -811,7 +787,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
     rc = writeDir(newImage, &newTree, 0, 0, 0, creationTime, 
                   filenameTypes & (FNTYPE_9660 | FNTYPE_ROCKRIDGE), true);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     
     pRootDirSize = rc;
     
@@ -820,7 +799,6 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
     {
         printf("sorting joliet\n");
         sortDir(&newTree, FNTYPE_JOLIET);
-        //showNewDir(&newTree, 0);
         
         printf("writing supplementary directory tree at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
         sRealRootDrOffset = lseek(newImage, 0, SEEK_CUR);
@@ -831,7 +809,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
         rc = writeDir(newImage, &newTree, 0, 0, 0, creationTime, 
                       FNTYPE_JOLIET, true);
         if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
             return rc;
+        }
         
         sRootDirSize = rc;
     }
@@ -844,13 +825,19 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
     lPathTable9660Loc = lseek(newImage, 0, SEEK_CUR);
     rc = writePathTable(newImage, &newTree, true, FNTYPE_9660);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     pathTable9660Size = rc;
     
     mPathTable9660Loc = lseek(newImage, 0, SEEK_CUR);
     rc = writePathTable(newImage, &newTree, false, FNTYPE_9660);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     
     if(filenameTypes & FNTYPE_JOLIET)
     {
@@ -858,13 +845,19 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
         lPathTableJolietLoc = lseek(newImage, 0, SEEK_CUR);
         rc = writePathTable(newImage, &newTree, true, FNTYPE_JOLIET);
         if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
             return rc;
+        }
         pathTableJolietSize = rc;
         
         mPathTableJolietLoc = lseek(newImage, 0, SEEK_CUR);
         rc = writePathTable(newImage, &newTree, false, FNTYPE_JOLIET);
         if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
             return rc;
+        }
     }
     
     if(progressFunction != NULL)
@@ -874,7 +867,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
     /* all files and offsets/sizes */
     rc = writeFileContents(oldImage, newImage, &newTree, filenameTypes, progressFunction);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     
     lseek(newImage, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA, SEEK_SET);
     
@@ -886,7 +882,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
                             pRootDirSize, lPathTable9660Loc, mPathTable9660Loc, 
                             pathTable9660Size, creationTime, true);
     if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
         return rc;
+    }
     
     if(filenameTypes & FNTYPE_JOLIET)
     {
@@ -898,7 +897,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
                                 sRootDirSize, lPathTableJolietLoc, mPathTableJolietLoc, 
                                 pathTableJolietSize, creationTime, false);
         if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
             return rc;
+        }
     }
     
     freeDirToWriteContents(&newTree);
@@ -907,7 +909,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, Dir* oldTree,
 }
 
 /* field size must be even */
-int writeJolietStringField(int image, char* name, int fieldSize)
+int writeJolietStringField(int image, const char* name, int fieldSize)
 {
     char jolietName[NCHARS_FILE_ID_MAX * 2];
     int srcCount;
@@ -944,7 +946,7 @@ int writeJolietStringField(int image, char* name, int fieldSize)
 }
 
 /* returns path table size (number of bytes not counting the blank) */
-int writePathTable(int image, DirToWrite* tree, bool isTypeL, int filenameType)
+int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filenameType)
 {
     int treeHeight;
     int count;
@@ -988,7 +990,10 @@ int writePathTable(int image, DirToWrite* tree, bool isTypeL, int filenameType)
         rc = writePathTableRecordsOnLevel(image, tree, isTypeL, filenameType, 
                                           level, 1, &numDirsSoFar);
         if(rc < 0)
+        {
+            free(dirsPerLevel);
             return rc;
+        }
     }
     
     numBytesWritten = lseek(image, 0, SEEK_CUR) - origPos;
@@ -996,14 +1001,17 @@ int writePathTable(int image, DirToWrite* tree, bool isTypeL, int filenameType)
     /* blank to conclude extent */
     rc = writeByteBlock(image, 0x00, NBYTES_LOGICAL_BLOCK - numBytesWritten);
     if(rc < 0)
+    {
+        free(dirsPerLevel);
         return rc;
+    }
     
     free(dirsPerLevel);
-
+    
     return numBytesWritten;
 }
 
-int writePathTableRecordsOnLevel(int image, DirToWrite* dir, bool isTypeL, 
+int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL, 
                                  int filenameType, int targetLevel, int thisLevel,
                                  int* parentDirNum)
 {
@@ -1322,7 +1330,7 @@ int writeVdsetTerminator(int image)
 * -rootdr location, size are in bytes
 * -note strings are not terminated on image
 */
-int writeVolDescriptor(int image, VolInfo* volInfo, off_t rootDrLocation,
+int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
                        unsigned rootDrSize, off_t lPathTableLoc, 
                        off_t mPathTableLoc, unsigned pathTableSize, 
                        time_t creationTime, bool isPrimary)

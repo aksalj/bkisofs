@@ -1,7 +1,6 @@
-add const to function parameters
-check if free() needed before any error return
 statusbar messages
-
+when adding/deleting/extracting fails, go to the next item in the directory
+delete files that failed to extract completely
 
 count size
 boot record

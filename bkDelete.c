@@ -63,16 +63,8 @@ int bk_delete_file(Dir* tree, const char* fileStr)
     return 1;
 }
 
-int deleteDir(Dir* tree, const Path* srcDir)
+void bk_delete_dir_contents(Dir* dir)
 {
-    int count;
-    int rc;
-    
-    /* vars to find the dir in the tree */
-    Dir* srcDirInTree;
-    DirLL* searchDir;
-    bool dirFound;
-    
     /* vars to delete files */
     FileLL* currentFile;
     FileLL* nextFile;
@@ -80,7 +72,45 @@ int deleteDir(Dir* tree, const Path* srcDir)
     /* vars to delete subdirectories */
     DirLL* currentDir;
     DirLL* nextDir;
-    Path* newSrcDir;
+    
+    /* DELETE all files */
+    currentFile = dir->files;
+    while(currentFile != NULL)
+    {
+        nextFile = currentFile->next;
+        
+        if(!currentFile->file.onImage)
+            free(currentFile->file.pathAndName);
+        
+        free(currentFile);
+        
+        currentFile = nextFile;
+    }
+    /* END DELETE all files */
+    
+    /* DELETE all directories */
+    currentDir = dir->directories;
+    while(currentDir != NULL)
+    {
+        nextDir = currentDir->next;
+        
+        bk_delete_dir_contents(&(currentDir->dir));
+        
+        free(currentDir);
+        
+        currentDir = nextDir;
+    }
+    /* END DELETE all directories */
+}
+
+int deleteDir(Dir* tree, const Path* dirToDelete)
+{
+    int count;
+    
+    /* vars to find the dir in the tree */
+    Dir* srcDirInTree;
+    DirLL* searchDir;
+    bool dirFound;
     
     /* vars to delete the directory */
     Dir* parentDirInTree;
@@ -90,7 +120,7 @@ int deleteDir(Dir* tree, const Path* srcDir)
     
     /* FIND dir to know what the contents are */
     srcDirInTree = tree;
-    for(count = 0; count < srcDir->numDirs; count++)
+    for(count = 0; count < dirToDelete->numDirs; count++)
     /* each directory in the path */
     {
         searchDir = srcDirInTree->directories;
@@ -98,7 +128,7 @@ int deleteDir(Dir* tree, const Path* srcDir)
         while(searchDir != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, srcDir->dirs[count]) == 0)
+            if(strcmp(searchDir->dir.name, dirToDelete->dirs[count]) == 0)
             {
                 dirFound = true;
                 srcDirInTree = &(searchDir->dir);
@@ -111,53 +141,11 @@ int deleteDir(Dir* tree, const Path* srcDir)
     }
     /* END FIND dir to know what the contents are */
     
-    /* DELETE all files */
-    currentFile = srcDirInTree->files;
-    while(currentFile != NULL)
-    {
-        nextFile = currentFile->next;
-        
-        if(!currentFile->file.onImage)
-            free(currentFile->file.pathAndName);
-        
-        free(currentFile);
-        
-        currentFile = nextFile;
-    }
-    /* in case deleting directories below fails */
-    srcDirInTree->files = NULL;
-    /* END DELETE all files */
-    
-    /* DELETE all directories */
-    currentDir = srcDirInTree->directories;
-    while(currentDir != NULL)
-    {
-        nextDir = currentDir->next;
-        
-        rc = makeLongerPath(srcDir, currentDir->dir.name, &newSrcDir);
-        if(rc <= 0)
-        {
-            srcDirInTree->directories = currentDir;
-            return rc;
-        }
-        
-        rc = deleteDir(tree, newSrcDir);
-        if(rc <= 0)
-        {
-            srcDirInTree->directories = currentDir;
-            freePath(newSrcDir);
-            return rc;
-        }
-        
-        freePath(newSrcDir);
-        
-        currentDir = nextDir;
-    }
-    /* END DELETE all directories */
+    bk_delete_dir_contents(srcDirInTree);
     
     /* GET A pointer to the parent dir */
     parentDirInTree = tree;
-    for(count = 0; count < srcDir->numDirs - 1; count++)
+    for(count = 0; count < dirToDelete->numDirs - 1; count++)
     /* each directory in the path except the last one */
     {
         searchDir = parentDirInTree->directories;
@@ -165,7 +153,7 @@ int deleteDir(Dir* tree, const Path* srcDir)
         while(searchDir != NULL && !parentDirFound)
         /* find the directory, last one found will be the parent */
         {
-            if(strcmp(searchDir->dir.name, srcDir->dirs[count]) == 0)
+            if(strcmp(searchDir->dir.name, dirToDelete->dirs[count]) == 0)
             {
                 parentDirFound = true;
                 parentDirInTree = &(searchDir->dir);
@@ -183,7 +171,8 @@ int deleteDir(Dir* tree, const Path* srcDir)
     dirFound = false;
     while(*parentDirLL != NULL && !dirFound)
     {
-        if(strcmp( (*parentDirLL)->dir.name, srcDir->dirs[srcDir->numDirs - 1] ) == 0 )
+        if(strcmp( (*parentDirLL)->dir.name, 
+                   dirToDelete->dirs[dirToDelete->numDirs - 1] ) == 0 )
         {
             parentDirNextLL = (*parentDirLL)->next;
             

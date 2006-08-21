@@ -65,6 +65,8 @@
 #define BKERROR_DUPLICATE_EXTRACT_TEXT           "Cannot extract item because another item with the same name already exists in this directory"
 #define BKERROR_NO_SPECIAL_FILES                 -1027
 #define BKERROR_NO_SPECIAL_FILES_TEXT            "Special files (symbolic links and such) are not yet supported"
+#define BKERROR_NO_POSIX_PRESENT                 -1028
+#define BKERROR_NO_POSIX_PRESENT_TEXT            "No posix extentions found"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000

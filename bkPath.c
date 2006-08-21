@@ -6,6 +6,38 @@
 #include "bkError.h"
 #include "bkPath.h"
 
+void freeDirToWriteContents(DirToWrite* dir)
+{
+    DirToWriteLL* currentDir;
+    DirToWriteLL* nextDir;
+    FileToWriteLL* currentFile;
+    FileToWriteLL* nextFile;
+    
+    currentDir = dir->directories;
+    while(currentDir != NULL)
+    {
+        nextDir = currentDir->next;
+        
+        freeDirToWriteContents(&(currentDir->dir));
+        free(currentDir);
+        
+        currentDir = nextDir;
+    }
+    
+    currentFile = dir->files;
+    while(currentFile != NULL)
+    {
+        nextFile = currentFile->next;
+        
+        if(!currentFile->file.onImage)
+            free(currentFile->file.pathAndName);
+        
+        free(currentFile);
+        
+        currentFile = nextFile;
+    }
+}
+
 void freePath(Path* path)
 {
     freePathDirs(path);
@@ -213,10 +245,7 @@ int makePathFromString(const char* strPath, Path* pathPath)
     
     if(pathStrLen < 3 || strPath[0] != '/' || strPath[1] == '/' || 
        strPath[pathStrLen - 1] != '/')
-    {
-        printf("misformed 3 %d '%c' '%c' '%c'\n", pathStrLen, strPath[0], strPath[1], strPath[pathStrLen - 1]);
         return BKERROR_MISFORMED_PATH;
-    }
     
     pathPath->numDirs = 0;
     for(count = 0; count < pathStrLen; count++)
