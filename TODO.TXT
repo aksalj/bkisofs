@@ -1,6 +1,8 @@
 statusbar messages
 when adding/deleting/extracting fails, go to the next item in the directory
 delete files that failed to extract completely
+make new image
+
 
 count size
 boot record

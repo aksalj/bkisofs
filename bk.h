@@ -193,6 +193,7 @@ int bk_add_file(Dir* tree, const char* srcPathAndName,
 int bk_delete_dir(Dir* tree, const char* dirStr);
 void bk_delete_dir_contents(Dir* dir);
 int bk_delete_file(Dir* tree, const char* fileStr);
+unsigned bk_estimate_iso_size(Dir* tree, int filenameTypes);
 int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
                    const char* destDir, bool keepPermissions,
                    void(*progressFunction)(void));

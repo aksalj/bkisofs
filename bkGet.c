@@ -3,6 +3,57 @@
 #include "bk.h"
 #include "bkError.h"
 
+
+/*******************************************************************************
+* bk_estimate_iso_size()
+* Public function
+* Recursive
+* Estimates the size of the directory trees + file contents on the iso
+* */
+unsigned bk_estimate_iso_size(Dir* tree, int filenameTypes)
+{
+    unsigned estimateDrSize;
+    unsigned thisDirSize;
+    int numItems; /* files and directories */
+    DirLL* nextDir;
+    FileLL* nextFile;
+    
+    thisDirSize = 0;
+    numItems = 0;
+    
+    nextFile = tree->files;
+    while(nextFile != NULL)
+    {
+        thisDirSize += nextFile->file.size;
+        thisDirSize += nextFile->file.size % NBYTES_LOGICAL_BLOCK;
+        
+        numItems++;
+        
+        nextFile = nextFile->next;
+    }
+    
+    nextDir = tree->directories;
+    while(nextDir != NULL)
+    {
+        numItems++;
+        
+        thisDirSize += bk_estimate_iso_size(&(nextDir->dir), filenameTypes);
+        
+        nextDir = nextDir->next;
+    }
+    
+    estimateDrSize = 70;
+    if(filenameTypes & FNTYPE_JOLIET)
+        estimateDrSize += 70;
+    if(filenameTypes & FNTYPE_ROCKRIDGE)
+        estimateDrSize += 70;
+    
+    thisDirSize += 68 + (estimateDrSize * numItems);
+    thisDirSize += NBYTES_LOGICAL_BLOCK - (68 + (estimateDrSize * numItems)) % NBYTES_LOGICAL_BLOCK;
+    
+    return thisDirSize;
+}
+
 /*******************************************************************************
 * bk_get_dir_from_string()
 * public function
