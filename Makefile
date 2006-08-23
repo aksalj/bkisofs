@@ -31,4 +31,4 @@ bkGet.o: bkGet.c
 	cc bkGet.c -Wall -c -g
 
 clean: 
-	rm -f *.o *.a
+	rm -f *.o bk.a
