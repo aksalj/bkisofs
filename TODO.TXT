@@ -1,9 +1,9 @@
-statusbar messages
+make new image
 when adding/deleting/extracting fails, go to the next item in the directory
 delete files that failed to extract completely
-make new image
+statusbar messages
 
 
-count size
 boot record
+improve size estimating
 rock ridge special files
