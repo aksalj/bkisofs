@@ -55,7 +55,7 @@ void freePathDirs(Path* path)
         * the first unallocated item is null */
         if(path->dirs[count] == NULL)
             break;
-
+        
         free(path->dirs[count]);
     }
     
@@ -195,6 +195,7 @@ int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
     }
     
     srcFile[fileIndex] = origFilenameFirstChar;
+    
     strcpy(pathPath->filename, &(srcFile[fileIndex]));
     
     return 1;
@@ -283,7 +284,7 @@ int makePathFromString(const char* strPath, Path* pathPath)
                     return BKERROR_MISFORMED_PATH;
                 }
                 
-                pathPath->dirs[numDirsDone] = (char*)malloc(nextDirLen);
+                pathPath->dirs[numDirsDone] = (char*)malloc(nextDirLen + 1);
                 if(pathPath->dirs[numDirsDone] == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
@@ -292,6 +293,7 @@ int makePathFromString(const char* strPath, Path* pathPath)
                 
                 numDirsDone++;
                 nextDirLen = 0;
+                
                 nextDir = &(strPath[count + 1]);
             }
         }
