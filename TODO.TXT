@@ -7,3 +7,4 @@ statusbar messages
 boot record
 improve size estimating
 rock ridge special files
+make defaults settable (use volinfo)
