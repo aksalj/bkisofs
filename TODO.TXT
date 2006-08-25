@@ -2,7 +2,7 @@ make new image
 when adding/deleting/extracting fails, go to the next item in the directory
 delete files that failed to extract completely
 statusbar messages
-
+extracting english/win2003.../drvfa... from winxp sp1 ddk causes crash
 
 boot record
 improve size estimating
