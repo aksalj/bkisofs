@@ -334,11 +334,66 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
 }
 
 /*******************************************************************************
+* bk_add_boot_record()
+* Source boot file must be exactly the right size if floppy emulation requested.
+* */
+int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName, 
+                       int bootMediaType)
+{
+    struct stat statStruct;
+    int rc;
+    
+    if(bootMediaType != BOOT_MEDIA_NO_EMULATION &&
+       bootMediaType != BOOT_MEDIA_1_2_FLOPPY &&
+       bootMediaType != BOOT_MEDIA_1_44_FLOPPY &&
+       bootMediaType != BOOT_MEDIA_2_88_FLOPPY)
+    {
+        return BKERROR_ADD_UNKNOWN_BOOT_MEDIA;
+    }
+    
+    rc = stat(srcPathAndName, &statStruct);
+    if(rc == -1)
+        return BKERROR_STAT_FAILED;
+    
+    if( (bootMediaType == BOOT_MEDIA_1_2_FLOPPY &&
+         statStruct.st_size != 1228800) ||
+        (bootMediaType == BOOT_MEDIA_1_44_FLOPPY &&
+         statStruct.st_size != 1474560) ||
+        (bootMediaType == BOOT_MEDIA_2_88_FLOPPY &&
+         statStruct.st_size != 2949120) )
+    {
+        return BKERROR_ADD_BOOT_RECORD_WRONG_SIZE;
+    }
+    
+    volInfo->bootMediaType = bootMediaType;
+    
+    volInfo->bootRecordSize = statStruct.st_size;
+    
+    volInfo->bootRecordIsOnImage = false;
+    
+    /* make copy of the source path and name */
+    if(volInfo->bootRecordPathAndName != NULL)
+        free(volInfo->bootRecordPathAndName);
+    volInfo->bootRecordPathAndName = malloc(strlen(srcPathAndName) + 1);
+    if(volInfo->bootRecordPathAndName == NULL)
+    {
+        volInfo->bootMediaType = BOOT_MEDIA_NONE;
+        return BKERROR_OUT_OF_MEMORY;
+    }
+    strcpy(volInfo->bootRecordPathAndName, srcPathAndName);
+    
+    /* this is the wrong function to use if you want a visible one */
+    volInfo->bootRecordIsVisible = false;
+    
+    return 1;
+}
+
+/*******************************************************************************
 * bk_add_dir()
 * public interface for addDir()
 * */
-int bk_add_dir(Dir* tree, const char* srcPathAndName, 
-               const char* destPathAndName)
+int bk_add_dir(VolInfo* volInfo, const char* srcPathAndName, 
+               const char* destPathStr)
 {
     int rc;
     Path* destPath;
@@ -350,10 +405,10 @@ int bk_add_dir(Dir* tree, const char* srcPathAndName,
     destPath->numDirs = 0;
     destPath->dirs = NULL;
     
-    if(destPathAndName[0] == '/' && destPathAndName[1] == '\0')
+    if(destPathStr[0] == '/' && destPathStr[1] == '\0')
     /* root, special case */
     {
-        rc = addDir(tree, srcPathAndName, destPath);
+        rc = addDir(&(volInfo->dirTree), srcPathAndName, destPath);
         if(rc <= 0)
         {
             freePath(destPath);
@@ -363,14 +418,14 @@ int bk_add_dir(Dir* tree, const char* srcPathAndName,
     else
     /* not root */
     {
-        rc = makePathFromString(destPathAndName, destPath);
+        rc = makePathFromString(destPathStr, destPath);
         if(rc <= 0)
         {
             freePath(destPath);
             return rc;
         }
         
-        rc = addDir(tree, srcPathAndName, destPath);
+        rc = addDir(&(volInfo->dirTree), srcPathAndName, destPath);
         if(rc <= 0)
         {
             freePath(destPath);
@@ -387,8 +442,8 @@ int bk_add_dir(Dir* tree, const char* srcPathAndName,
 * bk_add_file()
 * public interface for addFile()
 * */
-int bk_add_file(Dir* tree, const char* srcPathAndName, 
-                const char* destPathAndName)
+int bk_add_file(VolInfo* volInfo, const char* srcPathAndName, 
+                const char* destPathStr)
 {
     int rc;
     Path* destPath;
@@ -400,10 +455,10 @@ int bk_add_file(Dir* tree, const char* srcPathAndName,
     destPath->numDirs = 0;
     destPath->dirs = NULL;
     
-    if(destPathAndName[0] == '/' && destPathAndName[1] == '\0')
+    if(destPathStr[0] == '/' && destPathStr[1] == '\0')
     /* root, special case */
     {
-        rc = addFile(tree, srcPathAndName, destPath);
+        rc = addFile(&(volInfo->dirTree), srcPathAndName, destPath);
         if(rc <= 0)
         {
             freePath(destPath);
@@ -412,14 +467,14 @@ int bk_add_file(Dir* tree, const char* srcPathAndName,
     }
     else
     {
-        rc = makePathFromString(destPathAndName, destPath);
+        rc = makePathFromString(destPathStr, destPath);
         if(rc <= 0)
         {
             freePath(destPath);
             return rc;
         }
         
-        rc = addFile(tree, srcPathAndName, destPath);
+        rc = addFile(&(volInfo->dirTree), srcPathAndName, destPath);
         if(rc <= 0)
         {
             freePath(destPath);

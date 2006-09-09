@@ -8,15 +8,36 @@
 
 #include "bk.h"
 #include "bkError.h"
-
+#include "bkGet.h"
 
 /*******************************************************************************
 * bk_estimate_iso_size()
 * Public function
-* Recursive
 * Estimates the size of the directory trees + file contents on the iso
 * */
-unsigned bk_estimate_iso_size(Dir* tree, int filenameTypes)
+unsigned bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
+{
+    //!! add path tables, boot record
+    return estimateIsoSize(&(volInfo->dirTree), filenameTypes);
+}
+
+/*******************************************************************************
+* bk_get_dir_from_string()
+* public function
+* gets a pointer to a Dir in tree described by the string pathStr
+* */
+int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr, 
+                           Dir** dirFoundPtr)
+{
+    return getDirFromString(&(volInfo->dirTree), pathStr, dirFoundPtr);
+}
+
+/*******************************************************************************
+* estimateIsoSize()
+* Recursive
+* Estimate the size of the directory trees + file contents on the iso
+* */
+unsigned estimateIsoSize(const Dir* tree, int filenameTypes)
 {
     unsigned estimateDrSize;
     unsigned thisDirSize;
@@ -43,7 +64,7 @@ unsigned bk_estimate_iso_size(Dir* tree, int filenameTypes)
     {
         numItems++;
         
-        thisDirSize += bk_estimate_iso_size(&(nextDir->dir), filenameTypes);
+        thisDirSize += estimateIsoSize(&(nextDir->dir), filenameTypes);
         
         nextDir = nextDir->next;
     }
@@ -62,11 +83,10 @@ unsigned bk_estimate_iso_size(Dir* tree, int filenameTypes)
 
 /*******************************************************************************
 * bk_get_dir_from_string()
-* public function
 * recursive
 * gets a pointer to a Dir in tree described by the string pathStr
 * */
-int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr)
+int getDirFromString(const Dir* tree, const char* pathStr, Dir** dirFoundPtr)
 {
     int count;
     int pathStrLen;
@@ -81,7 +101,8 @@ int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr)
     if(pathStrLen == 1 && pathStr[0] == '/')
     /* root, special case */
     {
-        *dirFoundPtr = tree;
+        /* cast to prevent compiler const warning */
+        *dirFoundPtr = (Dir*)tree;
         return 1;
     }
     
@@ -121,9 +142,8 @@ int bk_get_dir_from_string(Dir* tree, char* pathStr, Dir** dirFoundPtr)
                     else
                     /* intermediate directory, go further down the tree */
                     {
-                        rc = bk_get_dir_from_string(&(dirNode->dir), 
-                                                    &(pathStr[count]), 
-                                                    dirFoundPtr);
+                        rc = getDirFromString(&(dirNode->dir), 
+                                              &(pathStr[count]), dirFoundPtr);
                         if(rc <= 0)
                         {
                             free(currentDirName);

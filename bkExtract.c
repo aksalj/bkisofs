@@ -10,16 +10,109 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdio.h>
 
 #include "bk.h"
 #include "bkExtract.h"
 #include "bkPath.h"
 #include "bkError.h"
+#include "bkWrite.h"
 
 const unsigned posixFileDefaults = 33188; /* octal 100644 */
 const unsigned posixDirDefaults = 16877; /* octal 40711 */
 
-int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
+/*******************************************************************************
+* bk_extract_boot_record()
+* Extracts the el torito boot record to the file destPathAndName, with
+* permissions destFilePerms.
+* */
+int bk_extract_boot_record(int image, const VolInfo* volInfo, 
+                           const char* destPathAndName, unsigned destFilePerms)
+{
+    int srcFile; /* returned by open() */
+    bool srcFileWasOpened;
+    int destFile; /* returned by open() */
+    int rc;
+    
+    if(volInfo->bootMediaType == BOOT_MEDIA_NONE)
+        return BKERROR_EXTRACT_ABSENT_BOOT_RECORD;
+    
+    if(volInfo->bootMediaType != BOOT_MEDIA_NO_EMULATION &&
+       volInfo->bootMediaType != BOOT_MEDIA_1_2_FLOPPY &&
+       volInfo->bootMediaType != BOOT_MEDIA_1_44_FLOPPY &&
+       volInfo->bootMediaType != BOOT_MEDIA_2_88_FLOPPY)
+    {
+        return BKERROR_EXTRACT_UNKNOWN_BOOT_MEDIA;
+    }
+    
+    /* SET source file (open if needed) */
+    if(volInfo->bootRecordIsVisible)
+    /* boot record is a file in the tree */
+    {
+        if(volInfo->bootRecordOnImage->onImage)
+        {
+            srcFile = image;
+            lseek(image, volInfo->bootRecordOnImage->position, SEEK_SET);
+            srcFileWasOpened = false;
+        }
+        else
+        {
+            srcFile = open(volInfo->bootRecordOnImage->pathAndName, O_RDONLY);
+            if(srcFile == -1)
+                return BKERROR_OPEN_READ_FAILED;
+            srcFileWasOpened = true;
+        }
+    }
+    else
+    /* boot record is not a file in the tree */
+    {
+        if(volInfo->bootRecordIsOnImage)
+        {
+            srcFile = image;
+            lseek(image, volInfo->bootRecordOffset, SEEK_SET);
+            srcFileWasOpened = false;
+        }
+        else
+        {
+            srcFile = open(volInfo->bootRecordPathAndName, O_RDONLY);
+            if(srcFile == -1)
+                return BKERROR_OPEN_READ_FAILED;
+            srcFileWasOpened = true;
+        }
+    }
+    /* END SET source file (open if needed) */
+    
+    destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, 
+                    destFilePerms);
+    if(destFile == -1)
+    {
+        if(srcFileWasOpened)
+            close(srcFile);
+        return BKERROR_OPEN_WRITE_FAILED;
+    }
+    
+    rc = copyByteBlock(srcFile, destFile, volInfo->bootRecordSize);
+    if(rc <= 0)
+    {
+        if(srcFileWasOpened)
+            close(srcFile);
+        return rc;
+    }
+    
+    close(destFile);
+    
+    if(srcFileWasOpened)
+        close(srcFile);
+    
+    return 1;
+}
+
+/*******************************************************************************
+* bk_extract_dir()
+* Extracts a directory with all its contents from the iso to the filesystem.
+* Public function.
+* */
+int bk_extract_dir(int image, const VolInfo* volInfo, const char* srcDir,
                    const char* destDir, bool keepPermissions,
                    void(*progressFunction)(void))
 {
@@ -44,7 +137,8 @@ int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
         return rc;
     }
     
-    rc = extractDir(image, tree, srcPath, destDir, keepPermissions, progressFunction);
+    rc = extractDir(image, &(volInfo->dirTree), srcPath, destDir, 
+                    keepPermissions, progressFunction);
     if(rc <= 0)
     {
         freePath(srcPath);
@@ -56,7 +150,12 @@ int bk_extract_dir(int image, const Dir* tree, const char* srcDir,
     return 1;
 }
 
-int bk_extract_file(int image, const Dir* tree, const char* srcFile, 
+/*******************************************************************************
+* bk_extract_file()
+* Extracts a file from the iso to the filesystem.
+* Public function.
+* */
+int bk_extract_file(int image, const VolInfo* volInfo, const char* srcFile, 
                     const char* destDir, bool keepPermissions, 
                     void(*progressFunction)(void))
 {
@@ -70,7 +169,8 @@ int bk_extract_file(int image, const Dir* tree, const char* srcFile,
         return rc;
     }
     
-    rc = extractFile(image, tree, &srcPath, destDir, keepPermissions, progressFunction);
+    rc = extractFile(image, &(volInfo->dirTree), &srcPath, destDir, 
+                     keepPermissions, progressFunction);
     if(rc <= 0)
     {
         freePathDirs(&(srcPath.path));
@@ -82,9 +182,11 @@ int bk_extract_file(int image, const Dir* tree, const char* srcFile,
     return 1;
 }
 
-/*
+/*******************************************************************************
+* extractDir()
+* Extracts a directory with all its contents from the iso to the filesystem.
 * don't try to extract root, don't know what will happen
-*/
+* */
 int extractDir(int image, const Dir* tree, const Path* srcDir, 
                const char* destDir, bool keepPermissions, 
                void(*progressFunction)(void))
@@ -210,11 +312,12 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
     return 1;
 }
 
-/*
+/*******************************************************************************
+* extractDir()
+* Extracts a file from the iso to the filesystem.
 * destDir must have trailing slash
-* read/write loop is waaay to slow when doing 1 byte at a time so changed it to
-*  do 100K at a time instead
-*/
+* 
+* */
 int extractFile(int image, const Dir* tree, const FilePath* pathAndName, 
                 const char* destDir, bool keepPermissions, 
                 void(*progressFunction)(void))
@@ -226,14 +329,14 @@ int extractFile(int image, const Dir* tree, const FilePath* pathAndName,
     FileLL* pointerToIt; /* pointer to the node with file to read */
     bool fileFound;
     
+    /* vars for the source file */
+    int srcFile; /* returned by open() */
+    bool srcFileWasOpened;
+    
     /* vars to create destination file */
     char* destPathAndName;
     unsigned destFilePerms;
     int destFile; /* returned by open() */
-    
-    char block[102400]; /* 100K */
-    int numBlocks;
-    int sizeLastBlock;
     
     int count;
     int rc;
@@ -272,21 +375,37 @@ int extractFile(int image, const Dir* tree, const FilePath* pathAndName,
         if(strcmp(pointerToIt->file.name, pathAndName->filename) == 0)
         /* this is the file */
         {
-            if(!pointerToIt->file.onImage)
-            //!! maybe just make a copy of the file here
-                return BKERROR_FIXME;
+            if(pointerToIt->file.onImage)
+            {
+                srcFile = image;
+                lseek(image, pointerToIt->file.position, SEEK_SET);
+                srcFileWasOpened = false;
+            }
+            else
+            {
+                srcFile = open(pointerToIt->file.pathAndName, O_RDONLY);
+                if(srcFile == -1)
+                    return BKERROR_OPEN_READ_FAILED;
+                srcFileWasOpened = true;
+            }
             
             fileFound = true;
             
             destPathAndName = malloc(strlen(destDir) + strlen(pathAndName->filename) + 1);
             if(destPathAndName == NULL)
+            {
+                if(srcFileWasOpened)
+                    close(srcFile);
                 return BKERROR_OUT_OF_MEMORY;
+            }
             
             strcpy(destPathAndName, destDir);
             strcat(destPathAndName, pathAndName->filename);
             
             if(access(destPathAndName, F_OK) == 0)
             {
+                if(srcFileWasOpened)
+                    close(srcFile);
                 free(destPathAndName);
                 return BKERROR_DUPLICATE_EXTRACT;
             }
@@ -300,49 +419,30 @@ int extractFile(int image, const Dir* tree, const FilePath* pathAndName,
             destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
             if(destFile == -1)
             {
+                if(srcFileWasOpened)
+                    close(srcFile);
                 free(destPathAndName);
                 return BKERROR_OPEN_WRITE_FAILED;
             }
             
             free(destPathAndName);
             
-            lseek(image, pointerToIt->file.position, SEEK_SET);
-            
-            numBlocks = pointerToIt->file.size / 102400;
-            sizeLastBlock = pointerToIt->file.size % 102400;
-            
-            for(count = 0; count < numBlocks; count++)
-            {
-                rc = read(image, block, 102400);
-                if(rc != 102400)
-                {
-                    close(destFile);
-                    return BKERROR_READ_GENERIC;
-                }
-                rc = write(destFile, block, 102400);
-                if(rc != 102400)
-                {
-                    close(destFile);
-                    return BKERROR_WRITE_GENERIC;
-                }
-            }
-            
-            rc = read(image, block, sizeLastBlock);
-            if(rc != sizeLastBlock)
+            rc = copyByteBlock(srcFile, destFile, pointerToIt->file.size);
+            if(rc < 0)
             {
                 close(destFile);
-                return BKERROR_READ_GENERIC;
-            }
-            rc = write(destFile, block, sizeLastBlock);
-            if(rc != sizeLastBlock)
-            {
-                close(destFile);
-                return BKERROR_WRITE_GENERIC;
+                if(srcFileWasOpened)
+                    close(srcFile);
+                return rc;
             }
             
             close(destFile);
             if(destFile == -1)
+            {
+                if(srcFileWasOpened)
+                    close(srcFile);
                 return BKERROR_EXOTIC;
+            }
             /* END WRITE file */
         }
         else
@@ -351,7 +451,14 @@ int extractFile(int image, const Dir* tree, const FilePath* pathAndName,
         }
     }
     if(!fileFound)
+    {
+        if(srcFileWasOpened)
+            close(srcFile);
         return BKERROR_FILE_NOT_FOUND_ON_IMAGE;
+    }
+    
+    if(srcFileWasOpened)
+        close(srcFile);
     
     return 1;
 }

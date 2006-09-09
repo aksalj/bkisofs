@@ -67,6 +67,14 @@
 #define BKERROR_NO_SPECIAL_FILES_TEXT            "Special files (symbolic links and such) are not yet supported"
 #define BKERROR_NO_POSIX_PRESENT                 -1028
 #define BKERROR_NO_POSIX_PRESENT_TEXT            "No posix extentions found"
+#define BKERROR_EXTRACT_ABSENT_BOOT_RECORD       -1029
+#define BKERROR_EXTRACT_ABSENT_BOOT_RECORD_TEXT  "Cannot extract boot record because there isn't one one the image"
+#define BKERROR_EXTRACT_UNKNOWN_BOOT_MEDIA       -1030
+#define BKERROR_EXTRACT_UNKNOWN_BOOT_MEDIA_TEXT  "Unable to extract boot record of unknown media type"
+#define BKERROR_ADD_UNKNOWN_BOOT_MEDIA           -1031
+#define BKERROR_ADD_UNKNOWN_BOOT_MEDIA_TEXT      "Unable to add boot record with unknown media type"
+#define BKERROR_ADD_BOOT_RECORD_WRONG_SIZE       -1032
+#define BKERROR_ADD_BOOT_RECORD_WRONG_SIZE_TEXT  "Size of boot record on the filesystem does not match the size requested via the boot record type parameter"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000

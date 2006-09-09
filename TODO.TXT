@@ -1,8 +1,17 @@
-when adding/deleting/extracting fails, go to the next item in the directory
+maybe when adding/deleting/extracting fails, go to the next item in the directory
 delete files that failed to extract completely
 statusbar messages
+add modal to all the dialog windows (see showBootInfoCbk() for example)
 
-boot record
+boot record:
+ extract
+ delete
+ add
+ set from iso
+ write
+move posixFileDefaults into VolInfo
+make size estimate into its own function
 improve size estimating
 rock ridge special files
 make defaults settable (use volinfo)
+change parameters to write7x functions, remove * from values

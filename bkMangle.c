@@ -4,6 +4,10 @@
 * Foundation; version 2 of the licence.
 ****************************** END LICENCE ***********************************/
 
+/******************************************************************************
+* most code in this file has been copied from the samba source, and that's why
+* comments are missing */
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -20,7 +24,6 @@
 * required to be 32 bits long for the hashing to work
 * see the samba code for details
 */
-
 bool charIsValid9660(char theChar)
 {
     if( (theChar >= '0' && theChar <= '9') ||
@@ -61,7 +64,12 @@ unsigned hashString(const char *str, unsigned int length)
     return value & ~0x80000000;  
 }
 
-/* filenametypes is all types required in the end */
+/******************************************************************************
+* mangleDir()
+* Mangles the filenames from origDir and puts the results into newDir, whcich
+* it also creates.
+* filenameTypes is all types required in the end
+* */
 int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
 {
     int rc;
@@ -154,7 +162,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         (*currentNewFile)->file.onImage = currentOrigFile->file.onImage;
         
-        (*currentNewFile)->file.position = currentOrigFile->file.position;
+        (*currentNewFile)->file.offset = currentOrigFile->file.position;
         
         if( !currentOrigFile->file.onImage )
         {
@@ -168,6 +176,8 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             
             strcpy((*currentNewFile)->file.pathAndName, currentOrigFile->file.pathAndName);
         }
+        
+        (*currentNewFile)->file.origFile = &(currentOrigFile->file);
         
         currentOrigFile = currentOrigFile->next;
         

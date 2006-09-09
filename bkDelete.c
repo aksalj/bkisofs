@@ -13,7 +13,26 @@
 #include "bkError.h"
 #include "bkDelete.h"
 
-int bk_delete_dir(Dir* tree, const char* dirStr)
+/*******************************************************************************
+* bk_delete_boot_record()
+* deletes whatever reference to a boot record volinfo has
+* */
+void bk_delete_boot_record(VolInfo* volInfo)
+{
+    volInfo->bootMediaType = BOOT_MEDIA_NONE;
+    
+    if(volInfo->bootRecordPathAndName != NULL)
+    {
+        free(volInfo->bootRecordPathAndName);
+        volInfo->bootRecordPathAndName = NULL;
+    }
+}
+
+/*******************************************************************************
+* bk_delete_dir()
+* deletes directory described by dirStr from the directory tree
+* */
+int bk_delete_dir(VolInfo* volInfo, const char* dirStr)
 {
     int rc;
     Path* dirPath;
@@ -33,7 +52,7 @@ int bk_delete_dir(Dir* tree, const char* dirStr)
         return rc;
     }
     
-    rc = deleteDir(tree, dirPath);
+    rc = deleteDir(volInfo, &(volInfo->dirTree), dirPath);
     if(rc <= 0)
     {
         freePath(dirPath);
@@ -45,7 +64,11 @@ int bk_delete_dir(Dir* tree, const char* dirStr)
     return 1;
 }
 
-int bk_delete_file(Dir* tree, const char* fileStr)
+/*******************************************************************************
+* bk_delete_file()
+* deletes file described by fileStr from the directory tree
+* */
+int bk_delete_file(VolInfo* volInfo, const char* fileStr)
 {
     int rc;
     FilePath filePath;
@@ -57,7 +80,7 @@ int bk_delete_file(Dir* tree, const char* fileStr)
         return rc;
     }
     
-    rc = deleteFile(tree, &filePath);
+    rc = deleteFile(volInfo, &(volInfo->dirTree), &filePath);
     if(rc <= 0)
     {
         freePathDirs(&(filePath.path));
@@ -69,47 +92,11 @@ int bk_delete_file(Dir* tree, const char* fileStr)
     return 1;
 }
 
-void bk_delete_dir_contents(Dir* dir)
-{
-    /* vars to delete files */
-    FileLL* currentFile;
-    FileLL* nextFile;
-    
-    /* vars to delete subdirectories */
-    DirLL* currentDir;
-    DirLL* nextDir;
-    
-    /* DELETE all files */
-    currentFile = dir->files;
-    while(currentFile != NULL)
-    {
-        nextFile = currentFile->next;
-        
-        if(!currentFile->file.onImage)
-            free(currentFile->file.pathAndName);
-        
-        free(currentFile);
-        
-        currentFile = nextFile;
-    }
-    /* END DELETE all files */
-    
-    /* DELETE all directories */
-    currentDir = dir->directories;
-    while(currentDir != NULL)
-    {
-        nextDir = currentDir->next;
-        
-        bk_delete_dir_contents(&(currentDir->dir));
-        
-        free(currentDir);
-        
-        currentDir = nextDir;
-    }
-    /* END DELETE all directories */
-}
-
-int deleteDir(Dir* tree, const Path* dirToDelete)
+/*******************************************************************************
+* deleteDir()
+* deletes directory described by dirToDelete from the directory tree
+* */
+int deleteDir(VolInfo* volInfo, Dir* tree, const Path* dirToDelete)
 {
     int count;
     
@@ -147,7 +134,7 @@ int deleteDir(Dir* tree, const Path* dirToDelete)
     }
     /* END FIND dir to know what the contents are */
     
-    bk_delete_dir_contents(srcDirInTree);
+    deleteDirContents(volInfo, srcDirInTree);
     
     /* GET A pointer to the parent dir */
     parentDirInTree = tree;
@@ -199,7 +186,69 @@ int deleteDir(Dir* tree, const Path* dirToDelete)
     return 1;
 }
 
-int deleteFile(Dir* tree, const FilePath* pathAndName)
+/*******************************************************************************
+* deleteDirContents()
+* deletes all the contents of a directory
+* recursive
+* */
+void deleteDirContents(VolInfo* volInfo, Dir* dir)
+{
+    /* vars to delete files */
+    FileLL* currentFile;
+    FileLL* nextFile;
+    
+    /* vars to delete subdirectories */
+    DirLL* currentDir;
+    DirLL* nextDir;
+    
+    /* DELETE all files */
+    currentFile = dir->files;
+    while(currentFile != NULL)
+    {
+        nextFile = currentFile->next;
+        
+        if(!currentFile->file.onImage)
+            free(currentFile->file.pathAndName);
+        
+        /* check whether file is being used as a boot record */
+        if(volInfo->bootMediaType != BOOT_MEDIA_NONE &&
+           volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
+        {
+            if(volInfo->bootRecordIsVisible && 
+               volInfo->bootRecordOnImage == &(currentFile->file))
+            {
+                /* and stop using it. perhaps insert a hook here one day to
+                * let the user know the boot record has been/will be deleted */
+                bk_delete_boot_record(volInfo);
+            }
+        }
+        
+        free(currentFile);
+        
+        currentFile = nextFile;
+    }
+    /* END DELETE all files */
+    
+    /* DELETE all directories */
+    currentDir = dir->directories;
+    while(currentDir != NULL)
+    {
+        nextDir = currentDir->next;
+        
+        deleteDirContents(volInfo, &(currentDir->dir));
+        
+        free(currentDir);
+        
+        currentDir = nextDir;
+    }
+    /* END DELETE all directories */
+}
+
+/*******************************************************************************
+* deleteFile()
+* deletes file described by pathAndName from the tree
+* */
+int deleteFile(VolInfo* volInfo, Dir* tree, const FilePath* pathAndName)
 {
     Dir* parentDir;
     DirLL* searchDir;
@@ -244,6 +293,19 @@ int deleteFile(Dir* tree, const FilePath* pathAndName)
             
             if( (*pointerToIt)->file.onImage )
                 free( (*pointerToIt)->file.pathAndName );
+            
+            /* check whether file is being used as a boot record */
+            if(volInfo->bootMediaType != BOOT_MEDIA_NONE &&
+               volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
+            {
+                if(volInfo->bootRecordIsVisible && 
+                   volInfo->bootRecordOnImage == &( (*pointerToIt)->file ))
+                {
+                    /* and stop using it. perhaps insert a hook here one day to
+                    * let the user know the boot record has been/will be deleted */
+                    bk_delete_boot_record(volInfo);
+                }
+            }
             
             free(*pointerToIt);
             

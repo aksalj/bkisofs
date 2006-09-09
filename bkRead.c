@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "bk.h"
 #include "bkRead.h"
@@ -22,9 +23,30 @@
 #define VDTYPE_VOLUMEPARTITION 3
 #define VDTYPE_TERMINATOR 255
 
+/* for el torito boot images */
+#define NBYTES_VIRTUAL_SECTOR 512
+
 /* these 2 are defined in bkExtract.c */
 extern const unsigned posixDirDefaults;
 extern const unsigned posixFileDefaults;
+
+/*******************************************************************************
+* bk_read_dir_tree()
+* 
+* */
+int bk_read_dir_tree(int image, VolInfo* volInfo, int filenameType, bool readPosix)
+{
+    if(filenameType == FNTYPE_ROCKRIDGE || filenameType == FNTYPE_9660)
+        lseek(image, volInfo->pRootDrOffset, SEEK_SET);
+    else /* if(filenameType == FNTYPE_JOLIET) */
+        lseek(image, volInfo->sRootDrOffset, SEEK_SET);
+    
+    //!! this shouldn't be needed here:
+    //~ volInfo->dirTree.directories = NULL;
+    //~ volInfo->dirTree.files = NULL;
+    
+    return readDir(image, volInfo, &(volInfo->dirTree), filenameType, readPosix);
+}
 
 /*******************************************************************************
 * bk_read_vol_info()
@@ -38,11 +60,6 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
     bool haveMorePvd; /* to skip extra pvds */
     unsigned char escapeSequence[3]; /* only interested in a joliet sequence */
     char timeString[17]; /* for creation time */
-    
-    /* for checking el torito */
-    //~ char elToritoSig[24];
-    //~ unsigned bootCatalogLocation; /* logical sector number */
-    off_t locationOfNextDescriptor;
     
     /* vars for checking rockridge */
     unsigned realRootLoc; /* location of the root dr inside root dir */
@@ -167,6 +184,11 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
     /* END SKIP all extra copies of pvd */
     
     /* TRY read boot record */
+    off_t locationOfNextDescriptor;
+    unsigned bootCatalogLocation; /* logical sector number */
+    char elToritoSig[24];
+    unsigned char bootMediaType;
+    
     locationOfNextDescriptor = lseek(image, 0, SEEK_CUR) + 2048;
     
     rc = read711(image, &vdType);
@@ -175,39 +197,89 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
     
     if(vdType == VDTYPE_BOOT)
     {
-        lseek(image, 2047, SEEK_CUR);
-        //~ lseek(image, 6, SEEK_CUR);
         
-        //~ rc = read(image, elToritoSig, 24);
-        //~ if(rc != 24)
-            //~ return -1;
+        lseek(image, 6, SEEK_CUR);
         
-        //~ if(strcmp(elToritoSig, "EL TORITO SPECIFICATION") == 0)
-        //~ /* el torito confirmed */
-        //~ {
-            //~ lseek(image, 40, SEEK_CUR);
+        rc = read(image, elToritoSig, 24);
+        if(rc != 24)
+            return BKERROR_READ_GENERIC;
+        elToritoSig[23] = '\0'; /* just in case */
+        
+        if(strcmp(elToritoSig, "EL TORITO SPECIFICATION") == 0)
+        /* el torito confirmed */
+        {
+            lseek(image, 40, SEEK_CUR);
             
-            //~ rc = read731(image, &bootCatalogLocation);
-            //~ if(rc != 4)
-                //~ return -1;
+            rc = read731(image, &bootCatalogLocation);
+            if(rc != 4)
+                return BKERROR_READ_GENERIC;
+            printf("boot catalog @%d\n", bootCatalogLocation);
             
-            //~ printf("boot catalog @%d\n", bootCatalogLocation);
-            //~ lseek(image, bootCatalogLocation * NBYTES_LOGICAL_BLOCK, SEEK_SET);
+            lseek(image, bootCatalogLocation * NBYTES_LOGICAL_BLOCK, SEEK_SET);
             
-            //~ /* skip validation entry */
-            //~ lseek(image, 32, SEEK_CUR);
+            /* skip validation entry */
+            lseek(image, 32, SEEK_CUR);
             
-            //~ /* read initial/default entry location */
+            /* skip boot indicator */
+            lseek(image, 1, SEEK_CUR);
             
+            rc = read(image, &bootMediaType, 1);
+            if(rc != 1)
+                return BKERROR_READ_GENERIC;
+            if(bootMediaType == 0)
+                volInfo->bootMediaType = BOOT_MEDIA_NO_EMULATION;
+            else if(bootMediaType == 1)
+                volInfo->bootMediaType = BOOT_MEDIA_1_2_FLOPPY;
+            else if(bootMediaType == 2)
+                volInfo->bootMediaType = BOOT_MEDIA_1_44_FLOPPY;
+            else if(bootMediaType == 3)
+                volInfo->bootMediaType = BOOT_MEDIA_2_88_FLOPPY;
+            else if(bootMediaType == 4)
+            {
+                //!! print warning
+                printf("hard disk boot emulation not supported\n");
+                volInfo->bootMediaType = BOOT_MEDIA_NONE;
+            }
+            else
+            {
+                //!! print warning
+                printf("unknown boot media type on iso\n");
+                volInfo->bootMediaType = BOOT_MEDIA_NONE;
+            }
+            printf("boot media type: %d\n", volInfo->bootMediaType);
             
-            //~ exit(0);
-        //~ }
-        //~ else
-        //~ //!! unknown boot record type
-        //~ {
-            //~ printf("err, boot record not el torito\n");
-            //~ lseek(image, 2018, SEEK_CUR);
-        //~ }
+            /* skip load segment, system type and unused byte */
+            lseek(image, 4, SEEK_CUR);
+            
+            rc = read(image, &(volInfo->bootRecordSize), 2);
+            if(rc != 2)
+                return BKERROR_READ_GENERIC;
+            
+            if(volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
+                volInfo->bootRecordSize *= NBYTES_VIRTUAL_SECTOR;
+            else if(bootMediaType == BOOT_MEDIA_1_2_FLOPPY)
+                volInfo->bootRecordSize = 1200 * 1024;
+            else if(bootMediaType == BOOT_MEDIA_1_44_FLOPPY)
+                volInfo->bootRecordSize = 1440 * 1024;
+            else if(bootMediaType == BOOT_MEDIA_2_88_FLOPPY)
+                volInfo->bootRecordSize = 2880 * 1024;
+            
+            volInfo->bootRecordIsOnImage = true;
+            
+            printf("boot record size: %d\n", volInfo->bootRecordSize);
+            
+            rc = read(image, &(volInfo->bootRecordOffset), 4);
+            if(rc != 4)
+                return BKERROR_READ_GENERIC;
+            volInfo->bootRecordOffset *= NBYTES_LOGICAL_BLOCK;
+            printf("boot record offset: %X\n", volInfo->bootRecordOffset);
+        }
+        else
+            //!! print warning
+            printf("err, boot record not el torito\n");
+        
+        /* go to the sector after the boot record */
+        lseek(image, locationOfNextDescriptor, SEEK_SET);
     }
     else
     /* not boot record */
@@ -249,6 +321,10 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
     return 1;
 }
 
+/*******************************************************************************
+* dirDrFollows()
+* checks whether the next directory record is for a directory (not a file)
+* */
 bool dirDrFollows(int image)
 {
     unsigned char fileFlags;
@@ -271,9 +347,13 @@ bool dirDrFollows(int image)
         return false;
 }
 
-/* if the next byte is zero returns false otherwise true
-* file position remains unchanged
-* returns false on read error */
+/*******************************************************************************
+* haveNextRecordInSector()
+* If a directory record won't fit into what's left in a logical block, the rest
+* of the block is filled with 0s. This function checks whether that's the case.
+* If the next byte is zero returns false otherwise true
+* File position remains unchanged
+* Also returns false on read error */
 bool haveNextRecordInSector(int image)
 {
     off_t origPos;
@@ -291,12 +371,18 @@ bool haveNextRecordInSector(int image)
     return (testByte == 0) ? false : true;
 }
 
-/*
-* do not use this to read self or parent records unless it's the following:
-* if the root dr (inside vd) is read, it's filename will be ""
-* note: directory identifiers do not end with ";1"
-*/
-int readDir(int image, Dir* dir, int filenameType, bool readPosix)
+/*******************************************************************************
+* readDir()
+* Reads a directory record for a directory (not a file)
+* Do not use this to read self or parent records unless it's the following:
+* - if the root dr (inside vd) is read, it's filename will be ""
+* filenameType can be only one (do not | more then one)
+*
+* note to self: directory identifiers do not end with ";1"
+*
+* */
+int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType, 
+            bool readPosix)
 {
     int rc;
     unsigned char recordLength;
@@ -473,7 +559,9 @@ int readDir(int image, Dir* dir, int filenameType, bool readPosix)
     
     lseek(image, locExtent * NBYTES_LOGICAL_BLOCK, SEEK_SET);
     
-    rc = readDirContents(image, dir, lenExtent, filenameType, readPosix);
+    dir->directories = NULL;
+    dir->files = NULL;
+    rc = readDirContents(image, volInfo, dir, lenExtent, filenameType, readPosix);
     if(rc < 0)
         return rc;
     
@@ -482,11 +570,13 @@ int readDir(int image, Dir* dir, int filenameType, bool readPosix)
     return recordLength;
 }
 
-/*
+/*******************************************************************************
+* readDirContents()
+* Reads the extent pointed to from a directory record of a directory.
 * size is number of bytes
-* hope you love pointers
-*/
-int readDirContents(int image, Dir* dir, unsigned size, int filenameType, bool readPosix)
+* */
+int readDirContents(int image, VolInfo* volInfo, Dir* dir, unsigned size, 
+                    int filenameType, bool readPosix)
 {
     int rc;
     int bytesRead = 0;
@@ -498,8 +588,6 @@ int readDirContents(int image, Dir* dir, unsigned size, int filenameType, bool r
     bytesRead += skipDR(image);
     bytesRead += skipDR(image);
     
-    dir->directories = NULL;
-    dir->files = NULL;
     nextDir = &(dir->directories);
     nextFile = &(dir->files);
     childrenBytesRead = 0;
@@ -517,7 +605,8 @@ int readDirContents(int image, Dir* dir, unsigned size, int filenameType, bool r
                 if(*nextDir == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
-                recordLength = readDir(image, &((*nextDir)->dir), filenameType, readPosix);
+                recordLength = readDir(image, volInfo, &((*nextDir)->dir), filenameType,
+                                       readPosix);
                 if(recordLength < 0)
                     return recordLength;
                 
@@ -535,7 +624,9 @@ int readDirContents(int image, Dir* dir, unsigned size, int filenameType, bool r
                 if(*nextFile == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
-                recordLength = readFileInfo(image, &((*nextFile)->file), filenameType, readPosix);
+                recordLength = readFileInfo(image, volInfo, 
+                                            &((*nextFile)->file), filenameType,
+                                            readPosix);
                 if(recordLength < 0)
                     return recordLength;
                 
@@ -575,7 +666,12 @@ int readDirContents(int image, Dir* dir, unsigned size, int filenameType, bool r
     return bytesRead;
 }
 
-int readFileInfo(int image, File* file, int filenameType, bool readPosix)
+/*******************************************************************************
+* readFileInfo()
+* Reads the directory record for a file
+* */
+int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType, 
+                 bool readPosix)
 {
     int rc;
     unsigned char recordLength;
@@ -597,6 +693,22 @@ int readFileInfo(int image, File* file, int filenameType, bool readPosix)
     rc = read733(image, &lenExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
+    
+    /* The length of isolinux.bin given in the initial/default entry of
+    * the el torito boot catalog does not match the actual length of the file
+    * but apparently when executed by the bios that's not a problem.
+    * However, if i want to read the entire thing, i need the length proper
+    * if i want to read it.
+    * So i'm looking for a file that starts in the same logical sector as the
+    * boot record from the initial/default entry. */
+    if(volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION && 
+       locExtent == volInfo->bootRecordOffset / NBYTES_LOGICAL_BLOCK)
+    {
+        volInfo->bootRecordSize = lenExtent;
+        printf("woo! found proper el torito file, length %d\n", volInfo->bootRecordSize);
+        volInfo->bootRecordIsVisible = true;
+        volInfo->bootRecordOnImage = file;
+    }
     
     lseek(image, 14, SEEK_CUR);
     
@@ -691,6 +803,10 @@ int readFileInfo(int image, File* file, int filenameType, bool readPosix)
     return recordLength;
 }
 
+/*******************************************************************************
+* readPosixInfo()
+* looks for the PX system use field and gets the permissions field out of it
+* */
 int readPosixInfo(int image, unsigned* posixFileMode, int lenSU)
 {
     off_t origPos;
@@ -732,8 +848,13 @@ int readPosixInfo(int image, unsigned* posixFileMode, int lenSU)
     return 1;
 }
 
-/*
-* leaves the file pointer where it was
+/*******************************************************************************
+* readRockridgeFilename()
+* Finds the NM entry in the system use fields and reads a maximum of
+* NCHARS_FILE_ID_MAX characters from it (truncates if necessary).
+* The continue system use field is not implemented so if the name is not in
+* this directory record, the function returns a failure.
+* Leaves the file pointer where it was.
 */
 int readRockridgeFilename(int image, char* dest, int lenSU)
 {
@@ -787,10 +908,11 @@ int readRockridgeFilename(int image, char* dest, int lenSU)
         return 1;
 }
 
-/*
+/*******************************************************************************
+* removeCrapFromFilename()
 * filenames as read from 9660 Sometimes end with ;1 (terminator+version num)
 * this removes the useless ending and terminates the destination with a '\0'
-*/
+* */
 void removeCrapFromFilename(char* filename, int length)
 {
     int count;
@@ -809,6 +931,10 @@ void removeCrapFromFilename(char* filename, int length)
     filename[count] = '\0';
 }
 
+/*******************************************************************************
+* skipDR()
+* Seek past a directory entry. Good for skipping "." and ".."
+* */
 int skipDR(int image)
 {
     unsigned char dRLen;
@@ -823,6 +949,11 @@ int skipDR(int image)
     return dRLen;
 }
 
+/*******************************************************************************
+* stripSpacesFromEndOfString
+* Some strings in the ISO volume are padded with spaces (hopefully on the right)
+* this function removes them.
+* */
 void stripSpacesFromEndOfString(char* str)
 {
     int count;
