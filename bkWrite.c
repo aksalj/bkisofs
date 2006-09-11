@@ -654,6 +654,77 @@ int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir,
 }
 
 /*******************************************************************************
+* bootInfoTableChecksum()
+* Calculate the checksum to be written into the boot info table.
+* */
+int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
+{
+    int rc;
+    int srcFile;
+    unsigned char* contents;
+    int count;
+    
+    if(file->size % 4 != 0)
+        return BKERROR_WRITE_BOOT_FILE_4;
+    
+    contents = malloc(file->size);
+    if(contents == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    if(file->onImage)
+    /* read file from original image */
+    {
+        lseek(oldImage, file->offset, SEEK_SET);
+        
+        rc = read(oldImage, contents, file->size);
+        if(rc != file->size)
+        {
+            free(contents);
+            return BKERROR_READ_GENERIC;
+        }
+    }
+    else
+    /* read file from fs */
+    {
+        srcFile = open(file->pathAndName, O_RDONLY);
+        if(srcFile == -1)
+        {
+            free(contents);
+            return BKERROR_OPEN_READ_FAILED;
+        }
+        
+        rc = read(srcFile, contents, file->size);
+        if(rc != file->size)
+        {
+            close(srcFile);
+            free(contents);
+            return BKERROR_READ_GENERIC;
+        }
+        
+        rc = close(srcFile);
+        if(rc < 0)
+        {
+            free(contents);
+            return BKERROR_EXOTIC;
+        }
+    }
+    
+    *checksum = 0;
+    /* do 32 bit checksum starting from byte 64
+    * because i check abover that the file is divisible by 4 i will not be 
+    * reading wrong memory */
+    for(count = 64; count < file->size; count += 4)
+    {
+        /* keep adding the next 4 bytes */
+        *checksum += *( (int*)(contents + count) );
+    }
+    
+    free(contents);
+    
+    return 1;
+}
+
+/*******************************************************************************
 * writeFileContents()
 * Write file contents into an extent and also write the file's location and 
 * size into the directory records back in the tree.
@@ -684,7 +755,7 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
         * the boot catalog */
         {
             off_t currPos;
-            printf("writing boot record sector number @0x%X\n", volInfo->bootRecordSectorNumberOffset);
+            
             currPos = lseek(newImage, 0, SEEK_CUR);
             
             lseek(newImage, volInfo->bootRecordSectorNumberOffset, SEEK_SET);
@@ -716,7 +787,10 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
             
             rc = copyByteBlock(srcFile, newImage, nextFile->file.size);
             if(rc < 0)
+            {
+                close(srcFile);
                 return rc;
+            }
             
             rc = close(srcFile);
             if(rc < 0)
@@ -724,7 +798,8 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
         }
         
         nextFile->file.dataLength = lseek(newImage, 0, SEEK_CUR) - 
-                                    nextFile->file.extentNumber * NBYTES_LOGICAL_BLOCK;
+                                    nextFile->file.extentNumber * 
+                                    NBYTES_LOGICAL_BLOCK;
         
         /* FILL extent with zeroes */
         numUnusedBytes = NBYTES_LOGICAL_BLOCK - 
@@ -736,6 +811,40 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
         /* END FILL extent with zeroes */
         
         endPos = lseek(newImage, 0, SEEK_CUR);
+        
+        if(volInfo->bootMediaType != BOOT_MEDIA_NONE && 
+           volInfo->bootRecordIsVisible &&
+           nextFile->file.origFile == volInfo->bootRecordOnImage)
+        /* this file is the boot record. assume it's isolinux and write the 
+        * boot info table */
+        {
+            unsigned char bootInfoTable[56];
+            unsigned checksum;
+            
+            bzero(bootInfoTable, 56);
+            
+            /* go to the offset in the file where the boot info table is */
+            lseek(newImage, nextFile->file.extentNumber * 
+                  NBYTES_LOGICAL_BLOCK + 8, SEEK_SET);
+            
+            /* sector number of pvd */
+            write731ToByteArray(bootInfoTable, 16);
+            /* sector number of boot file (this one) */
+            write731ToByteArray(bootInfoTable + 4, nextFile->file.extentNumber);
+            /* boot file length in bytes */
+            write731ToByteArray(bootInfoTable + 8, nextFile->file.size);
+            /* 32 bit checksum (the sum of all the 32-bit words in the boot
+            * file starting at byte offset 64 */
+            rc = bootInfoTableChecksum(oldImage, &(nextFile->file), &checksum);
+            if(rc <= 0)
+                return rc;
+            write731ToByteArray(bootInfoTable + 12, checksum);
+            /* the rest is reserved, leave at zero */
+            
+            rc = write(newImage, bootInfoTable, 56);
+            if(rc != 56)
+                return BKERROR_WRITE_GENERIC;
+        }
         
         /* WRITE file location and size */
         lseek(newImage, nextFile->file.extentLocationOffset, SEEK_SET);

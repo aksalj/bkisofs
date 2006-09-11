@@ -75,6 +75,8 @@
 #define BKERROR_ADD_UNKNOWN_BOOT_MEDIA_TEXT      "Unable to add boot record with unknown media type"
 #define BKERROR_ADD_BOOT_RECORD_WRONG_SIZE       -1032
 #define BKERROR_ADD_BOOT_RECORD_WRONG_SIZE_TEXT  "Size of boot record on the filesystem does not match the size requested via the boot record type parameter"
+#define BKERROR_WRITE_BOOT_FILE_4                -1033
+#define BKERROR_WRITE_BOOT_FILE_4_TEXT           "Size of no emulation boot record visible on image must be divisible by 4 so i can do a checksum"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000
