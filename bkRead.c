@@ -213,7 +213,6 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
             rc = read731(image, &bootCatalogLocation);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
-            printf("boot catalog @%d\n", bootCatalogLocation);
             
             lseek(image, bootCatalogLocation * NBYTES_LOGICAL_BLOCK, SEEK_SET);
             
@@ -246,7 +245,6 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
                 printf("unknown boot media type on iso\n");
                 volInfo->bootMediaType = BOOT_MEDIA_NONE;
             }
-            printf("boot media type: %d\n", volInfo->bootMediaType);
             
             /* skip load segment, system type and unused byte */
             lseek(image, 4, SEEK_CUR);
@@ -266,13 +264,10 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
             
             volInfo->bootRecordIsOnImage = true;
             
-            printf("boot record size: %d\n", volInfo->bootRecordSize);
-            
             rc = read(image, &(volInfo->bootRecordOffset), 4);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
             volInfo->bootRecordOffset *= NBYTES_LOGICAL_BLOCK;
-            printf("boot record offset: %X\n", volInfo->bootRecordOffset);
         }
         else
             //!! print warning
@@ -705,7 +700,7 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
        locExtent == volInfo->bootRecordOffset / NBYTES_LOGICAL_BLOCK)
     {
         volInfo->bootRecordSize = lenExtent;
-        printf("woo! found proper el torito file, length %d\n", volInfo->bootRecordSize);
+        
         volInfo->bootRecordIsVisible = true;
         volInfo->bootRecordOnImage = file;
     }

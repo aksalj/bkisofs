@@ -173,6 +173,9 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     DirToWriteLL* nextDir;
     FileToWriteLL* nextFile;
     
+    if(lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+        return BKERROR_SANITY;
+    
     /* names other then 9660 are not used for self and parent */
     selfDir.name9660[0] = 0x00;
     selfDir.posixFileMode = dir->posixFileMode;
@@ -745,6 +748,9 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
     while(nextFile != NULL)
     /* each file in current directory */
     {
+        if(lseek(newImage, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+            return BKERROR_SANITY;
+        
         nextFile->file.extentNumber = lseek(newImage, 0, SEEK_CUR) / 
                                       NBYTES_LOGICAL_BLOCK;
         
@@ -1106,7 +1112,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     }
     
     if(volInfo->bootMediaType != BOOT_MEDIA_NONE)
-    {printf("writing boot catalog sector number @0x%X\n", bootCatalogSectorNumberOffset);
+    {
         /* write boot catalog sector number */
         currPos = lseek(newImage, 0, SEEK_CUR);
         lseek(newImage, bootCatalogSectorNumberOffset, SEEK_SET);
@@ -1379,6 +1385,9 @@ int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filename
     
     origPos = lseek(image, 0, SEEK_CUR);
     
+    if(lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+        return BKERROR_SANITY;
+    
     treeHeight = countTreeHeight(tree, 1);
     
     dirsPerLevel = malloc(sizeof(int) * treeHeight);
@@ -1420,7 +1429,7 @@ int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filename
     
     /* blank to conclude extent */
     rc = writeByteBlock(image, 0x00, NBYTES_LOGICAL_BLOCK - 
-                                     NBYTES_LOGICAL_BLOCK % numBytesWritten);
+                                     numBytesWritten % NBYTES_LOGICAL_BLOCK);
     if(rc < 0)
     {
         free(dirsPerLevel);

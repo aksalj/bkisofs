@@ -37,6 +37,100 @@ bool charIsValid9660(char theChar)
         return false;
 }
 
+/******************************************************************************
+* convertNameTo9660()
+* Same as mangleNameFor9660() but without the ~XXXX.
+* */
+void convertNameTo9660(const char* origName, char* newName, bool isADir)
+{
+    char* dot_p;
+    int i;
+    char base[7]; /* max 6 chars */
+    char extension[4]; /* max 3 chars */
+    int extensionLen;
+    
+    /* FIND extension */
+    /* ISO9660 requires that directories have no dots ('.') but some isolinux 
+    * cds have the kernel in a directory with a dot so i need to allow dots in
+    * directories :( */
+    /*if(isADir)
+    {
+        dot_p = NULL;
+    }
+    else*/
+    {
+        dot_p = strrchr(origName, '.');
+        
+        if(dot_p)
+        {
+            /* if the extension contains any illegal characters or
+               is too long (> 3) or zero length then we treat it as part
+               of the prefix */
+            for(i = 0; i < 4 && dot_p[i + 1] != '\0'; i++)
+            {
+                if( !charIsValid9660(dot_p[i + 1]) )
+                {
+                    dot_p = NULL;
+                    break;
+                }
+            }
+            
+            if(i == 0 || i == 4)
+                dot_p = NULL;
+        }
+    }
+    /* END FIND extension */
+    
+    /* GET base */
+    /* the leading characters in the mangled name is taken from
+    *  the first characters of the name, if they are ascii otherwise
+    *  '_' is used */
+    for(i = 0; i < 8 && origName[i] != '\0'; i++)
+    {
+        base[i] = origName[i];
+        
+        if ( !charIsValid9660(origName[i]) )
+            base[i] = '_';
+        
+        base[i] = toupper(base[i]);
+    }
+    
+    /* make sure base doesn't contain part of the extension */
+    if(dot_p != NULL)
+    {
+        //!! test this to make sure it works
+        if(i > dot_p - origName)
+            i = dot_p - origName;
+    }
+    
+    base[i] = '\0';
+    /* END GET base */
+    
+    /* GET extension */
+    /* the extension of the mangled name is taken from the first 3
+       ascii chars after the dot */
+    extensionLen = 0;
+    if(dot_p)
+    {
+        for(i = 1; extensionLen < 3 && dot_p[i] != '\0'; i++)
+        {
+            extension[extensionLen] = toupper(dot_p[i]);
+            
+            extensionLen++;
+        }
+    }
+    
+    extension[extensionLen] = '\0';
+    /* END GET extension */
+    
+    strcpy(newName, base);
+    if(extensionLen > 0)
+    {
+        strcat(newName, ".");
+        strcat(newName, extension);
+    }
+}
+
 /* 
    hash a string of the specified length. The string does not need to be
    null terminated 
@@ -103,7 +197,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         bzero(*currentNewDir, sizeof(DirToWriteLL));
         
-        mangleNameFor9660(currentOrigDir->dir.name, 
+        convertNameTo9660(currentOrigDir->dir.name, 
                           (*currentNewDir)->dir.name9660, true);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
@@ -144,7 +238,8 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         bzero(*currentNewFile, sizeof(FileToWriteLL));
         
-        mangleNameFor9660(currentOrigFile->file.name, (*currentNewFile)->file.name9660, false);
+        convertNameTo9660(currentOrigFile->file.name, 
+                          (*currentNewFile)->file.name9660, false);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
             strcpy((*currentNewFile)->file.nameRock, currentOrigFile->file.name);
@@ -296,7 +391,15 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     return 1;
 }
 
-void mangleNameFor9660(char* origName, char* newName, bool isADir)
+/******************************************************************************
+* mangleNameFor9660()
+* Convert a long filename into an ISO9660 acceptable form: 
+* all uppercase + digits + '_' + "~", 8 chars max for directories and 8.3 chars
+* for files. Extension is kept if it's shorter then 4 chars.
+* 3 chars from the original name are kept, the rest is filled with ~XXXX where
+* the XXXX is a random string (but still with valid characters).
+* */
+void mangleNameFor9660(const char* origName, char* newName, bool isADir)
 {
     char* dot_p;
     int i;
@@ -309,8 +412,10 @@ void mangleNameFor9660(char* origName, char* newName, bool isADir)
     static const char *baseChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     
     /* FIND extension */
+    /* ISO9660 requires that directories have no dots ('.') but some isolinux 
+    * cds have the kernel in a directory with a dot so i need to allow dots in
+    * directories :( */
     if(isADir)
-    /* no extension */
     {
         dot_p = NULL;
     }
@@ -394,7 +499,7 @@ void mangleNameFor9660(char* origName, char* newName, bool isADir)
     /* now form the mangled name. */
     for(i = 0; i < NCHARS_9660_BASE; i++)
     {
-            newName[i] = base[i];
+        newName[i] = base[i];
     }
     
     newName[NCHARS_9660_BASE] = '~';
