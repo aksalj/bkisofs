@@ -209,12 +209,15 @@ typedef struct
 } VolInfo;
 
 /* public bkisofs functions */
+
 int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName, 
                        int bootMediaType);
 int bk_add_dir(VolInfo* volInfo, const char* srcPathAndName, 
                const char* destPathAndName);
 int bk_add_file(VolInfo* volInfo, const char* srcPathAndName, 
                 const char* destPathAndName);
+int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
+                  const char* newDirName);
 
 void bk_delete_boot_record(VolInfo* volInfo);
 int bk_delete_dir(VolInfo* volInfo, const char* dirStr);

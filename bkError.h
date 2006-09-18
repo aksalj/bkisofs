@@ -38,7 +38,7 @@
 #define BKERROR_WRITE_GENERIC                    -1013
 #define BKERROR_WRITE_GENERIC_TEXT               "Failed to write expected number of bytes (disk full?)"
 #define BKERROR_MANGLE_TOO_MANY_COL              -1014
-#define BKERROR_MANGLE_TOO_MANY_COL_TEXT         "Too many collisons while mangling filenames"
+#define BKERROR_MANGLE_TOO_MANY_COL_TEXT         "Too many collisons while mangling filenames (too many files/directories with a similar name)"
 #define BKERROR_MISFORMED_PATH                   -1015
 #define BKERROR_MISFORMED_PATH_TEXT              "Misformed path"
 #define BKERROR_INVALID_UCS2                     -1016
@@ -77,6 +77,10 @@
 #define BKERROR_ADD_BOOT_RECORD_WRONG_SIZE_TEXT  "Size of boot record on the filesystem does not match the size requested via the boot record type parameter"
 #define BKERROR_WRITE_BOOT_FILE_4                -1033
 #define BKERROR_WRITE_BOOT_FILE_4_TEXT           "Size of no emulation boot record visible on image must be divisible by 4 so i can do a checksum"
+#define BKERROR_DUPLICATE_CREATE_DIR             -1034
+#define BKERROR_DUPLICATE_CREATE_DIR_TEXT        "Cannot create directory because another file or directory with the same name exists"
+#define BKERROR_NAME_INVALID_CHAR                -1035
+#define BKERROR_NAME_INVALID_CHAR_TEXT           "Name contains invalid character(s)"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000

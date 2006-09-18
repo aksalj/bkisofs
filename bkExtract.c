@@ -19,7 +19,7 @@
 #include "bkWrite.h"
 
 const unsigned posixFileDefaults = 33188; /* octal 100644 */
-const unsigned posixDirDefaults = 16877; /* octal 40711 */
+const unsigned posixDirDefaults = 16877; /* octal 40755 */
 
 /*******************************************************************************
 * bk_extract_boot_record()

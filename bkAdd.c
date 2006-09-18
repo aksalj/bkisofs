@@ -14,6 +14,10 @@
 #include "bkPath.h"
 #include "bkAdd.h"
 #include "bkError.h"
+#include "bkGet.h"
+#include "bkMangle.h"
+
+extern const unsigned posixDirDefaults;
 
 /*******************************************************************************
 * addDir()
@@ -483,6 +487,55 @@ int bk_add_file(VolInfo* volInfo, const char* srcPathAndName,
     }
     
     freePath(destPath);
+    
+    return 1;
+}
+
+/*******************************************************************************
+* bk_create_dir()
+* public interface for addFile()
+* */
+int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
+                  const char* newDirName)
+{
+    int nameLen;
+    int count;
+    Dir* destDir;
+    int rc;
+    DirLL* oldHead;
+    
+    nameLen = strlen(newDirName);
+    if(nameLen > NCHARS_FILE_ID_MAX - 1)
+        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+    
+    for(count = 0; count < nameLen; count++)
+        if(!charIsValid9660(newDirName[count]))
+            return BKERROR_NAME_INVALID_CHAR;
+    
+    rc = getDirFromString(&(volInfo->dirTree), destPathStr, &destDir);
+    if(rc <= 0)
+        return rc;
+    
+    if(itemIsInDir(newDirName, destDir))
+        return BKERROR_DUPLICATE_CREATE_DIR;
+    
+    oldHead = destDir->directories;
+    
+    destDir->directories = malloc(sizeof(DirLL));
+    if(destDir->directories == NULL)
+    {
+        destDir->directories = oldHead;
+        return BKERROR_OUT_OF_MEMORY;
+    }
+    
+    destDir->directories->next = oldHead;
+    
+    strcpy(destDir->directories->dir.name, newDirName);
+    
+    destDir->directories->dir.posixFileMode = posixDirDefaults;
+    
+    destDir->directories->dir.directories = NULL;
+    destDir->directories->dir.files = NULL;
     
     return 1;
 }

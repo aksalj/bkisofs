@@ -282,7 +282,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     
     haveCollisions = true;
     numTimesTried = 0;
-    while(haveCollisions && numTimesTried < 5)
+    while(haveCollisions && numTimesTried < 500)
     {
         haveCollisions = false;
         

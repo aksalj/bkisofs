@@ -532,10 +532,10 @@ int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir,
         if(filenameTypes & FNTYPE_JOLIET)
             lenFileId = 2 * strlen(dir->nameJoliet);
         else
-            if(isADir)
+            /*if(isADir) see microsoft comment below */
                 lenFileId = strlen(dir->name9660);
-            else
-                lenFileId = strlen(dir->name9660) + 2; /* + ";1" */
+            /*else
+                lenFileId = strlen(dir->name9660) + 2; */
     }
     
     rc = write711(image, lenFileId);
@@ -555,31 +555,35 @@ int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir,
     {
         if(filenameTypes & FNTYPE_JOLIET)
         {
-            rc = writeJolietStringField(image, dir->nameJoliet, 2 * strlen(dir->nameJoliet));
+            rc = writeJolietStringField(image, dir->nameJoliet, 
+                                        2 * strlen(dir->nameJoliet));
             if(rc < 0)
                 return rc;
         }
         else
         {
+            /* ISO9660 requires ";1" after the filename (not directory name) 
+            * but the windows NT/2K boot loaders cannot find NTLDR inside
+            * the I386 directory because they are looking for "NTLDR" not 
+            * "NTLDR;1". i guess if microsoft an do it, i can do it. filenames
+            * on images written by me do not end with ";1"
             if(isADir)
-            {
+            {*/
                 /* the name */
                 rc = write(image, dir->name9660, lenFileId);
                 if(rc != lenFileId)
                     return BKERROR_WRITE_GENERIC;
-            }
+            /*}
             else
             {
-                /* the name */
                 rc = write(image, dir->name9660, lenFileId - 2);
                 if(rc != lenFileId - 2)
                     return BKERROR_WRITE_GENERIC;
                 
-                /* and the 9660-required version number */
                 rc = write(image, ";1", 2);
                 if(rc != 2)
                     return BKERROR_WRITE_GENERIC;
-            }
+            }*/
         }
     }
     /* END FILE identifier */
