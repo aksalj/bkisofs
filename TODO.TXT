@@ -2,8 +2,6 @@ maybe when adding/deleting/extracting fails, go to the next item in the director
 delete files that failed to extract completely
 statusbar messages
 add modal to all the dialog windows (see showBootInfoCbk() for example)
-remove save and open icons from toolbar
-add fields with the current iso/fs path
 
 move posix*Defaults into VolInfo
 make size estimate into its own function
