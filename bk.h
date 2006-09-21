@@ -192,14 +192,14 @@ typedef struct
     time_t creationTime;
     Dir dirTree;
     unsigned char bootMediaType;
-    unsigned bootRecordSize; /* in bytes */
-    bool bootRecordIsOnImage; /* unused if visible (flag below) */
-    unsigned bootRecordOffset; /* if on image */
-    char* bootRecordPathAndName; /* if on filesystem */
-    bool bootRecordIsVisible; /* whether boot record is a visible file 
-                              *  on the image */
-    File* bootRecordOnImage; /* if visible, pointer to the file in the 
-                             *  directory tree */
+    unsigned bootRecordSize;      /* in bytes */
+    bool bootRecordIsOnImage;     /* unused if visible (flag below) */
+    unsigned bootRecordOffset;    /* if on image */
+    char* bootRecordPathAndName;  /* if on filesystem */
+    bool bootRecordIsVisible;     /* whether boot record is a visible file 
+                                  *  on the image */
+    File* bootRecordOnImage;      /* if visible, pointer to the file in the 
+                                  *  directory tree */
     
     /* public use, read/write */
     char volId[33];

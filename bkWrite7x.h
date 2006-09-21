@@ -23,3 +23,4 @@ void write731ToByteArray(unsigned char* dest, unsigned value);
 int write732(int image, unsigned value);
 int write733(int image, unsigned value);
 void write733ToByteArray(unsigned char* dest, unsigned value);
+int writeWrapper(int fileDescriptor, const void* data, size_t numBytes);
