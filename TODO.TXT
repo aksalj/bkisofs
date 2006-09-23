@@ -2,6 +2,7 @@ maybe when adding/deleting/extracting fails, go to the next item in the director
 delete files that failed to extract completely
 statusbar messages
 add modal to all the dialog windows (see showBootInfoCbk() for example)
+move the icon paths into makefile
 dcop k3b K3bInterface burnCdImage /home/andrew/project2003.ISO
 
 move posix*Defaults into VolInfo
