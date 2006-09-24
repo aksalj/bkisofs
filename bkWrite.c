@@ -913,7 +913,7 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
 * Algorithm: the sum of all words, including the checksum must trunkate to 
 * a 16-bit 0x0000
 * */
-unsigned short elToritoChecksum(const char* record)
+unsigned short elToritoChecksum(const unsigned char* record)
 {
     short sum;
     int i;
@@ -950,12 +950,12 @@ int writeElToritoVd(int image, const VolInfo* volInfo)
     /* SETUP BOOT record volume descriptor sector */
     /* boot record indicator, must be 0 (bzero at start took care of this) */
     /* iso9660 identifier, must be "CD001" */
-    strncpy(buffer + 1, "CD001", 5);
+    strncpy((char*)buffer + 1, "CD001", 5);
     /* version, must be 1 */
     buffer[6] = 1;
     /* boot system identifier, must be 32 bytes "EL TORITO SPECIFICATION" 
     * padded with 0x00 (bzero at start took care of this) */
-    strncpy(&(buffer[7]), "EL TORITO SPECIFICATION", 23);
+    strncpy((char*)&(buffer[7]), "EL TORITO SPECIFICATION", 23);
     /* unused 32 bytes, must be 0 (bzero at start took care of this) */
     /* boot catalog location, 4 byte intel format. written later. */
     bootCatalogSectorNumberOffset = lseek(image, 0, SEEK_CUR) + 71;
@@ -994,7 +994,7 @@ int writeElToritoBootCatalog(int image, const VolInfo* volInfo)
     /* platform id, 0 for x86 (bzero at start took care of this) */
     /* 2 bytes reserved, must be 0 (bzero at start took care of this) */
     /* 24 bytes id string for manufacturer/developer of cdrom */
-    strncpy(&(buffer[4]), "Edited with ISO Master", 22);
+    strncpy((char*)&(buffer[4]), "Edited with ISO Master", 22);
     /* key byte 0x55 */
     buffer[30] = 0x55;
     /* key byte 0xAA */
@@ -1610,13 +1610,13 @@ int writeRockER(int image)
     record[7] = 1;
     
     /* extension identifier */
-    strncpy(&(record[8]), "IEEE_P1282", 10);
+    strncpy((char*)&(record[8]), "IEEE_P1282", 10);
     
     /* extension descriptor */
-    strncpy(&(record[18]), "DRAFT_1_12", 10);
+    strncpy((char*)&(record[18]), "DRAFT_1_12", 10);
     
     /* extension source */
-    strncpy(&(record[28]), "ADOPTED_1994_07_08", 18);
+    strncpy((char*)&(record[28]), "ADOPTED_1994_07_08", 18);
     
     rc = writeWrapper(image, record, 46);
     if(rc <= 0)

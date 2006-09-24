@@ -885,7 +885,7 @@ int readRockridgeFilename(int image, char* dest, int lenSU)
             else
                 recordableLenFileId = lengthAsRead;
             
-            strncpy(dest, suFields + count + 5, recordableLenFileId);
+            strncpy(dest, (char*)suFields + count + 5, recordableLenFileId);
             dest[recordableLenFileId] = '\0';
             
             foundName = true;

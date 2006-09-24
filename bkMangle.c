@@ -45,7 +45,7 @@ void convertNameTo9660(const char* origName, char* newName, bool isADir)
 {
     char* dot_p;
     int i;
-    char base[7]; /* max 6 chars */
+    char base[9]; /* max 9 chars */
     char extension[4]; /* max 3 chars */
     int extensionLen;
     
@@ -57,8 +57,8 @@ void convertNameTo9660(const char* origName, char* newName, bool isADir)
     {
         dot_p = NULL;
     }
-    else*/
-    {
+    else
+    {*/
         dot_p = strrchr(origName, '.');
         
         if(dot_p)
@@ -78,7 +78,7 @@ void convertNameTo9660(const char* origName, char* newName, bool isADir)
             if(i == 0 || i == 4)
                 dot_p = NULL;
         }
-    }
+    /*}*/
     /* END FIND extension */
     
     /* GET base */
