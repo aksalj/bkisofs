@@ -41,10 +41,6 @@ int bk_read_dir_tree(int image, VolInfo* volInfo, int filenameType, bool readPos
     else /* if(filenameType == FNTYPE_JOLIET) */
         lseek(image, volInfo->sRootDrOffset, SEEK_SET);
     
-    //!! this shouldn't be needed here:
-    //~ volInfo->dirTree.directories = NULL;
-    //~ volInfo->dirTree.files = NULL;
-    
     return readDir(image, volInfo, &(volInfo->dirTree), filenameType, readPosix);
 }
 
