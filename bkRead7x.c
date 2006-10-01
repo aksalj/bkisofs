@@ -4,6 +4,14 @@
 * Foundation; version 2 of the licence.
 ****************************** END LICENCE ***********************************/
 
+/******************************************************************************
+* Author:
+* Andrew Smith, http://littlesvr.ca/misc/contactandrew.php
+*
+* Contributors:
+* 
+******************************************************************************/
+
 #include <unistd.h>
 
 int read711(int image, unsigned char* value)

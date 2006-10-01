@@ -4,6 +4,14 @@
 * Foundation; version 2 of the licence.
 ****************************** END LICENCE ***********************************/
 
+/******************************************************************************
+* Author:
+* Andrew Smith, http://littlesvr.ca/misc/contactandrew.php
+*
+* Contributors:
+* 
+******************************************************************************/
+
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
@@ -723,7 +731,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     
     *checksum = 0;
     /* do 32 bit checksum starting from byte 64
-    * because i check abover that the file is divisible by 4 i will not be 
+    * because i check above that the file is divisible by 4 i will not be 
     * reading wrong memory */
     for(count = 64; count < file->size; count += 4)
     {

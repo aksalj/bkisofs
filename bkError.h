@@ -76,7 +76,7 @@
 #define BKERROR_ADD_BOOT_RECORD_WRONG_SIZE       -1032
 #define BKERROR_ADD_BOOT_RECORD_WRONG_SIZE_TEXT  "Size of boot record on the filesystem does not match the size requested via the boot record type parameter"
 #define BKERROR_WRITE_BOOT_FILE_4                -1033
-#define BKERROR_WRITE_BOOT_FILE_4_TEXT           "Size of no emulation boot record visible on image must be divisible by 4 so i can do a checksum"
+#define BKERROR_WRITE_BOOT_FILE_4_TEXT           "Size of no emulation boot record visible on image must be divisible by 4 so i can do a checksum (invalid boot file?)"
 #define BKERROR_DUPLICATE_CREATE_DIR             -1034
 #define BKERROR_DUPLICATE_CREATE_DIR_TEXT        "Cannot create directory because another file or directory with the same name exists"
 #define BKERROR_NAME_INVALID_CHAR                -1035

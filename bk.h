@@ -1,7 +1,21 @@
-/*******************************************************************************
+/******************************* LICENCE **************************************
+* Any code in this file may be redistributed or modified under the terms of
+* the GNU General Public Licence as published by the Free Software 
+* Foundation; version 2 of the licence.
+****************************** END LICENCE ***********************************/
+
+/******************************************************************************
+* Author:
+* Andrew Smith, http://littlesvr.ca/misc/contactandrew.php
+*
+* Contributors:
+* 
+******************************************************************************/
+
+/********************************* PURPOSE ************************************
 * bk.h
-* global #defines and definitions for structures used throughout bkisofs
-* */
+* This header file is the public interface to bkisofs.
+******************************** END PURPOSE *********************************/
 
 #ifndef bk_h
 #define bk_h

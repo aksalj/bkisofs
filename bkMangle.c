@@ -5,8 +5,13 @@
 ****************************** END LICENCE ***********************************/
 
 /******************************************************************************
-* most code in this file has been copied from the samba source, and that's why
-* comments are missing */
+* Author:
+* Andrew Smith, http://littlesvr.ca/misc/contactandrew.php
+*
+* Contributors:
+* The Samba Project - http://samba.org/
+* - most of the filename mangling code
+******************************************************************************/
 
 #include <stdio.h>
 #include <string.h>
