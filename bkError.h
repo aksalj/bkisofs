@@ -81,6 +81,8 @@
 #define BKERROR_DUPLICATE_CREATE_DIR_TEXT        "Cannot create directory because another file or directory with the same name exists"
 #define BKERROR_NAME_INVALID_CHAR                -1035
 #define BKERROR_NAME_INVALID_CHAR_TEXT           "Name contains invalid character(s)"
+#define BKERROR_NEW_DIR_ZERO_LEN_NAME            -1036
+#define BKERROR_NEW_DIR_ZERO_LEN_NAME_TEXT       "Cannot create new directory without a name"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000

@@ -3,6 +3,8 @@ delete files that failed to extract completely
 statusbar messages
 dcop k3b K3bInterface burnCdImage /home/andrew/project2003.ISO
 make the enter key work in the new dir window and save/open windows
+add david to the credits
+add checking for proper characters when creating new dir on iso
 
 move posix*Defaults into VolInfo
 make size estimate into its own function

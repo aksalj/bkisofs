@@ -1,5 +1,5 @@
 OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o bkGet.o bkSet.o
-GLOBALFLAGS = -Wall
+GLOBALFLAGS = -Wall -g
 
 bk.a: $(OBJECTS)
 	ar -cr bk.a $(OBJECTS)

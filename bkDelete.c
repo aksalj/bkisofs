@@ -53,6 +53,8 @@ int bk_delete_dir(VolInfo* volInfo, const char* dirStr)
     if(dirPath == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
+    bzero(dirPath, sizeof(Path));
+    
     rc = makePathFromString(dirStr, dirPath);
     if(rc <= 0)
     {

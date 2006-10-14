@@ -515,6 +515,9 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     nameLen = strlen(newDirName);
     if(nameLen > NCHARS_FILE_ID_MAX - 1)
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+    if(nameLen == 0)
+        return BKERROR_NEW_DIR_ZERO_LEN_NAME;
+    //!! make sure the characters are valid
     
     for(count = 0; count < nameLen; count++)
         if(!charIsValid9660(newDirName[count]))
