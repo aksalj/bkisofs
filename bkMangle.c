@@ -336,8 +336,6 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 
                 mangleNameFor9660(currentDir->dir.name9660, newName9660, true);
                 
-                printf("remangled '%s' -> '%s'\n", currentDir->dir.name9660, newName9660);
-                
                 strcpy(currentDir->dir.name9660, newName9660);
             }
             
@@ -378,8 +376,6 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 haveCollisions = true;
                 
                 mangleNameFor9660(currentFile->file.name9660, newName9660, false);
-                
-                printf("remangled '%s' -> '%s'\n", currentFile->file.name9660, newName9660);
                 
                 strcpy(currentFile->file.name9660, newName9660);
             }
@@ -528,4 +524,6 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     {
         newName[8] = '\0';
     }
+    
+    printf("remangled '%s' -> '%s'\n", origName, newName);
 }
