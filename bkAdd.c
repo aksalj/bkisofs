@@ -303,6 +303,27 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
     oldHead = destDirInTree->files;
     
     /* ADD file */
+    rc = stat(srcPathAndName, &statStruct);
+    if(rc == -1)
+    {
+        destDirInTree->files = oldHead;
+        return BKERROR_STAT_FAILED;
+    }
+    
+    if( !(statStruct.st_mode & S_IFREG) )
+    /* not a regular file */
+    {
+        destDirInTree->files = oldHead;
+        return BKERROR_NO_SPECIAL_FILES;
+    }
+    
+    if(statStruct.st_size > 0xFFFFFFFF)
+    /* size won't fit in a 32bit variable on the iso */
+    {
+        destDirInTree->files = oldHead;
+        return BKERROR_ADD_FILE_TOO_BIG;
+    }
+    
     destDirInTree->files = malloc(sizeof(FileLL));
     if(destDirInTree->files == NULL)
     {
@@ -313,22 +334,6 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
     destDirInTree->files->next = oldHead;
     
     strcpy(destDirInTree->files->file.name, filename);
-    
-    rc = stat(srcPathAndName, &statStruct);
-    if(rc == -1)
-    {
-        free(destDirInTree->files);
-        destDirInTree->files = oldHead;
-        return BKERROR_STAT_FAILED;
-    }
-    
-    if( !(statStruct.st_mode & S_IFREG) )
-    /* not a regular file */
-    {
-        free(destDirInTree->files);
-        destDirInTree->files = oldHead;
-        return BKERROR_NO_SPECIAL_FILES;
-    }
     
     destDirInTree->files->file.posixFileMode = statStruct.st_mode;
     

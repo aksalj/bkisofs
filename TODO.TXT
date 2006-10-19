@@ -5,6 +5,9 @@ dcop k3b K3bInterface burnCdImage /home/andrew/project2003.ISO
 make the enter key work in the new dir window and save/open windows
 add david to the credits
 add checking for proper characters when creating new dir on iso
+check what happens if i isomaster file.iso and then try to save (overwrite)
+move non-public stuff away from bk.h
+
 
 move posix*Defaults into VolInfo
 make size estimate into its own function
