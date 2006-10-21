@@ -1,14 +1,10 @@
-maybe when adding/deleting/extracting fails, go to the next item in the directory
+maybe when adding/deleting/extracting fails, go to the next item in the directory (need warning queue)
 delete files that failed to extract completely
-statusbar messages
 dcop k3b K3bInterface burnCdImage /home/andrew/project2003.ISO
-make the enter key work in the new dir window and save/open windows
 add david to the credits
-make escape key work in my dialogs
 
 
 make size estimate into its own function
 improve size estimating
 rock ridge special files
-make defaults settable (use volinfo)
 add functions for checking validity of names when adding

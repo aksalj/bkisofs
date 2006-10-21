@@ -76,6 +76,9 @@ char* bk_get_error_string(int errorId)
             break;
     }
     
+    if(messageStructs[count].number == BKERROR_END)
+        printf("unknown error %d used\n", errorId);
+    
     return messageStructs[count].text;
 }
 

@@ -89,7 +89,7 @@ int bk_read_vol_info(int image, VolInfo* volInfo)
     
     rc = read(image, volInfo->volId, 32);
     if(rc != 32)
-        return -1;
+        return BKERROR_READ_GENERIC;
     volInfo->volId[32] = '\0';
     stripSpacesFromEndOfString(volInfo->volId);
     
@@ -580,8 +580,14 @@ int readDirContents(int image, VolInfo* volInfo, Dir* dir, unsigned size,
     FileLL** nextFile; /* ditto */
     
     /* skip self and parent */
-    bytesRead += skipDR(image);
-    bytesRead += skipDR(image);
+    rc = skipDR(image);
+    if(rc <= 0)
+        return rc;
+    bytesRead += rc;
+    rc = skipDR(image);
+    if(rc <= 0)
+        return rc;
+    bytesRead += rc;
     
     nextDir = &(dir->directories);
     nextFile = &(dir->files);
@@ -936,7 +942,7 @@ int skipDR(int image)
     int rc;
     
     rc = read711(image, &dRLen);
-    if(rc != 1)
+    if(rc <= 0)
         return BKERROR_READ_GENERIC;
     
     lseek(image, dRLen - 1, SEEK_CUR);
