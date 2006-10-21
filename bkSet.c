@@ -27,7 +27,7 @@ void bk_init_vol_info(VolInfo* volInfo)
 {
     bzero(volInfo, sizeof(VolInfo));
     
-    volInfo->dirTree.posixFileMode = 0755;
+    volInfo->dirTree.posixFileMode = 040755;
 }
 
 /*******************************************************************************
