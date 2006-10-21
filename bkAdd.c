@@ -510,7 +510,6 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
                   const char* newDirName)
 {
     int nameLen;
-    int count;
     Dir* destDir;
     int rc;
     DirLL* oldHead;
@@ -520,11 +519,9 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     if(nameLen == 0)
         return BKERROR_NEW_DIR_ZERO_LEN_NAME;
-    //!! make sure the characters are valid
     
-    for(count = 0; count < nameLen; count++)
-        if(!charIsValid9660(newDirName[count]))
-            return BKERROR_NAME_INVALID_CHAR;
+    if( !nameIsValid(newDirName) )
+        return BKERROR_NAME_INVALID_CHAR;
     
     rc = getDirFromString(&(volInfo->dirTree), destPathStr, &destDir);
     if(rc <= 0)

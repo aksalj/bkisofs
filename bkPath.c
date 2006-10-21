@@ -19,7 +19,12 @@
 #include "bk.h"
 #include "bkError.h"
 #include "bkPath.h"
+#include "bkMangle.h"
 
+/******************************************************************************
+* freeDirToWriteContents()
+* Recursively deletes all the dynamically allocated contents of dir.
+* */
 void freeDirToWriteContents(DirToWrite* dir)
 {
     DirToWriteLL* currentDir;
@@ -52,6 +57,10 @@ void freeDirToWriteContents(DirToWrite* dir)
     }
 }
 
+/******************************************************************************
+* freePath()
+* Deletes path contents and the path itself.
+* */
 void freePath(Path* path)
 {
     freePathDirs(path);
@@ -59,6 +68,10 @@ void freePath(Path* path)
     free(path);
 }
 
+/******************************************************************************
+* freePathDirs()
+* Recursively deletes the dynamically allocated path contents.
+* */
 void freePathDirs(Path* path)
 {
     int count;
@@ -77,6 +90,13 @@ void freePathDirs(Path* path)
         free(path->dirs);
 }
 
+/******************************************************************************
+* getFilenameFromPath()
+* Get the filename from a path and name string, e.g. if srcPathAndName is
+* /some/thing filename will be thing.
+* The filename must be allocated and have less than 
+* NCHARS_FILE_ID_MAX - 1 characters.
+* */
 int getFilenameFromPath(const char* srcPathAndName, char* filename)
 {
     int count;
@@ -115,10 +135,12 @@ int getFilenameFromPath(const char* srcPathAndName, char* filename)
     return 1;
 }
 
-/*
-* srcPath must have trailing slash
-* dirName will not have a slash
-*/
+/******************************************************************************
+* getLastDirFromString()
+* Get the last directory name from a path string, e.g. if srcPath is
+* /some/thing/ dirName will be thing.
+* The srcPath must have a trailing slash. dirName will not have a slash.
+* */
 int getLastDirFromString(const char* srcPath, char* dirName)
 {
     int prevSlashIndex = 0;
@@ -155,6 +177,10 @@ int getLastDirFromString(const char* srcPath, char* dirName)
     return 1;
 }
 
+/******************************************************************************
+* makeFilePathFromString()
+* Converts a path and name string into a FilePath
+* */
 int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
 {
     int rc;
@@ -215,6 +241,10 @@ int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
     return 1;
 }
 
+/******************************************************************************
+* makeLongerPath()
+* Adds a directory to origPath.
+* */
 int makeLongerPath(const Path* origPath, const char* newDir, Path** newPath)
 {
     int count;
@@ -251,6 +281,10 @@ int makeLongerPath(const Path* origPath, const char* newDir, Path** newPath)
     return 1;
 }
 
+/******************************************************************************
+* makePathFromString()
+* Converts a path string into a Path
+* */
 int makePathFromString(const char* strPath, Path* pathPath)
 {
     int count;
@@ -321,4 +355,24 @@ int makePathFromString(const char* strPath, Path* pathPath)
         return BKERROR_SANITY;
     
     return 1;
+}
+
+/******************************************************************************
+* nameIsValid()
+* Checks each character in name to see whether it's allowed in an identifier
+* */
+bool nameIsValid(const char* name)
+{
+    int count;
+    int nameLen;
+    
+    nameLen = strlen(name);
+    
+    for(count = 0; count < nameLen; count++)
+    {
+        if( !charIsValid9660(name[count]) )
+            return false;
+    }
+    
+    return true;
 }
