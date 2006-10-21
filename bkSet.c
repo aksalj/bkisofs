@@ -125,3 +125,21 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
     
     return 1;
 }
+
+/*******************************************************************************
+* bk_set_publisher()
+* Copies publisher into volInfo, a maximum of 128 characters.
+* */
+void bk_set_publisher(VolInfo* volInfo, const char* publisher)
+{
+    strncpy(volInfo->publisher, publisher, 128);
+}
+
+/*******************************************************************************
+* bk_set_vol_name()
+* Copies volName into volInfo, a maximum of 32 characters.
+* */
+void bk_set_vol_name(VolInfo* volInfo, const char* volName)
+{
+    strncpy(volInfo->volId, volName, 32);
+}

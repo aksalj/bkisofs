@@ -30,6 +30,15 @@ unsigned bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
 }
 
 /*******************************************************************************
+* bk_get_creation_time()
+* Public function
+* */
+time_t bk_get_creation_time(const VolInfo* volInfo)
+{
+    return volInfo->creationTime;
+}
+
+/*******************************************************************************
 * bk_get_dir_from_string()
 * public function
 * gets a pointer to a Dir in tree described by the string pathStr
@@ -38,6 +47,26 @@ int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr,
                            Dir** dirFoundPtr)
 {
     return getDirFromString(&(volInfo->dirTree), pathStr, dirFoundPtr);
+}
+
+/*******************************************************************************
+* bk_get_publisher()
+* Public function
+* Returns a pointer to the string in volInfo that holds the volume name.
+* */
+const char* bk_get_publisher(const VolInfo* volInfo)
+{
+    return volInfo->publisher;
+}
+
+/*******************************************************************************
+* bk_get_volume_name()
+* Public function
+* Returns a pointer to the string in volInfo that holds the volume name.
+* */
+const char* bk_get_volume_name(const VolInfo* volInfo)
+{
+    return volInfo->volId;
 }
 
 /*******************************************************************************

@@ -224,6 +224,7 @@ typedef struct
 
 /* public bkisofs functions */
 
+/* adding */
 int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName, 
                        int bootMediaType);
 int bk_add_dir(VolInfo* volInfo, const char* srcPathAndName, 
@@ -233,6 +234,7 @@ int bk_add_file(VolInfo* volInfo, const char* srcPathAndName,
 int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
                   const char* newDirName);
 
+/* deleting */
 void bk_delete_boot_record(VolInfo* volInfo);
 int bk_delete_dir(VolInfo* volInfo, const char* dirStr);
 int bk_delete_file(VolInfo* volInfo, const char* fileStr);
@@ -246,19 +248,28 @@ int bk_extract_file(int image, const VolInfo* volInfo, const char* srcFile,
                     const char* destDir, bool keepPermissions, 
                     void(*progressFunction)(void));
 
+/* getters */
 unsigned bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
+time_t bk_get_creation_time(const VolInfo* volInfo);
 int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr, 
                            Dir** dirFoundPtr);
+const char* bk_get_publisher(const VolInfo* volInfo);
+const char* bk_get_volume_name(const VolInfo* volInfo);
 char* bk_get_error_string(int errorId);
 
+/* setters */
 void bk_destroy_vol_info(VolInfo* volInfo);
 void bk_init_vol_info(VolInfo* volInfo);
 int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName);
+void bk_set_publisher(VolInfo* volInfo, const char* publisher);
+void bk_set_vol_name(VolInfo* volInfo, const char* volName);
 
+/* reading */
 int bk_read_dir_tree(int image, VolInfo* volInfo, int filenameType, 
                      bool readPosix);
 int bk_read_vol_info(int image, VolInfo* volInfo);
 
+/* writing */
 int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
                    void(*progressFunction)(void));
