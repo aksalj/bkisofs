@@ -219,6 +219,8 @@ typedef struct
     char volId[33];
     char publisher[129];
     char dataPreparer[129];
+    unsigned posixFileDefaults;   /* for extracting */
+    unsigned posixDirDefaults;    /* for extracting or creating on iso */
     
 } VolInfo;
 

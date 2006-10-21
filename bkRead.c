@@ -34,10 +34,6 @@
 /* for el torito boot images */
 #define NBYTES_VIRTUAL_SECTOR 512
 
-/* these 2 are defined in bkExtract.c */
-extern const unsigned posixDirDefaults;
-extern const unsigned posixFileDefaults;
-
 /*******************************************************************************
 * bk_read_dir_tree()
 * 
@@ -549,7 +545,7 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
     else
     {
         /* this is good for root also */
-        dir->posixFileMode = posixDirDefaults;
+        dir->posixFileMode = volInfo->posixDirDefaults;
     }
     
     lseek(image, lenSU, SEEK_CUR);
@@ -789,7 +785,7 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
     }
     else
     {
-        file->posixFileMode = posixFileDefaults;
+        file->posixFileMode = volInfo->posixFileDefaults;
     }
     
     lseek(image, lenSU, SEEK_CUR);

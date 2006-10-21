@@ -28,6 +28,8 @@ void bk_init_vol_info(VolInfo* volInfo)
     bzero(volInfo, sizeof(VolInfo));
     
     volInfo->dirTree.posixFileMode = 040755;
+    volInfo->posixFileDefaults = 0100644;
+    volInfo->posixDirDefaults = 040755;
 }
 
 /*******************************************************************************

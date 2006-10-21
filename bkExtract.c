@@ -26,9 +26,6 @@
 #include "bkError.h"
 #include "bkWrite.h"
 
-const unsigned posixFileDefaults = 33188; /* octal 100644 */
-const unsigned posixDirDefaults = 16877; /* octal 40755 */
-
 /*******************************************************************************
 * bk_extract_boot_record()
 * Extracts the el torito boot record to the file destPathAndName, with
@@ -145,7 +142,7 @@ int bk_extract_dir(int image, const VolInfo* volInfo, const char* srcDir,
         return rc;
     }
     
-    rc = extractDir(image, &(volInfo->dirTree), srcPath, destDir, 
+    rc = extractDir(volInfo, image, &(volInfo->dirTree), srcPath, destDir, 
                     keepPermissions, progressFunction);
     if(rc <= 0)
     {
@@ -177,7 +174,7 @@ int bk_extract_file(int image, const VolInfo* volInfo, const char* srcFile,
         return rc;
     }
     
-    rc = extractFile(image, &(volInfo->dirTree), &srcPath, destDir, 
+    rc = extractFile(volInfo, image, &(volInfo->dirTree), &srcPath, destDir, 
                      keepPermissions, progressFunction);
     if(rc <= 0)
     {
@@ -195,7 +192,7 @@ int bk_extract_file(int image, const VolInfo* volInfo, const char* srcFile,
 * Extracts a directory with all its contents from the iso to the filesystem.
 * don't try to extract root, don't know what will happen
 * */
-int extractDir(int image, const Dir* tree, const Path* srcDir, 
+int extractDir(const VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir, 
                const char* destDir, bool keepPermissions, 
                void(*progressFunction)(void))
 {
@@ -255,7 +252,7 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
     if(keepPermissions)
         destDirPerms = srcDirInTree->posixFileMode;
     else
-        destDirPerms = posixDirDefaults;
+        destDirPerms = volInfo->posixDirDefaults;
     
     if(access(newDestDir, F_OK) == 0)
     {
@@ -278,7 +275,7 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
     {
         strcpy(filePath.filename, currentFile->file.name);
         
-        rc = extractFile(image, tree, &filePath, newDestDir, keepPermissions, 
+        rc = extractFile(volInfo, image, tree, &filePath, newDestDir, keepPermissions, 
                          progressFunction);
         if(rc <= 0)
         {
@@ -301,7 +298,7 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
             return rc;
         }
         
-        rc = extractDir(image, tree, newSrcDir, newDestDir, keepPermissions, 
+        rc = extractDir(volInfo, image, tree, newSrcDir, newDestDir, keepPermissions, 
                         progressFunction);
         if(rc <= 0)
         {
@@ -321,12 +318,12 @@ int extractDir(int image, const Dir* tree, const Path* srcDir,
 }
 
 /*******************************************************************************
-* extractDir()
+* extractFile()
 * Extracts a file from the iso to the filesystem.
 * destDir must have trailing slash
 * 
 * */
-int extractFile(int image, const Dir* tree, const FilePath* pathAndName, 
+int extractFile(const VolInfo* volInfo, int image, const Dir* tree, const FilePath* pathAndName, 
                 const char* destDir, bool keepPermissions, 
                 void(*progressFunction)(void))
 {
@@ -422,7 +419,7 @@ int extractFile(int image, const Dir* tree, const FilePath* pathAndName,
             if(keepPermissions)
                 destFilePerms = pointerToIt->file.posixFileMode;
             else
-                destFilePerms = posixFileDefaults;
+                destFilePerms = volInfo->posixFileDefaults;
             
             destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
             if(destFile == -1)

@@ -25,8 +25,6 @@
 #include "bkGet.h"
 #include "bkMangle.h"
 
-extern const unsigned posixDirDefaults;
-
 /*******************************************************************************
 * addDir()
 * adds a directory from the filesystem to the image
@@ -548,7 +546,7 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     
     strcpy(destDir->directories->dir.name, newDirName);
     
-    destDir->directories->dir.posixFileMode = posixDirDefaults;
+    destDir->directories->dir.posixFileMode = volInfo->posixDirDefaults;
     
     destDir->directories->dir.directories = NULL;
     destDir->directories->dir.files = NULL;
