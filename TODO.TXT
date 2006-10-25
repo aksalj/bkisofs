@@ -1,10 +1,9 @@
 maybe when adding/deleting/extracting fails, go to the next item in the directory (need warning queue)
 delete files that failed to extract completely
-dcop k3b K3bInterface burnCdImage /home/andrew/project2003.ISO
 add david to the credits
 
 
-make size estimate into its own function
 improve size estimating
 rock ridge special files
 add functions for checking validity of names when adding
+try to keey permissions for files when extracting

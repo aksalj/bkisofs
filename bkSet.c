@@ -13,6 +13,7 @@
 ******************************************************************************/
 
 #include <string.h>
+#include <unistd.h>
 
 #include "bk.h"
 #include "bkDelete.h"
@@ -34,7 +35,8 @@ void bk_init_vol_info(VolInfo* volInfo)
 
 /*******************************************************************************
 * bk_destroy_vol_info()
-* Frees any memory refered to by volinfo. 
+* Frees any memory refered to by volinfo.
+* If an image was open for reading closes it.
 * Does not reinitialize the structure.
 * */
 void bk_destroy_vol_info(VolInfo* volInfo)
@@ -43,6 +45,9 @@ void bk_destroy_vol_info(VolInfo* volInfo)
     
     if(volInfo->bootRecordPathAndName != NULL)
         free(volInfo->bootRecordPathAndName);
+    
+    if(volInfo->imageForReading > 0)
+        close(volInfo->imageForReading);
 }
 
 /*******************************************************************************

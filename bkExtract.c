@@ -31,8 +31,8 @@
 * Extracts the el torito boot record to the file destPathAndName, with
 * permissions destFilePerms.
 * */
-int bk_extract_boot_record(int image, const VolInfo* volInfo, 
-                           const char* destPathAndName, unsigned destFilePerms)
+int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 
+                           unsigned destFilePerms)
 {
     int srcFile; /* returned by open() */
     bool srcFileWasOpened;
@@ -56,8 +56,8 @@ int bk_extract_boot_record(int image, const VolInfo* volInfo,
     {
         if(volInfo->bootRecordOnImage->onImage)
         {
-            srcFile = image;
-            lseek(image, volInfo->bootRecordOnImage->position, SEEK_SET);
+            srcFile = volInfo->imageForReading;
+            lseek(volInfo->imageForReading, volInfo->bootRecordOnImage->position, SEEK_SET);
             srcFileWasOpened = false;
         }
         else
@@ -73,8 +73,8 @@ int bk_extract_boot_record(int image, const VolInfo* volInfo,
     {
         if(volInfo->bootRecordIsOnImage)
         {
-            srcFile = image;
-            lseek(image, volInfo->bootRecordOffset, SEEK_SET);
+            srcFile = volInfo->imageForReading;
+            lseek(volInfo->imageForReading, volInfo->bootRecordOffset, SEEK_SET);
             srcFileWasOpened = false;
         }
         else
@@ -117,7 +117,7 @@ int bk_extract_boot_record(int image, const VolInfo* volInfo,
 * Extracts a directory with all its contents from the iso to the filesystem.
 * Public function.
 * */
-int bk_extract_dir(int image, const VolInfo* volInfo, const char* srcDir,
+int bk_extract_dir(const VolInfo* volInfo, const char* srcDir,
                    const char* destDir, bool keepPermissions,
                    void(*progressFunction)(void))
 {
@@ -142,7 +142,7 @@ int bk_extract_dir(int image, const VolInfo* volInfo, const char* srcDir,
         return rc;
     }
     
-    rc = extractDir(volInfo, image, &(volInfo->dirTree), srcPath, destDir, 
+    rc = extractDir(volInfo, volInfo->imageForReading, &(volInfo->dirTree), srcPath, destDir, 
                     keepPermissions, progressFunction);
     if(rc <= 0)
     {
@@ -160,7 +160,7 @@ int bk_extract_dir(int image, const VolInfo* volInfo, const char* srcDir,
 * Extracts a file from the iso to the filesystem.
 * Public function.
 * */
-int bk_extract_file(int image, const VolInfo* volInfo, const char* srcFile, 
+int bk_extract_file(const VolInfo* volInfo, const char* srcFile, 
                     const char* destDir, bool keepPermissions, 
                     void(*progressFunction)(void))
 {
@@ -174,7 +174,7 @@ int bk_extract_file(int image, const VolInfo* volInfo, const char* srcFile,
         return rc;
     }
     
-    rc = extractFile(volInfo, image, &(volInfo->dirTree), &srcPath, destDir, 
+    rc = extractFile(volInfo, volInfo->imageForReading, &(volInfo->dirTree), &srcPath, destDir, 
                      keepPermissions, progressFunction);
     if(rc <= 0)
     {

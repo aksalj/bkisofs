@@ -198,9 +198,13 @@ typedef struct
     unsigned filenameTypes;
     off_t pRootDrOffset; /* primary (9660 and maybe rockridge) */
     off_t sRootDrOffset; /* secondary (joliet), 0 if does not exist */
+    int imageForReading;
+    ino_t imageForReadingInode; /* to know which file was open for reading
+                                * (filename is not reliable) */
     
     /* bk use for writing the new image */
     off_t bootRecordSectorNumberOffset;
+    int imageForWriting;
     
     /* public use, read only */
     time_t creationTime;
@@ -241,12 +245,12 @@ void bk_delete_boot_record(VolInfo* volInfo);
 int bk_delete_dir(VolInfo* volInfo, const char* dirStr);
 int bk_delete_file(VolInfo* volInfo, const char* fileStr);
 
-int bk_extract_boot_record(int image, const VolInfo* volInfo, 
-                           const char* destPathAndName, unsigned destFilePerms);
-int bk_extract_dir(int image, const VolInfo* volInfo, const char* srcDir,
+int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 
+                           unsigned destFilePerms);
+int bk_extract_dir(const VolInfo* volInfo, const char* srcDir,
                    const char* destDir, bool keepPermissions,
                    void(*progressFunction)(void));
-int bk_extract_file(int image, const VolInfo* volInfo, const char* srcFile, 
+int bk_extract_file(const VolInfo* volInfo, const char* srcFile, 
                     const char* destDir, bool keepPermissions, 
                     void(*progressFunction)(void));
 
@@ -267,9 +271,9 @@ void bk_set_publisher(VolInfo* volInfo, const char* publisher);
 void bk_set_vol_name(VolInfo* volInfo, const char* volName);
 
 /* reading */
-int bk_read_dir_tree(int image, VolInfo* volInfo, int filenameType, 
-                     bool readPosix);
-int bk_read_vol_info(int image, VolInfo* volInfo);
+int bk_open_image(VolInfo* volInfo, const char* filename);
+int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool readPosix);
+int bk_read_vol_info(VolInfo* volInfo);
 
 /* writing */
 int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, 
