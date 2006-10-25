@@ -18,6 +18,7 @@
 #include <ctype.h>
 
 #include "bk.h"
+#include "bkInternal.h"
 #include "bkMangle.h"
 #include "bkError.h"
 

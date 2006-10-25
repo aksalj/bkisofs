@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "bk.h"
+#include "bkInternal.h"
 #include "bkError.h"
 #include "bkGet.h"
 

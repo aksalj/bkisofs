@@ -21,6 +21,7 @@
 #include <fcntl.h>
 
 #include "bk.h"
+#include "bkInternal.h"
 #include "bkRead.h"
 #include "bkRead7x.h"
 #include "bkTime.h"

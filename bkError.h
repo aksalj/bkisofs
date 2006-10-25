@@ -91,5 +91,3 @@
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000
 #define BKERROR_END_TEXT                         "Double oops, unusable error number used"
-
-void outputError(int errorNum);

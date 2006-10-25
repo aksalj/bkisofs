@@ -1,6 +1,8 @@
 #ifndef bkPath_h
 #define bkPath_h
 
+#include "bkInternal.h"
+
 void freeDirToWriteContents(DirToWrite* dir);
 void freePath(Path* path);
 void freePathDirs(Path* path);

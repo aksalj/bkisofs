@@ -7,8 +7,6 @@
 * -file as returned by open()
 * -variable address to read from and write
 * 
-* return is number of bytes written
-* 
 * !! these functions are not platform independent
 * */
 

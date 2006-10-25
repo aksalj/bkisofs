@@ -15,6 +15,8 @@
 #include <string.h>
 
 #include "bk.h"
+#include "bkInternal.h"
+#include "bkSort.h"
 
 /* strings cannot be equal */
 bool rightIsBigger(char* leftStr, char* rightStr)

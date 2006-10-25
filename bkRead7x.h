@@ -7,8 +7,6 @@
 * -file as returned by open()
 * -variable address to read into
 * 
-* return is number of bytes read
-* 
 * if they are stored in both byte orders, the appropriate one is read into
 * the parameter but the return is 2x the size of that variable
 *

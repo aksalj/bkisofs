@@ -29,9 +29,9 @@ bkSort.o: bkSort.c bkSort.h bk.h
 	cc bkSort.c $(GLOBALFLAGS) -c
 bkError.o: bkError.c bkError.h
 	cc bkError.c $(GLOBALFLAGS) -c
-bkGet.o: bkGet.c bkGet.h
+bkGet.o: bkGet.c bkGet.h bk.h
 	cc bkGet.c $(GLOBALFLAGS) -c
-bkSet.o: bkSet.c bkSet.h
+bkSet.o: bkSet.c bkSet.h bk.h
 	cc bkSet.c $(GLOBALFLAGS) -c
 
 clean: 

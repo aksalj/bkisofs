@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "bk.h"
+#include "bkInternal.h"
 #include "bkError.h"
 #include "bkPath.h"
 #include "bkMangle.h"

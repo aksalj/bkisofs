@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 
 #include "bk.h"
+#include "bkInternal.h"
 #include "bkWrite7x.h"
 #include "bkTime.h"
 #include "bkWrite.h"

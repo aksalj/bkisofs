@@ -1,7 +1,6 @@
 maybe when adding/deleting/extracting fails, go to the next item in the directory (need warning queue)
 delete files that failed to extract completely
 add david to the credits
-resize icons to proper toolbar size
 
 
 improve size estimating

@@ -21,6 +21,7 @@
 #include <stdio.h>
 
 #include "bk.h"
+#include "bkInternal.h"
 #include "bkExtract.h"
 #include "bkPath.h"
 #include "bkError.h"

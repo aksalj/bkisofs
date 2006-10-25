@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "bkInternal.h"
 #include "bkError.h"
 
 struct MessageStruct
@@ -81,29 +82,4 @@ char* bk_get_error_string(int errorId)
         printf("unknown error %d used\n", errorId);
     
     return messageStructs[count].text;
-}
-
-void outputError(int errorNumIn)
-{
-    int count;
-    bool found;
-    
-    found = false;
-    for(count = 0; !found && messageStructs[count].number != BKERROR_END; count++)
-    {
-        if(messageStructs[count].number == errorNumIn)
-        {
-            found = true;
-            
-            if(errorNumIn >= BKERROR_MIN_ID && errorNumIn <= BKERROR_MAX_ID)
-                fprintf(stderr, "Error: ");
-            else
-                fprintf(stderr, "Warning: ");
-            
-            fprintf(stderr, "%s\n", messageStructs[count].text);
-        }
-    }
-    
-    if(!found)
-        fprintf(stderr, "Unknown error has occured\n");
 }
