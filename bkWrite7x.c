@@ -151,8 +151,8 @@ void write733ToByteArray(unsigned char* dest, unsigned value)
 
 /*******************************************************************************
 * writeWrapper()
-* Simply a wrapper around write(), to facilitate migration to a caching system
-* or fwrite()
+* Simply a wrapper around write(), possibly utterly pointeless but perhaps it 
+* will facilitate migration to a caching system.
 * */
 int writeWrapper(int fileDescriptor, const void* data, size_t numBytes)
 {

@@ -17,6 +17,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include "bk.h"
 #include "bkWrite7x.h"
@@ -1050,11 +1051,13 @@ int writeElToritoBootCatalog(int image, const VolInfo* volInfo)
 * Writes everything from first to last byte of the iso.
 * Public function.
 * */
-int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, 
+int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
                    void(*progressFunction)(void))
 {
     int rc;
+    struct stat statStruct;
+    int newImage;
     DirToWrite newTree;
     off_t svdOffset;
     off_t pRealRootDrOffset;
@@ -1069,6 +1072,10 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     int pathTableJolietSize;
     off_t bootCatalogSectorNumberOffset;
     off_t currPos;
+    
+    rc = stat(newImagePathAndName, &statStruct);
+    if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
+        return BKERROR_SAVE_OVERWRITE;
     
     /* because mangleDir works on dir's children i need to copy the root manually */
     bzero(&newTree, sizeof(DirToWrite));
@@ -1089,12 +1096,21 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     if(progressFunction != NULL)
         progressFunction();
     
+    printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
+    newImage = open(newImagePathAndName, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    if(newImage == -1)
+    {
+        freeDirToWriteContents(&newTree);
+        return BKERROR_OPEN_WRITE_FAILED;
+    }
+    
     printf("writing blank at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
     /* system area, always zeroes */
     rc = writeByteBlock(newImage, 0, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
+        close(newImage);
         return rc;
     }
     
@@ -1106,7 +1122,11 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         /* el torito volume descriptor */
         bootCatalogSectorNumberOffset = writeElToritoVd(newImage, volInfo);
         if(bootCatalogSectorNumberOffset <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            close(newImage);
             return bootCatalogSectorNumberOffset;
+        }
     }
     
     if(filenameTypes & FNTYPE_JOLIET)
@@ -1125,6 +1145,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
+        close(newImage);
         return rc;
     }
     
@@ -1137,6 +1158,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
+            close(newImage);
             return rc;
         }
         lseek(newImage, currPos, SEEK_SET);
@@ -1147,6 +1169,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(volInfo->bootRecordSectorNumberOffset <= 0)
         {
             freeDirToWriteContents(&newTree);
+            close(newImage);
             return volInfo->bootRecordSectorNumberOffset;
         }
     }
@@ -1163,8 +1186,8 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         /* set up source file pointer */
         if(volInfo->bootRecordIsOnImage)
         {
-            srcFile = oldImage;
-            lseek(oldImage, volInfo->bootRecordOffset, SEEK_SET);
+            srcFile = volInfo->imageForReading;
+            lseek(volInfo->imageForReading, volInfo->bootRecordOffset, SEEK_SET);
             srcFileOpened = false;
         }
         else
@@ -1173,6 +1196,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
             if(srcFile == -1)
             {
                 freeDirToWriteContents(&newTree);
+                close(newImage);
                 return BKERROR_OPEN_READ_FAILED;
             }
             srcFileOpened = true;
@@ -1185,6 +1209,9 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
+            if(srcFileOpened)
+                close(srcFile);
+            close(newImage);
             return rc;
         }
         lseek(newImage, currPos, SEEK_SET);
@@ -1194,7 +1221,9 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc < 0)
         {
             freeDirToWriteContents(&newTree);
-            close(srcFile);
+            if(srcFileOpened)
+                close(srcFile);
+            close(newImage);
             return rc;
         }
         
@@ -1206,7 +1235,9 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc < 0)
         {
             freeDirToWriteContents(&newTree);
-            close(srcFile);
+            if(srcFileOpened)
+                close(srcFile);
+            close(newImage);
             return rc;
         }
         
@@ -1230,6 +1261,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
+        close(newImage);
         return rc;
     }
     
@@ -1252,6 +1284,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
+            close(newImage);
             return rc;
         }
         
@@ -1268,6 +1301,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
+        close(newImage);
         return rc;
     }
     pathTable9660Size = rc;
@@ -1277,6 +1311,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
+        close(newImage);
         return rc;
     }
     
@@ -1288,6 +1323,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
+            close(newImage);
             return rc;
         }
         pathTableJolietSize = rc;
@@ -1297,6 +1333,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
+            close(newImage);
             return rc;
         }
     }
@@ -1306,10 +1343,11 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     
     printf("writing files at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
     /* all files and offsets/sizes */
-    rc = writeFileContents(oldImage, newImage, volInfo, &newTree, filenameTypes, progressFunction);
+    rc = writeFileContents(volInfo->imageForReading, newImage, volInfo, &newTree, filenameTypes, progressFunction);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
+        close(newImage);
         return rc;
     }
     
@@ -1325,6 +1363,7 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
+        close(newImage);
         return rc;
     }
     
@@ -1342,11 +1381,13 @@ int bk_write_image(int oldImage, int newImage, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
+            close(newImage);
             return rc;
         }
     }
     
     freeDirToWriteContents(&newTree);
+    close(newImage);
     
     return 1;
 }

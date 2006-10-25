@@ -276,7 +276,7 @@ int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool readPosix);
 int bk_read_vol_info(VolInfo* volInfo);
 
 /* writing */
-int bk_write_image(int oldImage, int newImage, VolInfo* volInfo, 
+int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
                    void(*progressFunction)(void));
 

@@ -85,6 +85,8 @@
 #define BKERROR_NEW_DIR_ZERO_LEN_NAME_TEXT       "Cannot create new directory without a name"
 #define BKERROR_ADD_FILE_TOO_BIG                 -1037
 #define BKERROR_ADD_FILE_TOO_BIG_TEXT            "Cannot add file larger than 4294967295 bytes because the ISO filesystem does not support such large files"
+#define BKERROR_SAVE_OVERWRITE                   -1038
+#define BKERROR_SAVE_OVERWRITE_TEXT              "Cannot overwrite original image when saving"
 
 /* do not make up #defines with numbers lower then this */
 #define BKERROR_END                              -1000000
