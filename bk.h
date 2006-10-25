@@ -198,13 +198,10 @@ typedef struct
     unsigned filenameTypes;
     off_t pRootDrOffset; /* primary (9660 and maybe rockridge) */
     off_t sRootDrOffset; /* secondary (joliet), 0 if does not exist */
+    off_t bootRecordSectorNumberOffset;
     int imageForReading;
     ino_t imageForReadingInode; /* to know which file was open for reading
                                 * (filename is not reliable) */
-    
-    /* bk use for writing the new image */
-    off_t bootRecordSectorNumberOffset;
-    int imageForWriting;
     
     /* public use, read only */
     time_t creationTime;
