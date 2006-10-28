@@ -118,7 +118,7 @@ int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName,
 * Extracts a directory with all its contents from the iso to the filesystem.
 * Public function.
 * */
-int bk_extract_dir(const VolInfo* volInfo, const char* srcDir,
+int bk_extract_dir(VolInfo* volInfo, const char* srcDir,
                    const char* destDir, bool keepPermissions,
                    void(*progressFunction)(void))
 {
@@ -193,7 +193,7 @@ int bk_extract_file(const VolInfo* volInfo, const char* srcFile,
 * Extracts a directory with all its contents from the iso to the filesystem.
 * don't try to extract root, don't know what will happen
 * */
-int extractDir(const VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir, 
+int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir, 
                const char* destDir, bool keepPermissions, 
                void(*progressFunction)(void))
 {
@@ -276,12 +276,29 @@ int extractDir(const VolInfo* volInfo, int image, const Dir* tree, const Path* s
     {
         strcpy(filePath.filename, currentFile->file.name);
         
-        rc = extractFile(volInfo, image, tree, &filePath, newDestDir, keepPermissions, 
-                         progressFunction);
+        rc = extractFile(volInfo, image, tree, &filePath, newDestDir, 
+                         keepPermissions, progressFunction);
         if(rc <= 0)
         {
-            free(newDestDir);
-            return rc;
+            bool goOn;
+            
+            if(volInfo->warningCbk != NULL)
+            /* perhaps the user wants to ignore this failure */
+            {
+                snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                         "Failed to extract file '%s' to '%s': '%s'",
+                         filePath.filename, newDestDir, bk_get_error_string(rc));
+                goOn = volInfo->warningCbk(volInfo->warningMessage);
+                rc = BKWARNING_OPER_PARTLY_FAILED;
+            }
+            else
+                goOn = false;
+            
+            if(!goOn)
+            {
+                free(newDestDir);
+                return rc;
+            }
         }
         
         currentFile = currentFile->next;
@@ -303,8 +320,25 @@ int extractDir(const VolInfo* volInfo, int image, const Dir* tree, const Path* s
                         progressFunction);
         if(rc <= 0)
         {
-            free(newDestDir);
-            return rc;
+            bool goOn;
+            
+            if(volInfo->warningCbk != NULL)
+            /* perhaps the user wants to ignore this failure */
+            {
+                snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                         "Failed to extract directory '%s' to '%s': '%s'",
+                         currentDir->dir.name, newDestDir, bk_get_error_string(rc));
+                goOn = volInfo->warningCbk(volInfo->warningMessage);
+                rc = BKWARNING_OPER_PARTLY_FAILED;
+            }
+            else
+                goOn = false;
+            
+            if(!goOn)
+            {
+                free(newDestDir);
+                return rc;
+            }
         }
         
         freePath(newSrcDir);

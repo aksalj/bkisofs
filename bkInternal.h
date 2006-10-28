@@ -105,13 +105,4 @@ typedef struct FileToWriteLL
     
 } FileToWriteLL;
 
-#define BK_WARNING_MAX_LEN 512
-
-typedef struct BkMessageLL
-{
-    char message[BK_WARNING_MAX_LEN];
-    struct BkMessageLL* next;
-    
-} BkMessageLL;
-
 #endif

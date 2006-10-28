@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "bk.h"
 #include "bkPath.h"
@@ -34,7 +35,7 @@
 * - char*, path of directory to add, must end with trailing slash
 * - Path*, destination on image
 * */
-int addDir(Dir* tree, const char* srcPath, const Path* destDir)
+int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir)
 {
     int count;
     int rc;
@@ -162,26 +163,60 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
         if( strcmp(dirEnt->d_name, ".") != 0 && strcmp(dirEnt->d_name, "..") != 0 )
         /* not "." or ".." (safely ignore those two) */
         {
+            bool goOn;
+            
             if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX - 1)
             {
-                free(destDirInTree->directories);
-                destDirInTree->directories = oldHead;
-                free(newSrcPathAndName);
-                freePath(newDestDir);
-                return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
-            }
+                if(volInfo->warningCbk != NULL)
+                /* perhaps the user wants to ignore this failure */
+                {
+                    snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                             "Failed to add item '%s': '%s'",
+                             dirEnt->d_name, 
+                             bk_get_error_string(BKERROR_MAX_NAME_LENGTH_EXCEEDED));
+                    goOn = volInfo->warningCbk(volInfo->warningMessage);
+                    rc = BKWARNING_OPER_PARTLY_FAILED;
+                }
+                else
+                    goOn = false;
                 
+                if(goOn)
+                    continue;
+                else
+                {
+                    free(newSrcPathAndName);
+                    freePath(newDestDir);
+                    return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+                }
+            }
+            
             /* append file/dir name */
             strcpy(newSrcPathAndName + newSrcPathLen, dirEnt->d_name);
             
             rc = stat(newSrcPathAndName, &anEntry);
             if(rc == -1)
             {
-                free(destDirInTree->directories);
-                destDirInTree->directories = oldHead;
-                free(newSrcPathAndName);
-                freePath(newDestDir);
-                return BKERROR_STAT_FAILED;
+                if(volInfo->warningCbk != NULL)
+                /* perhaps the user wants to ignore this failure */
+                {
+                    snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                             "Failed to add item '%s': '%s'",
+                             newSrcPathAndName, 
+                             bk_get_error_string(BKERROR_STAT_FAILED));
+                    goOn = volInfo->warningCbk(volInfo->warningMessage);
+                    rc = BKWARNING_OPER_PARTLY_FAILED;
+                }
+                else
+                    goOn = false;
+                
+                if(goOn)
+                    continue;
+                else
+                {
+                    free(newSrcPathAndName);
+                    freePath(newDestDir);
+                    return BKERROR_STAT_FAILED;
+                }
             }
             
             if(anEntry.st_mode & S_IFDIR)
@@ -189,14 +224,27 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
             {
                 strcat(newSrcPathAndName, "/");
                 
-                rc = addDir(tree, newSrcPathAndName, newDestDir);
+                rc = addDir(volInfo, tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
                 {
-                    free(destDirInTree->directories);
-                    destDirInTree->directories = oldHead;
-                    free(newSrcPathAndName);
-                    freePath(newDestDir);
-                    return rc;
+                    if(volInfo->warningCbk != NULL)
+                    /* perhaps the user wants to ignore this failure */
+                    {
+                        snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                                 "Failed to add directory '%s': '%s'",
+                                 newSrcPathAndName, bk_get_error_string(rc));
+                        goOn = volInfo->warningCbk(volInfo->warningMessage);
+                        rc = BKWARNING_OPER_PARTLY_FAILED;
+                    }
+                    else
+                        goOn = false;
+                    
+                    if(!goOn)
+                    {
+                        free(newSrcPathAndName);
+                        freePath(newDestDir);
+                        return rc;
+                    }
                 }
             }
             else if(anEntry.st_mode & S_IFREG)
@@ -205,21 +253,50 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
                 rc = addFile(tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
                 {
-                    free(destDirInTree->directories);
-                    destDirInTree->directories = oldHead;
-                    free(newSrcPathAndName);
-                    freePath(newDestDir);
-                    return rc;
+                    if(volInfo->warningCbk != NULL)
+                    /* perhaps the user wants to ignore this failure */
+                    {
+                        snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                                 "Failed to add file '%s': '%s'",
+                                 newSrcPathAndName, bk_get_error_string(rc));
+                        goOn = volInfo->warningCbk(volInfo->warningMessage);
+                        rc = BKWARNING_OPER_PARTLY_FAILED;
+                    }
+                    else
+                        goOn = false;
+                    
+                    if(!goOn)
+                    {
+                        free(newSrcPathAndName);
+                        freePath(newDestDir);
+                        return rc;
+                    }
                 }
             }
             else
             /* not regular file or directory */
             {
-                free(destDirInTree->directories);
-                destDirInTree->directories = oldHead;
-                free(newSrcPathAndName);
-                freePath(newDestDir);
-                return BKERROR_NO_SPECIAL_FILES;
+                if(volInfo->warningCbk != NULL)
+                /* perhaps the user wants to ignore this failure */
+                {
+                    snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                             "Failed to add item '%s': '%s'",
+                             newSrcPathAndName, 
+                             bk_get_error_string(BKERROR_NO_SPECIAL_FILES));
+                    goOn = volInfo->warningCbk(volInfo->warningMessage);
+                    rc = BKWARNING_OPER_PARTLY_FAILED;
+                }
+                else
+                    goOn = false;
+                
+                if(goOn)
+                    continue;
+                else
+                {
+                    free(newSrcPathAndName);
+                    freePath(newDestDir);
+                    return BKERROR_NO_SPECIAL_FILES;
+                }
             }
             
         } /* if */
@@ -230,8 +307,6 @@ int addDir(Dir* tree, const char* srcPath, const Path* destDir)
     if(rc != 0)
     /* exotic error */
     {
-        free(destDirInTree->directories);
-        destDirInTree->directories = oldHead;
         free(newSrcPathAndName);
         freePath(newDestDir);
         return BKERROR_EXOTIC;
@@ -423,7 +498,7 @@ int bk_add_dir(VolInfo* volInfo, const char* srcPathAndName,
     if(destPathStr[0] == '/' && destPathStr[1] == '\0')
     /* root, special case */
     {
-        rc = addDir(&(volInfo->dirTree), srcPathAndName, destPath);
+        rc = addDir(volInfo, &(volInfo->dirTree), srcPathAndName, destPath);
         if(rc <= 0)
         {
             freePath(destPath);
@@ -440,7 +515,7 @@ int bk_add_dir(VolInfo* volInfo, const char* srcPathAndName,
             return rc;
         }
         
-        rc = addDir(&(volInfo->dirTree), srcPathAndName, destPath);
+        rc = addDir(volInfo, &(volInfo->dirTree), srcPathAndName, destPath);
         if(rc <= 0)
         {
             freePath(destPath);

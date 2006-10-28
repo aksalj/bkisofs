@@ -23,6 +23,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "bkError.h"
+
 /* can be |ed */
 #define FNTYPE_9660 1
 #define FNTYPE_ROCKRIDGE 2
@@ -105,6 +107,8 @@ typedef struct FileLL
     
 } FileLL;
 
+#define BK_WARNING_MAX_LEN 512
+
 /*******************************************************************************
 * VolInfo
 * information about a volume (one image)
@@ -119,6 +123,7 @@ typedef struct
     int imageForReading;
     ino_t imageForReadingInode; /* to know which file was open for reading
                                 * (filename is not reliable) */
+    char warningMessage[BK_WARNING_MAX_LEN];
     
     /* public use, read only */
     time_t creationTime;
@@ -139,6 +144,7 @@ typedef struct
     char dataPreparer[129];
     unsigned posixFileDefaults;   /* for extracting */
     unsigned posixDirDefaults;    /* for extracting or creating on iso */
+    bool(*warningCbk)(const char*);   /*  */
     
 } VolInfo;
 
@@ -161,7 +167,7 @@ int bk_delete_file(VolInfo* volInfo, const char* fileStr);
 
 int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 
                            unsigned destFilePerms);
-int bk_extract_dir(const VolInfo* volInfo, const char* srcDir,
+int bk_extract_dir(VolInfo* volInfo, const char* srcDir,
                    const char* destDir, bool keepPermissions,
                    void(*progressFunction)(void));
 int bk_extract_file(const VolInfo* volInfo, const char* srcFile, 
