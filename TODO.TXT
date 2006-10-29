@@ -20,3 +20,4 @@ tests to run before a release:
 - make a dos bootable cd, see if it boots
  - from scratch
  - starting with an existing no emulation bootable disk
+- remember to update the version number in the about box
