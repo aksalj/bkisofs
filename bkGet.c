@@ -13,6 +13,7 @@
 ******************************************************************************/
 
 #include <string.h>
+#include <sys/types.h>
 
 #include "bk.h"
 #include "bkInternal.h"
