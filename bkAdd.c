@@ -41,7 +41,7 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
     int rc;
     
     /* vars to add dir to tree */
-    char srcDirName[NCHARS_FILE_ID_MAX];
+    char srcDirName[NCHARS_FILE_ID_MAX_STORE];
     Dir* destDirInTree;
     DirLL* searchDir;
     bool dirFound;
@@ -124,7 +124,7 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
     newSrcPathLen = strlen(srcPath);
     
     /* including the file/dir name and the trailing '/' and the '\0' */
-    newSrcPathAndName = malloc(newSrcPathLen + NCHARS_FILE_ID_MAX + 1);
+    newSrcPathAndName = malloc(newSrcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
     if(newSrcPathAndName == NULL)
     {
         free(destDirInTree->directories);
@@ -165,7 +165,7 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
         {
             bool goOn;
             
-            if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX - 1)
+            if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX_STORE - 1)
             {
                 if(volInfo->warningCbk != NULL)
                 /* perhaps the user wants to ignore this failure */
@@ -335,7 +335,7 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
     int count;
     int rc;
     FileLL* oldHead; /* of the files list */
-    char filename[NCHARS_FILE_ID_MAX];
+    char filename[NCHARS_FILE_ID_MAX_STORE];
     struct stat statStruct;
     
     /* vars to find the dir in the tree */
@@ -590,7 +590,7 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     DirLL* oldHead;
     
     nameLen = strlen(newDirName);
-    if(nameLen > NCHARS_FILE_ID_MAX - 1)
+    if(nameLen > NCHARS_FILE_ID_MAX_STORE - 1)
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     if(nameLen == 0)
         return BKERROR_NEW_DIR_ZERO_LEN_NAME;

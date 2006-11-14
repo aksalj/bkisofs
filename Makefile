@@ -1,6 +1,6 @@
 OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o bkGet.o bkSet.o
 # the _FILE_OFFSET_BITS=64 is to enable stat() for large files
-GLOBALFLAGS = -D_FILE_OFFSET_BITS=64 -Wall
+GLOBALFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -g
 
 bk.a: $(OBJECTS)
 	ar -cr bk.a $(OBJECTS)

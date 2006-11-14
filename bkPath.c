@@ -97,7 +97,7 @@ void freePathDirs(Path* path)
 * Get the filename from a path and name string, e.g. if srcPathAndName is
 * /some/thing filename will be thing.
 * The filename must be allocated and have less than 
-* NCHARS_FILE_ID_MAX - 1 characters.
+* NCHARS_FILE_ID_MAX_STORE - 1 characters.
 * */
 int getFilenameFromPath(const char* srcPathAndName, char* filename)
 {
@@ -125,7 +125,7 @@ int getFilenameFromPath(const char* srcPathAndName, char* filename)
     /* string ended with '/' */
         return BKERROR_MISFORMED_PATH;
     
-    if(srcLen - indexLastSlash - 1 > NCHARS_FILE_ID_MAX - 1)
+    if(srcLen - indexLastSlash - 1 > NCHARS_FILE_ID_MAX_STORE - 1)
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     
     /* this loop copies null byte also */
@@ -166,7 +166,7 @@ int getLastDirFromString(const char* srcPath, char* dirName)
         }
     }
     
-    if(lastSlashIndex - prevSlashIndex - 1 > NCHARS_FILE_ID_MAX - 1)
+    if(lastSlashIndex - prevSlashIndex - 1 > NCHARS_FILE_ID_MAX_STORE - 1)
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     
     /* copy all characters in between the slashes found */
@@ -183,39 +183,42 @@ int getLastDirFromString(const char* srcPath, char* dirName)
 * makeFilePathFromString()
 * Converts a path and name string into a FilePath
 * */
-int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
+int makeFilePathFromString(const char* srcPathAndNameIn, FilePath* pathPath)
 {
     int rc;
-    int srcFileLen;
+    int srcPathAndNameLen;
     /* because i need to modify it and the parameter needs to be const */
-    char* srcFile; 
-    /* index of the first character in the filename part of srcFile */
+    char* srcPathAndName; 
+    /* index of the first character in the filename part of srcPathAndName */
     int fileIndex;
     char origFilenameFirstChar;
     
     pathPath->path.numDirs = 0;
     pathPath->path.dirs = NULL;
     
-    srcFileLen = strlen(srcFileIn);
+    srcPathAndNameLen = strlen(srcPathAndNameIn);
     
-    srcFile = malloc(srcFileLen + 1);
-    if(srcFile == NULL)
+    srcPathAndName = malloc(srcPathAndNameLen + 1);
+    if(srcPathAndName == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
-    strcpy(srcFile, srcFileIn);
+    strcpy(srcPathAndName, srcPathAndNameIn);
     
-    if(srcFile[0] != '/' || srcFile[srcFileLen] == '/')
+    if(srcPathAndName[0] != '/' || srcPathAndName[srcPathAndNameLen] == '/')
+    {
+        free(srcPathAndName);
         return BKERROR_MISFORMED_PATH;
+    }
     
     /* replace the first character of the filename with a null byte so
     * that i can pass the string to makePathFromString() */
     origFilenameFirstChar = 0x01; /* not a character */
-    for(fileIndex = srcFileLen; fileIndex > 0; fileIndex--)
+    for(fileIndex = srcPathAndNameLen; fileIndex > 0; fileIndex--)
     {
-        if(srcFile[fileIndex - 1] == '/')
+        if(srcPathAndName[fileIndex - 1] == '/')
         {
-            origFilenameFirstChar = srcFile[fileIndex];
-            srcFile[fileIndex] = '\0';
+            origFilenameFirstChar = srcPathAndName[fileIndex];
+            srcPathAndName[fileIndex] = '\0';
             
             break;
         }
@@ -223,23 +226,34 @@ int makeFilePathFromString(const char* srcFileIn, FilePath* pathPath)
     
     if(origFilenameFirstChar == 0x01)
     /* no filename found */
+    {
+        free(srcPathAndName);
         return BKERROR_MISFORMED_PATH;
-    
-    if(srcFileLen - origFilenameFirstChar > NCHARS_FILE_ID_MAX - 1)
-        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+    }
     
     if(fileIndex != 1)
     /* file not in root */
     {
-        rc = makePathFromString(srcFile, &(pathPath->path));
+        rc = makePathFromString(srcPathAndName, &(pathPath->path));
         if(rc <= 0)
+        {
+            free(srcPathAndName);
             return rc;
+        }
     }
     
-    srcFile[fileIndex] = origFilenameFirstChar;
+    srcPathAndName[fileIndex] = origFilenameFirstChar;
     
-    strcpy(pathPath->filename, &(srcFile[fileIndex]));
+    if(strlen(srcPathAndName + fileIndex) > NCHARS_FILE_ID_MAX_STORE - 1)
+    {
+        free(srcPathAndName);
+        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+    }
     
+    strcpy(pathPath->filename, srcPathAndName + fileIndex);
+    
+    free(srcPathAndName);
+
     return 1;
 }
 

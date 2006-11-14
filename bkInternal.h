@@ -44,7 +44,7 @@ typedef struct
 typedef struct
 {
     Path path;
-    char filename[NCHARS_FILE_ID_MAX]; /* '\0' terminated */
+    char filename[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
     
 } FilePath;
 

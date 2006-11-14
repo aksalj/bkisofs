@@ -793,7 +793,7 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
         
         removeCrapFromFilename(nameInAscii, lenFileId9660 / 2);
         
-        if( strlen(nameInAscii) > NCHARS_FILE_ID_MAX - 1 )
+        if( strlen(nameInAscii) > NCHARS_FILE_ID_MAX_STORE - 1 )
             return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
         
         strncpy(file->name, nameInAscii, NCHARS_FILE_ID_MAX_STORE - 1);
@@ -911,7 +911,7 @@ int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
 /*******************************************************************************
 * readRockridgeFilename()
 * Finds the NM entry in the system use fields and reads a maximum of
-* NCHARS_FILE_ID_MAX characters from it (truncates if necessary).
+* NCHARS_FILE_ID_MAX_STORE characters from it (truncates if necessary).
 * The continue system use field is not implemented so if the name is not in
 * this directory record, the function returns a failure.
 * Leaves the file pointer where it was.
