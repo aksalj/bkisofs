@@ -45,10 +45,10 @@ bool charIsValid9660(char theChar)
 }
 
 /******************************************************************************
-* convertNameTo9660()
+* shortenNameFor9660()
 * Same as mangleNameFor9660() but without the ~XXXX.
 * */
-void convertNameTo9660(const char* origName, char* newName, bool isADir)
+void shortenNameFor9660(const char* origName, char* newName, bool isADir)
 {
     char* dot_p;
     int i;
@@ -86,6 +86,98 @@ void convertNameTo9660(const char* origName, char* newName, bool isADir)
                 dot_p = NULL;
         }
     /*}*/
+    /* END FIND extension */
+    
+    /* GET base */
+    /* the leading characters in the mangled name is taken from
+    *  the first characters of the name, if they are ascii otherwise
+    *  '_' is used */
+    for(i = 0; i < 8 && origName[i] != '\0'; i++)
+    {
+        base[i] = origName[i];
+        
+        if ( !charIsValid9660(origName[i]) )
+            base[i] = '_';
+        
+        base[i] = toupper(base[i]);
+    }
+    
+    /* make sure base doesn't contain part of the extension */
+    if(dot_p != NULL)
+    {
+        //!! test this to make sure it works
+        if(i > dot_p - origName)
+            i = dot_p - origName;
+    }
+    
+    base[i] = '\0';
+    /* END GET base */
+    
+    /* GET extension */
+    /* the extension of the mangled name is taken from the first 3
+       ascii chars after the dot */
+    extensionLen = 0;
+    if(dot_p)
+    {
+        for(i = 1; extensionLen < 3 && dot_p[i] != '\0'; i++)
+        {
+            extension[extensionLen] = toupper(dot_p[i]);
+            
+            extensionLen++;
+        }
+    }
+    
+    extension[extensionLen] = '\0';
+    /* END GET extension */
+    
+    strcpy(newName, base);
+    if(extensionLen > 0)
+    {
+        strcat(newName, ".");
+        strcat(newName, extension);
+    }
+}
+
+/******************************************************************************
+* shortenNameForJoliet()
+* If the name is longer than NCHARS_FILE_ID_MAX_JOLIET - 1, cuts some 
+* characters off. Tries to preserve the extension.
+* */
+void shortenNameForJoliet(const char* origName, char* newName)
+{
+    char* dot_p;
+    int i;
+    char base[9]; /* max 9 chars */
+    char extension[4]; /* max 3 chars */
+    int extensionLen;
+    
+    if(strlen(origName) < NCHARS_FILE_ID_MAX_JOLIET)
+    /* name is short enough, don't do anything fancy */
+    {
+        strcpy(newName, origName);
+        return;
+    }
+    
+    /* FIND extension */
+    dot_p = strrchr(origName, '.');
+    
+    if(dot_p)
+    {
+        /* if the extension contains any illegal characters or
+           is too long (> 3) or zero length then we treat it as part
+           of the prefix */
+        for(i = 0; i < 4 && dot_p[i + 1] != '\0'; i++)
+        {
+            if( !charIsValid9660(dot_p[i + 1]) )
+            {
+                dot_p = NULL;
+                break;
+            }
+        }
+        
+        if(i == 0 || i == 4)
+            dot_p = NULL;
+    }
     /* END FIND extension */
     
     /* GET base */
@@ -176,7 +268,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     int rc;
     bool haveCollisions;
     int numTimesTried;
-    int numCollisions;
+    int num9660Collisions;
     char newName9660[13]; /* for remangling */
     
     DirLL* currentOrigDir;
@@ -204,7 +296,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         bzero(*currentNewDir, sizeof(DirToWriteLL));
         
-        convertNameTo9660(currentOrigDir->dir.name, 
+        shortenNameFor9660(currentOrigDir->dir.name, 
                           (*currentNewDir)->dir.name9660, true);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
@@ -245,7 +337,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         bzero(*currentNewFile, sizeof(FileToWriteLL));
         
-        convertNameTo9660(currentOrigFile->file.name, 
+        shortenNameFor9660(currentOrigFile->file.name, 
                           (*currentNewFile)->file.name9660, false);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
@@ -289,24 +381,24 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     
     haveCollisions = true;
     numTimesTried = 0;
-    while(haveCollisions && numTimesTried < 500)
+    while(haveCollisions && numTimesTried < 500) /* random big number */
     {
         haveCollisions = false;
         
         // for each subdir
           // look through entire dir list and count collisions
           // look through entire file list and count collisions
-          // if more then 1, remangle name
+          // if more than 1, remangle name
         
         // for each file
           // look through entire dir list and count collisions
           // look through entire file list and count collisions
-          // if more then 1, remangle name
+          // if more than 1, remangle name
         
         currentDir = newDir->directories;
         while(currentDir != NULL)
         {
-            numCollisions = 0;
+            num9660Collisions = 0;
             
             currentDirToCompare = newDir->directories;
             while(currentDirToCompare != NULL)
@@ -314,7 +406,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 if(strcmp(currentDir->dir.name9660, 
                           currentDirToCompare->dir.name9660) == 0)
                 {
-                    numCollisions++;
+                    num9660Collisions++;
                 }
                 
                 currentDirToCompare = currentDirToCompare->next;
@@ -326,13 +418,13 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 if(strcmp(currentDir->dir.name9660, 
                           currentFileToCompare->file.name9660) == 0)
                 {
-                    numCollisions++;
+                    num9660Collisions++;
                 }
                 
                 currentFileToCompare = currentFileToCompare->next;
             }
             
-            if(numCollisions != 1)
+            if(num9660Collisions != 1)
             {
                 haveCollisions = true;
                 
@@ -347,7 +439,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         currentFile = newDir->files;
         while(currentFile != NULL)
         {
-            numCollisions = 0;
+            num9660Collisions = 0;
             
             currentDirToCompare = newDir->directories;
             while(currentDirToCompare != NULL)
@@ -355,7 +447,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 if(strcmp(currentFile->file.name9660, 
                           currentDirToCompare->dir.name9660) == 0)
                 {
-                    numCollisions++;
+                    num9660Collisions++;
                 }
                 
                 currentDirToCompare = currentDirToCompare->next;
@@ -367,13 +459,13 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 if(strcmp(currentFile->file.name9660, 
                           currentFileToCompare->file.name9660) == 0)
                 {
-                    numCollisions++;
+                    num9660Collisions++;
                 }
                 
                 currentFileToCompare = currentFileToCompare->next;
             }
             
-            if(numCollisions != 1)
+            if(num9660Collisions != 1)
             {
                 haveCollisions = true;
                 
@@ -412,7 +504,7 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     unsigned hash;
     unsigned v;
     /* these are the characters we use in the 8.3 hash. Must be 36 chars long */
-    static const char *baseChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static const char* baseChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     
     /* FIND extension */
     /* ISO9660 requires that directories have no dots ('.') but some isolinux 
