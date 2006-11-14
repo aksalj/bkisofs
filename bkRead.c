@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h>
 
 #include "bk.h"
 #include "bkInternal.h"
@@ -66,7 +67,7 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 
 /*******************************************************************************
 * bk_read_dir_tree()
-* 
+* filenameType can be only one (do not | more then one)
 * */
 int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool readPosix)
 {
@@ -421,6 +422,11 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
     bool isRoot;
     unsigned char recordableLenFileId; /* to prevent reading too long a name */
     
+    /* should anything fail, will still be safe to delete dir, this also
+    * needs to be done before calling readDirContents() (now is good) */
+    dir->directories = NULL;
+    dir->files = NULL;
+    
     rc = read(image, &recordLength, 1);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
@@ -463,20 +469,14 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
         isRoot = false;
     /* END FIND out if root */
     
-    /* the data structures cannot handle filenames longer then NCHARS_FILE_ID_MAX
-    * so in case the image contains an invalid, long filename, trunkate it
-    * rather then corrupt memory */
-    if(lenFileId9660 > NCHARS_FILE_ID_MAX - 1)
-        recordableLenFileId = NCHARS_FILE_ID_MAX - 1;
-    else
-        recordableLenFileId = lenFileId9660;
+    recordableLenFileId = lenFileId9660;
     
     /* READ directory name */
     if(filenameType == FNTYPE_9660)
     {
         if(!isRoot)
         {
-            char nameAsOnDisk[256];
+            char nameAsOnDisk[UCHAR_MAX];
             
             rc = read(image, nameAsOnDisk, lenFileId9660);
             if(rc != lenFileId9660)
@@ -494,8 +494,9 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
     {
         if(!isRoot)
         {
-            char nameAsOnDisk[256];
-            char nameInAscii[256];
+            char nameAsOnDisk[UCHAR_MAX];
+            /* in the worst possible case i'll use 129 bytes for this: */
+            char nameInAscii[UCHAR_MAX];
             int ucsCount, byteCount;
             
             /* ucs2 byte count must be even */
@@ -531,7 +532,7 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
             if(lenFileId9660 % 2 == 0)
                 lseek(image, 1, SEEK_CUR);
             
-            rc = readRockridgeFilename(image, dir->name, lenSU);
+            rc = readRockridgeFilename(image, dir->name, lenSU, 0);
             if(rc < 0)
                 return rc;
         }
@@ -585,8 +586,6 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
     
     lseek(image, locExtent * NBYTES_LOGICAL_BLOCK, SEEK_SET);
     
-    dir->directories = NULL;
-    dir->files = NULL;
     rc = readDirContents(image, volInfo, dir, lenExtent, filenameType, readPosix);
     if(rc < 0)
         return rc;
@@ -712,6 +711,9 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
     unsigned char lenFileId9660; /* also len joliet fileid (bytes) */
     int lenSU; /* calculated as recordLength - 33 - lenFileId9660 */
     
+    /* so if anything failes it's still safe to delete file */
+    file->pathAndName = NULL;
+    
     rc = read(image, &recordLength, 1);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
@@ -729,8 +731,8 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
     /* The length of isolinux.bin given in the initial/default entry of
     * the el torito boot catalog does not match the actual length of the file
     * but apparently when executed by the bios that's not a problem.
-    * However, if i want to read the entire thing, i need the length proper
-    * if i want to read it.
+    * However, if i ever want to read that file myself, i need 
+    * the length proper.
     * So i'm looking for a file that starts in the same logical sector as the
     * boot record from the initial/default entry. */
     if(volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION && 
@@ -754,7 +756,7 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
     
     if(filenameType == FNTYPE_9660)
     {
-        char nameAsOnDisk[256];
+        char nameAsOnDisk[UCHAR_MAX];
         
         rc = read(image, nameAsOnDisk, lenFileId9660);
         if(rc != lenFileId9660)
@@ -762,10 +764,8 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
         
         removeCrapFromFilename(nameAsOnDisk, lenFileId9660);
         
-        if( strlen(nameAsOnDisk) > NCHARS_FILE_ID_MAX - 1 )
-            return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
-        
-        strcpy(file->name, nameAsOnDisk);
+        strncpy(file->name, nameAsOnDisk, NCHARS_FILE_ID_MAX_STORE - 1);
+        file->name[NCHARS_FILE_ID_MAX_STORE - 1] = '\0';
         
         /* padding field */
         if(lenFileId9660 % 2 == 0)
@@ -773,8 +773,9 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
     }
     else if(filenameType == FNTYPE_JOLIET)
     {
-        char nameAsOnDisk[256];
-        char nameInAscii[256];
+        char nameAsOnDisk[UCHAR_MAX];
+        /* in the worst possible case i'll use 129 bytes for this: */
+        char nameInAscii[UCHAR_MAX];
         int ucsCount, byteCount;
         
         if(lenFileId9660 % 2 != 0)
@@ -795,7 +796,8 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
         if( strlen(nameInAscii) > NCHARS_FILE_ID_MAX - 1 )
             return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
         
-        strcpy(file->name, nameInAscii);
+        strncpy(file->name, nameInAscii, NCHARS_FILE_ID_MAX_STORE - 1);
+        file->name[NCHARS_FILE_ID_MAX_STORE - 1] = '\0';
         
         /* padding field */
         if(lenFileId9660 % 2 == 0)
@@ -809,7 +811,7 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
         if(lenFileId9660 % 2 == 0)
             lseek(image, 1, SEEK_CUR);
         
-        rc = readRockridgeFilename(image, file->name, lenSU);
+        rc = readRockridgeFilename(image, file->name, lenSU, 0);
         if(rc < 0)
             return rc;
     }
@@ -830,7 +832,6 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
     file->onImage = true;
     file->position = locExtent * NBYTES_LOGICAL_BLOCK;
     file->size = lenExtent;
-    file->pathAndName = NULL;
     
     return recordLength;
 }
@@ -839,13 +840,21 @@ int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType,
 * readPosixInfo()
 * looks for the PX system use field and gets the permissions field out of it
 * */
-int readPosixInfo(int image, unsigned* posixFileMode, int lenSU)
+int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
 {
     off_t origPos;
-    unsigned char suFields[256];
+    unsigned char* suFields;
     int rc;
     bool foundPosix;
+    bool foundCE;
     int count;
+    unsigned logicalBlockOfCE;
+    unsigned offsetInLogicalBlockOfCE;
+    unsigned lengthOfCE; /* in bytes */
+    
+    suFields = malloc(lenSU);
+    if(suFields == NULL)
+        return BKERROR_OUT_OF_MEMORY;
     
     origPos = lseek(image, 0, SEEK_CUR);
     
@@ -853,10 +862,9 @@ int readPosixInfo(int image, unsigned* posixFileMode, int lenSU)
     if(rc != lenSU)
         return BKERROR_READ_GENERIC;
     
-    lseek(image, origPos, SEEK_SET);
-    
     count = 0;
     foundPosix = false;
+    foundCE = false;
     while(count < lenSU && !foundPosix)
     {
         if(suFields[count] == 'P' && suFields[count + 1] == 'X')
@@ -867,15 +875,35 @@ int readPosixInfo(int image, unsigned* posixFileMode, int lenSU)
             
             foundPosix = true;
         }
-        else
-        /* skip su record */
+        else if(suFields[count] == 'C' && suFields[count + 1] == 'E')
         {
-            count += suFields[count + 2];
+            foundCE = true;
+            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE);
+            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE);
+            read733FromCharArray(suFields + count + 20, &lengthOfCE);
         }
+        
+        /* skip su record */
+        count += suFields[count + 2];
     }
     
+    free(suFields);
+    lseek(image, origPos, SEEK_SET);
+    
     if(!foundPosix)
-        return BKERROR_NO_POSIX_PRESENT;
+    {
+        if(!foundCE)
+            return BKERROR_NO_POSIX_PRESENT;
+        else
+        {
+            lseek(image, logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + offsetInLogicalBlockOfCE, SEEK_SET);
+            rc = readPosixInfo(image, posixFileMode, lengthOfCE);
+            
+            lseek(image, origPos, SEEK_SET);
+            
+            return rc;
+        }
+    }
     
     return 1;
 }
@@ -888,54 +916,89 @@ int readPosixInfo(int image, unsigned* posixFileMode, int lenSU)
 * this directory record, the function returns a failure.
 * Leaves the file pointer where it was.
 */
-int readRockridgeFilename(int image, char* dest, int lenSU)
+int readRockridgeFilename(int image, char* dest, unsigned lenSU, 
+                          unsigned numCharsReadAlready)
 {
     off_t origPos;
-    unsigned char suFields[256];
+    unsigned char* suFields;
     int rc;
     int count;
-    int lengthAsRead;
+    int lengthThisNM;
+    int usableLenThisNM;
     bool foundName;
-    int recordableLenFileId;
+    bool nameContinues; /* in another NM entry */
+    bool foundCE;
+    unsigned logicalBlockOfCE;
+    unsigned offsetInLogicalBlockOfCE;
+    unsigned lengthOfCE; /* in bytes */
+    
+    suFields = malloc(lenSU);
+    if(suFields == NULL)
+        return BKERROR_OUT_OF_MEMORY;
     
     origPos = lseek(image, 0, SEEK_CUR);
     
     rc = read(image, suFields, lenSU);
     if(rc != lenSU)
+    {
+        free(suFields);
         return BKERROR_READ_GENERIC;
-    
-    lseek(image, origPos, SEEK_SET);
+    }
     
     count = 0;
     foundName = false;
-    while(count < lenSU && !foundName)
+    nameContinues = false;
+    foundCE = false;
+    while(count < lenSU)
     {
         if(suFields[count] == 'N' && suFields[count + 1] == 'M')
         {
-            lengthAsRead = suFields[count + 2] - 5;
+            lengthThisNM = suFields[count + 2] - 5;
             
-            /* the data structures cannot handle filenames longer then NCHARS_FILE_ID_MAX
-            * so in case the image contains an invalid, long filename, trunkate it
-            * rather then corrupt memory */
-            if(lengthAsRead > NCHARS_FILE_ID_MAX - 1)
-                recordableLenFileId = NCHARS_FILE_ID_MAX - 1;
+            /* the data structures cannot handle filenames longer than 
+            * NCHARS_FILE_ID_MAX_STORE so in case the image contains an 
+            * invalid, long filename, truncate it rather than corrupt memory */
+            if(lengthThisNM + numCharsReadAlready > NCHARS_FILE_ID_MAX_STORE - 1)
+                usableLenThisNM = NCHARS_FILE_ID_MAX_STORE - numCharsReadAlready - 1;
             else
-                recordableLenFileId = lengthAsRead;
+                usableLenThisNM = lengthThisNM;
             
-            strncpy(dest, (char*)suFields + count + 5, recordableLenFileId);
-            dest[recordableLenFileId] = '\0';
+            strncpy(dest + numCharsReadAlready, (char*)suFields + count + 5, usableLenThisNM);
+            dest[usableLenThisNM + numCharsReadAlready] = '\0';
+            numCharsReadAlready += usableLenThisNM;
             
             foundName = true;
+            nameContinues = suFields[count + 4] & 0x01; /* NM 'continue' flag */
         }
-        else
-        /* skip su record */
+        else if(suFields[count] == 'C' && suFields[count + 1] == 'E')
         {
-            count += suFields[count + 2];
+            foundCE = true;
+            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE);
+            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE);
+            read733FromCharArray(suFields + count + 20, &lengthOfCE);
         }
+        
+        /* skip su record */
+        count += suFields[count + 2];
     }
     
-    if(!foundName)
-        return BKERROR_RR_FILENAME_MISSING;
+    free(suFields);
+    lseek(image, origPos, SEEK_SET);
+    
+    if( !foundName || (foundName && nameContinues) )
+    {
+        if(!foundCE)
+            return BKERROR_RR_FILENAME_MISSING;
+        else
+        {
+            lseek(image, logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + offsetInLogicalBlockOfCE, SEEK_SET);
+            rc = readRockridgeFilename(image, dest, lengthOfCE, numCharsReadAlready);
+            
+            lseek(image, origPos, SEEK_SET);
+            
+            return rc;
+        }
+    }
     else
         return 1;
 }
@@ -950,7 +1013,7 @@ void removeCrapFromFilename(char* filename, int length)
     int count;
     bool stop = false;
     
-    for(count = 0; count < NCHARS_FILE_ID_MAX_READ && count < length && !stop; count++)
+    for(count = 0; count < length && !stop; count++)
     {
         if(filename[count] == ';')
         {

@@ -52,6 +52,9 @@
 #define NCHARS_FILE_ID_MAX_READ 71
 #define NCHARS_FILE_ID_MAX 65
 
+/* many library functions rely on this being at least 256 */
+#define NCHARS_FILE_ID_MAX_STORE 256
+
 /* options for VolInfo.bootMediaType */
 #define BOOT_MEDIA_NONE 0
 #define BOOT_MEDIA_NO_EMULATION 1
@@ -60,12 +63,15 @@
 #define BOOT_MEDIA_2_88_FLOPPY 4
 #define BOOT_MEDIA_HARD_DISK 5
 
+/* warning message string lengths in VolInfo */
+#define BK_WARNING_MAX_LEN 512
+
 /*******************************************************************************
 * Dir
 * information about a directory and it's contents */
 typedef struct
 {
-    char name[NCHARS_FILE_ID_MAX]; /* '\0' terminated */
+    char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
     unsigned posixFileMode;
     struct DirLL* directories;
     struct FileLL* files;
@@ -87,7 +93,7 @@ typedef struct DirLL
 * information about a file, whether on the image or on the filesystem */
 typedef struct
 {
-    char name[NCHARS_FILE_ID_MAX]; /* '\0' terminated */
+    char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
     unsigned posixFileMode;
     unsigned size; /* in bytes */
     bool onImage;
@@ -106,8 +112,6 @@ typedef struct FileLL
     struct FileLL* next;
     
 } FileLL;
-
-#define BK_WARNING_MAX_LEN 512
 
 /*******************************************************************************
 * VolInfo
@@ -129,22 +133,22 @@ typedef struct
     time_t creationTime;
     Dir dirTree;
     unsigned char bootMediaType;
-    unsigned bootRecordSize;      /* in bytes */
-    bool bootRecordIsOnImage;     /* unused if visible (flag below) */
-    unsigned bootRecordOffset;    /* if on image */
-    char* bootRecordPathAndName;  /* if on filesystem */
-    bool bootRecordIsVisible;     /* whether boot record is a visible file 
-                                  *  on the image */
-    File* bootRecordOnImage;      /* if visible, pointer to the file in the 
-                                  *  directory tree */
+    unsigned bootRecordSize;       /* in bytes */
+    bool bootRecordIsOnImage;      /* unused if visible (flag below) */
+    unsigned bootRecordOffset;     /* if on image */
+    char* bootRecordPathAndName;   /* if on filesystem */
+    bool bootRecordIsVisible;      /* whether boot record is a visible file 
+                                   *  on the image */
+    const File* bootRecordOnImage; /* if visible, pointer to the file in the 
+                                   *  directory tree */
     
     /* public use, read/write */
     char volId[33];
     char publisher[129];
     char dataPreparer[129];
-    unsigned posixFileDefaults;   /* for extracting */
-    unsigned posixDirDefaults;    /* for extracting or creating on iso */
-    bool(*warningCbk)(const char*);   /*  */
+    unsigned posixFileDefaults;    /* for extracting */
+    unsigned posixDirDefaults;     /* for extracting or creating on iso */
+    bool(*warningCbk)(const char*);  /*  */
     
 } VolInfo;
 

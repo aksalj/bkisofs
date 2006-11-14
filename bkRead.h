@@ -10,8 +10,9 @@ int readDirContents(int image, VolInfo* volInfo, Dir* dir, unsigned size,
 int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType, 
                  bool readPosix);
 unsigned char readNextRecordLen(int image);
-int readPosixInfo(int image, unsigned* posixFileMode, int lenSU);
-int readRockridgeFilename(int image, char* dest, int lenSU);
+int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU);
+int readRockridgeFilename(int image, char* dest, unsigned lenSU, 
+                          unsigned numCharsReadAlready);
 void removeCrapFromFilename(char* filename, int length);
 int skipDR(int image);
 void stripSpacesFromEndOfString(char* str);
