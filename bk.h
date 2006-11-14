@@ -30,28 +30,6 @@
 #define FNTYPE_ROCKRIDGE 2
 #define FNTYPE_JOLIET 4
 
-/* Long note on maximum file/directory name lengths:
-* Joliet allows max 128 bytes
-*     + 2 separator1 (9660, just in case)
-*     + 2 separator2 (9660, just in case)
-*     + 10 version (9660, just in case)
-*     = 142 bytes (71 characters)
-*
-* Rockridge allows unlimited file name lengths but i would need to have the
-* 'continue' su entry implemented, doubt it will ever happen.
-*
-* The 71 maximum is only for reading the record,
-* i will want to store the 64 characters + 1 for '\0' (the rest is nonsense).
-*
-* On almost every kind the filesystem the max filename length is 255 bytes.
-* Reiserfs is an exception in that it supports a max of 255 .
-* characters (4032 bytes).
-* However, since i don't want to bother with mangling filenames from the
-* filesystem (yet) i will limit it to the same maximum as names from the iso.
-* i will want to add a '\0' at the end */
-#define NCHARS_FILE_ID_MAX_READ 71
-#define NCHARS_FILE_ID_MAX 65
-
 /* many library functions rely on this being at least 256 */
 #define NCHARS_FILE_ID_MAX_STORE 256
 

@@ -28,6 +28,16 @@
 #define NBYTES_LOGICAL_BLOCK 2048
 
 /*******************************************************************************
+* Joliet allows max 128 bytes
+*     + 2 separator1 (9660, just in case)
+*     + 2 separator2 (9660, just in case)
+*     + 10 version (9660, just in case)
+*     = 142 bytes (71 characters)
+* Only a max of 64 characters of this will be stored. (plus '\0')
+*/
+#define NCHARS_FILE_ID_MAX_JOLIET 65
+
+/*******************************************************************************
 * Path
 * full path of a directory on the image
 * to add to root, set numDirs to 0 */
@@ -51,8 +61,8 @@ typedef struct
 typedef struct
 {
     char name9660[13]; /* 8.3 max */
-    char nameRock[NCHARS_FILE_ID_MAX];
-    char nameJoliet[NCHARS_FILE_ID_MAX];
+    char nameRock[NCHARS_FILE_ID_MAX_STORE];
+    char nameJoliet[NCHARS_FILE_ID_MAX_JOLIET];
     unsigned posixFileMode;
     off_t extentLocationOffset; /* where on image to write location of extent 
                                 *  for this directory */
@@ -77,8 +87,8 @@ typedef struct DirToWriteLL
 typedef struct
 {
     char name9660[13]; /* 8.3 max */
-    char nameRock[NCHARS_FILE_ID_MAX];
-    char nameJoliet[NCHARS_FILE_ID_MAX];
+    char nameRock[NCHARS_FILE_ID_MAX_STORE];
+    char nameJoliet[NCHARS_FILE_ID_MAX_JOLIET];
     unsigned posixFileMode;
     off_t extentLocationOffset; /* where on image to write location of extent 
                                 *  for this file */
