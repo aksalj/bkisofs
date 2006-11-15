@@ -2,9 +2,10 @@
 #define bkMangle_h
 
 bool charIsValid9660(char theChar);
+bool charIsValidJoliet(char theChar);
 void shortenNameFor9660(const char* origName, char* newName, bool isADir);
 unsigned hashString(const char *str, unsigned int length);
 int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes);
 void mangleNameFor9660(const char* origName, char* newName, bool isADir);
-
+void mangleName(const char* origName, char* newName, bool appendHash);
 #endif

@@ -33,8 +33,7 @@
 *     + 2 separator2 (9660, just in case)
 *     + 10 version (9660, just in case)
 *     = 142 bytes (71 characters)
-* Only a max of 64 characters of this will be stored. (plus '\0')
-*/
+* Only a max of 64 characters of this will be stored. (plus '\0') */
 #define NCHARS_FILE_ID_MAX_JOLIET 65
 
 /*******************************************************************************

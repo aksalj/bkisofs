@@ -31,6 +31,11 @@
 * required to be 32 bits long for the hashing to work
 * see the samba code for details
 */
+
+/******************************************************************************
+* charIsValid9660()
+* 
+* */
 bool charIsValid9660(char theChar)
 {
     if( (theChar >= '0' && theChar <= '9') ||
@@ -45,189 +50,20 @@ bool charIsValid9660(char theChar)
 }
 
 /******************************************************************************
-* shortenNameFor9660()
-* Same as mangleNameFor9660() but without the ~XXXX.
+* charIsValidJoliet()
+* 
 * */
-void shortenNameFor9660(const char* origName, char* newName, bool isADir)
+bool charIsValidJoliet(char theChar)
 {
-    char* dot_p;
-    int i;
-    char base[9]; /* max 9 chars */
-    char extension[4]; /* max 3 chars */
-    int extensionLen;
-    
-    /* FIND extension */
-    /* ISO9660 requires that directories have no dots ('.') but some isolinux 
-    * cds have the kernel in a directory with a dot so i need to allow dots in
-    * directories :( */
-    /*if(isADir)
+    if( (theChar >= '0' && theChar <= '9') ||
+        (theChar >= 'a' && theChar <= 'z') ||
+        (theChar >= 'A' && theChar <= 'Z') ||
+        strchr("_-$~.", theChar) )
     {
-        dot_p = NULL;
+        return true;
     }
     else
-    {*/
-        dot_p = strrchr(origName, '.');
-        
-        if(dot_p)
-        {
-            /* if the extension contains any illegal characters or
-               is too long (> 3) or zero length then we treat it as part
-               of the prefix */
-            for(i = 0; i < 4 && dot_p[i + 1] != '\0'; i++)
-            {
-                if( !charIsValid9660(dot_p[i + 1]) )
-                {
-                    dot_p = NULL;
-                    break;
-                }
-            }
-            
-            if(i == 0 || i == 4)
-                dot_p = NULL;
-        }
-    /*}*/
-    /* END FIND extension */
-    
-    /* GET base */
-    /* the leading characters in the mangled name is taken from
-    *  the first characters of the name, if they are ascii otherwise
-    *  '_' is used */
-    for(i = 0; i < 8 && origName[i] != '\0'; i++)
-    {
-        base[i] = origName[i];
-        
-        if ( !charIsValid9660(origName[i]) )
-            base[i] = '_';
-        
-        base[i] = toupper(base[i]);
-    }
-    
-    /* make sure base doesn't contain part of the extension */
-    if(dot_p != NULL)
-    {
-        //!! test this to make sure it works
-        if(i > dot_p - origName)
-            i = dot_p - origName;
-    }
-    
-    base[i] = '\0';
-    /* END GET base */
-    
-    /* GET extension */
-    /* the extension of the mangled name is taken from the first 3
-       ascii chars after the dot */
-    extensionLen = 0;
-    if(dot_p)
-    {
-        for(i = 1; extensionLen < 3 && dot_p[i] != '\0'; i++)
-        {
-            extension[extensionLen] = toupper(dot_p[i]);
-            
-            extensionLen++;
-        }
-    }
-    
-    extension[extensionLen] = '\0';
-    /* END GET extension */
-    
-    strcpy(newName, base);
-    if(extensionLen > 0)
-    {
-        strcat(newName, ".");
-        strcat(newName, extension);
-    }
-}
-
-/******************************************************************************
-* shortenNameForJoliet()
-* If the name is longer than NCHARS_FILE_ID_MAX_JOLIET - 1, cuts some 
-* characters off. Tries to preserve the extension.
-* */
-void shortenNameForJoliet(const char* origName, char* newName)
-{
-    char* dot_p;
-    int i;
-    char base[9]; /* max 9 chars */
-    char extension[4]; /* max 3 chars */
-    int extensionLen;
-    
-    if(strlen(origName) < NCHARS_FILE_ID_MAX_JOLIET)
-    /* name is short enough, don't do anything fancy */
-    {
-        strcpy(newName, origName);
-        return;
-    }
-    
-    /* FIND extension */
-    dot_p = strrchr(origName, '.');
-    
-    if(dot_p)
-    {
-        /* if the extension contains any illegal characters or
-           is too long (> 3) or zero length then we treat it as part
-           of the prefix */
-        for(i = 0; i < 4 && dot_p[i + 1] != '\0'; i++)
-        {
-            if( !charIsValid9660(dot_p[i + 1]) )
-            {
-                dot_p = NULL;
-                break;
-            }
-        }
-        
-        if(i == 0 || i == 4)
-            dot_p = NULL;
-    }
-    /* END FIND extension */
-    
-    /* GET base */
-    /* the leading characters in the mangled name is taken from
-    *  the first characters of the name, if they are ascii otherwise
-    *  '_' is used */
-    for(i = 0; i < 8 && origName[i] != '\0'; i++)
-    {
-        base[i] = origName[i];
-        
-        if ( !charIsValid9660(origName[i]) )
-            base[i] = '_';
-        
-        base[i] = toupper(base[i]);
-    }
-    
-    /* make sure base doesn't contain part of the extension */
-    if(dot_p != NULL)
-    {
-        //!! test this to make sure it works
-        if(i > dot_p - origName)
-            i = dot_p - origName;
-    }
-    
-    base[i] = '\0';
-    /* END GET base */
-    
-    /* GET extension */
-    /* the extension of the mangled name is taken from the first 3
-       ascii chars after the dot */
-    extensionLen = 0;
-    if(dot_p)
-    {
-        for(i = 1; extensionLen < 3 && dot_p[i] != '\0'; i++)
-        {
-            extension[extensionLen] = toupper(dot_p[i]);
-            
-            extensionLen++;
-        }
-    }
-    
-    extension[extensionLen] = '\0';
-    /* END GET extension */
-    
-    strcpy(newName, base);
-    if(extensionLen > 0)
-    {
-        strcat(newName, ".");
-        strcat(newName, extension);
-    }
+        return false;
 }
 
 /* 
@@ -270,6 +106,8 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     int numTimesTried;
     int num9660Collisions;
     char newName9660[13]; /* for remangling */
+    int numJolietCollisions;
+    char newNameJoliet[NCHARS_FILE_ID_MAX_JOLIET]; /* for remangling */
     
     DirLL* currentOrigDir;
     DirToWriteLL** currentNewDir;
@@ -305,7 +143,8 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             (*currentNewDir)->dir.nameRock[0] = '\0';
         
         if(filenameTypes | FNTYPE_JOLIET)
-            strcpy((*currentNewDir)->dir.nameJoliet, currentOrigDir->dir.name);
+            //strcpy((*currentNewDir)->dir.nameJoliet, currentOrigDir->dir.name);
+            mangleName(currentOrigDir->dir.name, (*currentNewDir)->dir.nameJoliet, false);
         else
             (*currentNewDir)->dir.nameJoliet[0] = '\0';
         
@@ -346,7 +185,8 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             (*currentNewFile)->file.nameRock[0] = '\0';
         
         if(filenameTypes | FNTYPE_JOLIET)
-            strcpy((*currentNewFile)->file.nameJoliet, currentOrigFile->file.name);
+            //strcpy((*currentNewFile)->file.nameJoliet, currentOrigFile->file.name);
+            mangleName(currentOrigFile->file.name, (*currentNewFile)->file.nameJoliet, false);
         else
             (*currentNewFile)->file.nameJoliet[0] = '\0';
         
@@ -399,6 +239,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         while(currentDir != NULL)
         {
             num9660Collisions = 0;
+            numJolietCollisions = 0;
             
             currentDirToCompare = newDir->directories;
             while(currentDirToCompare != NULL)
@@ -407,6 +248,12 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                           currentDirToCompare->dir.name9660) == 0)
                 {
                     num9660Collisions++;
+                }
+                
+                if(strcmp(currentDir->dir.nameJoliet, 
+                          currentDirToCompare->dir.nameJoliet) == 0)
+                {
+                    numJolietCollisions++;
                 }
                 
                 currentDirToCompare = currentDirToCompare->next;
@@ -419,6 +266,12 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                           currentFileToCompare->file.name9660) == 0)
                 {
                     num9660Collisions++;
+                }
+                
+                if(strcmp(currentDir->dir.nameJoliet, 
+                          currentFileToCompare->file.nameJoliet) == 0)
+                {
+                    numJolietCollisions++;
                 }
                 
                 currentFileToCompare = currentFileToCompare->next;
@@ -433,6 +286,15 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 strcpy(currentDir->dir.name9660, newName9660);
             }
             
+            if(numJolietCollisions != 1)
+            {
+                haveCollisions = true;
+                
+                mangleName(currentDir->dir.nameJoliet, newNameJoliet, true);
+                
+                strcpy(currentDir->dir.nameJoliet, newNameJoliet);
+            }
+            
             currentDir = currentDir->next;
         }
         
@@ -440,6 +302,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         while(currentFile != NULL)
         {
             num9660Collisions = 0;
+            numJolietCollisions = 0;
             
             currentDirToCompare = newDir->directories;
             while(currentDirToCompare != NULL)
@@ -448,6 +311,12 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                           currentDirToCompare->dir.name9660) == 0)
                 {
                     num9660Collisions++;
+                }
+                
+                if(strcmp(currentFile->file.nameJoliet, 
+                          currentDirToCompare->dir.nameJoliet) == 0)
+                {
+                    numJolietCollisions++;
                 }
                 
                 currentDirToCompare = currentDirToCompare->next;
@@ -462,6 +331,12 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                     num9660Collisions++;
                 }
                 
+                if(strcmp(currentFile->file.nameJoliet, 
+                          currentFileToCompare->file.nameJoliet) == 0)
+                {
+                    numJolietCollisions++;
+                }
+                
                 currentFileToCompare = currentFileToCompare->next;
             }
             
@@ -472,6 +347,15 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
                 mangleNameFor9660(currentFile->file.name9660, newName9660, false);
                 
                 strcpy(currentFile->file.name9660, newName9660);
+            }
+            
+            if(numJolietCollisions != 1)
+            {
+                haveCollisions = true;
+                
+                mangleName(currentFile->file.nameJoliet, newNameJoliet, true);
+                
+                strcpy(currentFile->file.nameJoliet, newNameJoliet);
             }
             
             currentFile = currentFile->next;
@@ -507,9 +391,6 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     static const char* baseChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     
     /* FIND extension */
-    /* ISO9660 requires that directories have no dots ('.') but some isolinux 
-    * cds have the kernel in a directory with a dot so i need to allow dots in
-    * directories :( */
     if(isADir)
     {
         dot_p = NULL;
@@ -532,7 +413,7 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
                 }
             }
             
-            if(i == 0 || i == 4)
+            if(i == 0 || i == 4 || dot_p == origName)
                 dot_p = NULL;
         }
     }
@@ -620,4 +501,209 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     }
     
     printf("remangled '%s' -> '%s'\n", origName, newName);
+}
+
+void mangleName(const char* origName, char* newName, bool appendHash)
+{
+    char* dot_p;
+    int i;
+    char base[NCHARS_FILE_ID_MAX_JOLIET]; /* '\0' terminated */
+    char extension[6]; /* max 3 chars */
+    int extensionLen;
+    unsigned hash;
+    unsigned v;
+    char hashStr[5]; /* '\0' terminated */
+    /* these are the characters we use in the 8.3 hash. Must be 36 chars long */
+    static const char* baseChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    printf("mangling '%s'\n", origName);
+    /* FIND extension candidate */
+    dot_p = strrchr(origName, '.');
+    
+    if(dot_p)
+    {
+        /* if the extension contains any illegal characters or
+           is too long (> 5) or zero length then we treat it as part
+           of the prefix */
+        for(i = 0; i < 6 && dot_p[i + 1] != '\0'; i++)
+        {
+            if( !charIsValidJoliet(dot_p[i + 1]) )
+            {
+                dot_p = NULL;
+                break;
+            }
+        }
+        
+        if(i == 0 || i == 6 || dot_p == origName)
+            dot_p = NULL;
+    }
+    /* END FIND extension candidate */
+    printf("dot_p %d\n", dot_p);
+    /* GET base */
+    /* The leading characters in the mangled name are taken from
+    *  the first characters of the name if they are allowed, otherwise
+    *  '_' is used */
+    for(i = 0; i < NCHARS_FILE_ID_MAX_JOLIET - 1 && origName[i] != '\0'; i++)
+    {
+        base[i] = origName[i];
+        
+        if ( !charIsValidJoliet(origName[i]) )
+            base[i] = '_';
+    }
+    printf("i %d\n", i);
+    /* make sure base doesn't contain part of the extension */
+    if(dot_p != NULL)
+    {
+        if(i > dot_p - origName)
+            i = dot_p - origName;
+    }
+    printf("i %d\n", i);
+    base[i] = '\0';
+    /* END GET base */
+    printf("base: '%s'\n", base);
+    /* GET extension */
+    /* the extension of the mangled name is taken from the first 3
+       ascii chars after the dot */
+    extensionLen = 0;
+    if(dot_p)
+    {
+        for(i = 1; extensionLen < 5 && dot_p[i] != '\0'; i++)
+        {
+            extension[extensionLen] = dot_p[i];
+            
+            extensionLen++;
+        }
+    }
+    
+    extension[extensionLen] = '\0';
+    /* END GET extension */
+    printf("extension: '%s'\n", extension);fflush(NULL);
+    
+    /* FIND the hash for this prefix */
+    hash = hashString(origName, strlen(origName));
+    
+    hashStr[4] = '\0';
+    v = hash;
+    hashStr[3] = baseChars[v % 36];
+    for(i = 2; i >= 0; i--)
+    {
+        v = v / 36;
+        hashStr[i] = baseChars[v % 36];
+    }
+    /* END FIND the hash for this prefix */
+    printf("hash: '%s'\n", hashStr);fflush(NULL);
+    
+    /* ASSEMBLE name */
+    strcpy(newName, base);
+    printf("new base: '%s', limit %d\n", newName, NCHARS_FILE_ID_MAX_JOLIET - 1 - 4 - 1 - 5);
+    if(appendHash)
+    {
+        /* max name len - '~' - hash - '.' - extension */
+        if(strlen(newName) >= NCHARS_FILE_ID_MAX_JOLIET - 1 - 1 - 4 - 1 - 5)
+            newName[NCHARS_FILE_ID_MAX_JOLIET - 1 - 1 - 4 - 1 - 5] = '\0';
+        
+        strcat(newName, "~");
+        strcat(newName, hashStr);
+    }
+    if(extensionLen > 0)
+    {
+        strcat(newName, ".");
+        strcat(newName, extension);
+    }
+    /* END ASSEMBLE name */
+    
+    printf("joliet mangle '%s', len %d\n", newName, strlen(newName));
+}
+
+/******************************************************************************
+* shortenNameFor9660()
+* Same as mangleNameFor9660() but without the ~XXXX.
+* */
+void shortenNameFor9660(const char* origName, char* newName, bool isADir)
+{
+    char* dot_p;
+    int i;
+    char base[9]; /* max 9 chars */
+    char extension[4]; /* max 3 chars */
+    int extensionLen;
+    
+    /* FIND extension */
+    /* ISO9660 requires that directories have no dots ('.') but some isolinux 
+    * cds have the kernel in a directory with a dot so i need to allow dots in
+    * directories :( */
+    /*if(isADir)
+    {
+        dot_p = NULL;
+    }
+    else
+    {*/
+        dot_p = strrchr(origName, '.');
+        
+        if(dot_p)
+        {
+            /* if the extension contains any illegal characters or
+               is too long (> 3) or zero length then we treat it as part
+               of the prefix */
+            for(i = 0; i < 4 && dot_p[i + 1] != '\0'; i++)
+            {
+                if( !charIsValid9660(dot_p[i + 1]) )
+                {
+                    dot_p = NULL;
+                    break;
+                }
+            }
+            
+            if(i == 0 || i == 4 || dot_p == origName)
+                dot_p = NULL;
+        }
+    /*}*/
+    /* END FIND extension */
+    
+    /* GET base */
+    /* the leading characters in the mangled name is taken from
+    *  the first characters of the name, if they are allowed otherwise
+    *  '_' is used */
+    for(i = 0; i < 8 && origName[i] != '\0'; i++)
+    {
+        base[i] = origName[i];
+        
+        if ( !charIsValid9660(origName[i]) )
+            base[i] = '_';
+        
+        base[i] = toupper(base[i]);
+    }
+    
+    /* make sure base doesn't contain part of the extension */
+    if(dot_p != NULL)
+    {
+        //!! test this to make sure it works
+        if(i > dot_p - origName)
+            i = dot_p - origName;
+    }
+    
+    base[i] = '\0';
+    /* END GET base */
+    
+    /* GET extension */
+    /* the extension of the mangled name is taken from the first 3
+       ascii chars after the dot */
+    extensionLen = 0;
+    if(dot_p)
+    {
+        for(i = 1; extensionLen < 3 && dot_p[i] != '\0'; i++)
+        {
+            extension[extensionLen] = toupper(dot_p[i]);
+            
+            extensionLen++;
+        }
+    }
+    
+    extension[extensionLen] = '\0';
+    /* END GET extension */
+    
+    strcpy(newName, base);
+    if(extensionLen > 0)
+    {
+        strcat(newName, ".");
+        strcat(newName, extension);
+    }
 }

@@ -1093,7 +1093,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    
+    exit(0);
     if(progressFunction != NULL)
         progressFunction();
     
@@ -1396,7 +1396,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
 /* field size must be even */
 int writeJolietStringField(int image, const char* name, int fieldSize)
 {
-    char jolietName[NCHARS_FILE_ID_MAX * 2];
+    char jolietName[NCHARS_FILE_ID_MAX_JOLIET * 2];
     int srcCount;
     int destCount;
     int rc;

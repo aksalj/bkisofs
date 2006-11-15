@@ -414,7 +414,7 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
     int rc;
     unsigned char recordLength;
     unsigned locExtent; /* to know where to go before readDir9660() */
-    unsigned lenExtent; /* parameter to readDir9660() */
+    unsigned lenExtent; /* parameter to readDirContents() */
     unsigned char lenFileId9660; /* also len joliet fileid (bytes) */
     int lenSU; /* calculated as recordLength - 33 - lenFileId9660 */
     off_t origPos;
@@ -965,6 +965,7 @@ int readRockridgeFilename(int image, char* dest, unsigned lenSU,
             
             strncpy(dest + numCharsReadAlready, (char*)suFields + count + 5, usableLenThisNM);
             dest[usableLenThisNM + numCharsReadAlready] = '\0';
+            
             numCharsReadAlready += usableLenThisNM;
             
             foundName = true;
@@ -980,6 +981,13 @@ int readRockridgeFilename(int image, char* dest, unsigned lenSU,
         
         /* skip su record */
         count += suFields[count + 2];
+
+        /* mkisofs made an image for me where the length of the directory record
+        * was 1 more than needed, so to prevent an infinite loop in such cases the
+        * following is necessary: */
+        if(foundName)
+            if(!nameContinues || (nameContinues && foundCE))
+                break;
     }
     
     free(suFields);
