@@ -1,15 +1,19 @@
 #ifndef bkwrite_h
 #define bkwrite_h
 
+int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum);
 int copyByteBlock(int src, int dest, unsigned numBytes);
 int countDirsOnLevel(const DirToWrite* dir, int targetLevel, int thisLevel);
 int countTreeHeight(const DirToWrite* dir, int heightSoFar);
+unsigned short elToritoChecksum(const unsigned char* record);
 int writeByteBlock(int image, unsigned char byteToWrite, int numBytes);
 int writeDir(int image, DirToWrite* dir, int parentLbNum, 
              int parentNumBytes, int parentPosix, time_t recordingTime, 
              int filenameTypes, bool isRoot);
 int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir, 
             bool isSelfOrParent, bool isFirstRecord, int filenameTypes);
+int writeElToritoBootCatalog(int image, const VolInfo* volInfo);
+int writeElToritoVd(int image, const VolInfo* volInfo);
 int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo, 
                       DirToWrite* dir, int filenameTypes, 
                       void(*progressFunction)(void));
@@ -21,7 +25,7 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
                                  int* parentDirNum);
 int writeRockER(int image);
 int writeRockNM(int image, char* name);
-int writeRockPX(int image, DirToWrite* dir, bool isADir);
+int writeRockPX(int image, unsigned posixFileMode, bool isADir);
 int writeRockSP(int image);
 int writeVdsetTerminator(int image);
 int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,

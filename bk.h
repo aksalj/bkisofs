@@ -97,7 +97,7 @@ typedef struct FileLL
 * strings are '\0' terminated */
 typedef struct
 {
-    /* bk use for reading from original image */
+    /* private bk use  */
     unsigned filenameTypes;
     off_t pRootDrOffset; /* primary (9660 and maybe rockridge) */
     off_t sRootDrOffset; /* secondary (joliet), 0 if does not exist */
@@ -105,6 +105,8 @@ typedef struct
     int imageForReading;
     ino_t imageForReadingInode; /* to know which file was open for reading
                                 * (filename is not reliable) */
+    const File* bootRecordOnImage; /* if visible, pointer to the file in the 
+                                   *  directory tree */
     char warningMessage[BK_WARNING_MAX_LEN];
     
     /* public use, read only */
@@ -117,8 +119,6 @@ typedef struct
     char* bootRecordPathAndName;   /* if on filesystem */
     bool bootRecordIsVisible;      /* whether boot record is a visible file 
                                    *  on the image */
-    const File* bootRecordOnImage; /* if visible, pointer to the file in the 
-                                   *  directory tree */
     
     /* public use, read/write */
     char volId[33];

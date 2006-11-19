@@ -68,6 +68,7 @@ typedef struct
     unsigned extentNumber; /* extent number */
     unsigned dataLength; /* bytes, including blank */
     off_t extentLocationOffset2; /* for svd (joliet) */
+    off_t offsetForCE;  /* if the name won't fit inside the directory record */
     
     unsigned extentNumber2; /* for svd (joliet) */
     unsigned dataLength2; /* for svd (joliet) */
@@ -94,6 +95,7 @@ typedef struct
     unsigned extentNumber; /* extent number */
     unsigned dataLength; /* bytes, including blank */
     off_t extentLocationOffset2; /* for svd (joliet) */
+    bool needCEforNM; /* if the name won't fit inside the directory record */
     
     unsigned size; /* in bytes */
     bool onImage;

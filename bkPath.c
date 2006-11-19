@@ -38,7 +38,7 @@ void freeDirToWriteContents(DirToWrite* dir)
     while(currentDir != NULL)
     {
         nextDir = currentDir->next;
-        
+        printf("getting rid of '%s'\n", currentDir->dir.name9660);fflush(NULL);
         freeDirToWriteContents(&(currentDir->dir));
         free(currentDir);
         
@@ -49,7 +49,7 @@ void freeDirToWriteContents(DirToWrite* dir)
     while(currentFile != NULL)
     {
         nextFile = currentFile->next;
-        
+        printf("getting rid of '%s'\n", currentFile->file.name9660);fflush(NULL);
         if(!currentFile->file.onImage)
             free(currentFile->file.pathAndName);
         
