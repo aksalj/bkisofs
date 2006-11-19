@@ -62,7 +62,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     /* because mangleDir works on dir's children i need to copy the root manually */
     bzero(&newTree, sizeof(DirToWrite));
-    newTree.name9660[0] = 0;
+    newTree.name9660[0] = 0x00;
     newTree.nameRock[0] = '\0';
     newTree.nameJoliet[0] = '\0';
     newTree.posixFileMode = volInfo->dirTree.posixFileMode;
@@ -75,7 +75,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    
+    printDirToWrite(&newTree, 0);
     if(progressFunction != NULL)
         progressFunction();
     
@@ -334,6 +334,21 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         return rc;
     }
     
+    if(filenameTypes & FNTYPE_ROCKRIDGE)
+    {
+        if(progressFunction != NULL)
+            progressFunction();
+        
+        printf("writing long NMs at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+        rc = writeLongNMsInDir(newImage, &newTree);
+        if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            close(newImage);
+            return rc;
+        }
+    }
+    
     lseek(newImage, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA, SEEK_SET);
     
     if(progressFunction != NULL)
@@ -369,21 +384,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         }
     }
     
-    //~ if(filenameTypes & FNTYPE_ROCKRIDGE)
-    //~ {
-        //~ if(progressFunction != NULL)
-            //~ progressFunction();
-        
-        //~ printf("writing long NMs at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
-        //~ rc = writeLongNMsInDir(newImage, &newTree);
-        //~ if(rc <= 0)
-        //~ {
-            //~ freeDirToWriteContents(&newTree);
-            //~ close(newImage);
-            //~ return rc;
-        //~ }
-    //~ }
-    
     printf("freeing memory\n");fflush(NULL);
     freeDirToWriteContents(&newTree);
     close(newImage);
@@ -391,6 +391,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     return 1;
 }
 
+/* write NM that won't fit in a directory record */
 int writeLongNM(int image, DirToWrite* dir)
 {
     off_t origPos;
@@ -400,7 +401,7 @@ int writeLongNM(int image, DirToWrite* dir)
     int firstNMlen;
     off_t endPos;
     int rc;
-    printf("long name '%s'\n", dir->nameRock);fflush(NULL);
+    printf("long name '%s' @0x%X -> ", dir->nameRock, lseek(image, 0, SEEK_CUR));fflush(NULL);
     origPos = lseek(image, 0, SEEK_CUR);
     
     fullNameLen = strlen(dir->nameRock);
@@ -449,15 +450,15 @@ int writeLongNM(int image, DirToWrite* dir)
     {
         byteBlock[2] = fullNameLen - firstNMlen;
         byteBlock[4] = 0x00;
+        
+        rc = write(image, byteBlock, 5);
+        if(rc != 5)
+            return BKERROR_WRITE_GENERIC;
+        
+        rc = write(image, dir->nameRock + firstNMlen, byteBlock[2]);
+        if(rc != byteBlock[2])
+            return BKERROR_WRITE_GENERIC;
     }
-    
-    rc = write(image, byteBlock, 5);
-    if(rc != 5)
-        return BKERROR_WRITE_GENERIC;
-    
-    rc = write(image, dir->nameRock + firstNMlen, byteBlock[2]);
-    if(rc != firstNMlen)
-        return BKERROR_WRITE_GENERIC;
     /* END NM record 2 */
     
     /* write blank to conclude extent */
@@ -465,7 +466,7 @@ int writeLongNM(int image, DirToWrite* dir)
                         lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK);
     if(rc < 0)
         return rc;
-    
+    printf("%X\n", lseek(image, 0, SEEK_CUR));fflush(NULL);
     endPos = lseek(image, 0, SEEK_CUR);
     
     /* CE record back in the directory record */
@@ -486,18 +487,22 @@ int writeLongNM(int image, DirToWrite* dir)
     return 1;
 }
 
+/* write all NMs in the tree that won't fit in directory records */
 int writeLongNMsInDir(int image, DirToWrite* dir)
 {
-    struct DirToWriteLL* nextDir;
-    struct FileToWriteLL* nextFile;
+    DirToWriteLL* nextDir;
+    FileToWriteLL* nextFile;
     int rc;
-    
+    printf("dir '%s'\n", dir->nameRock);
     nextDir = dir->directories;
     while(nextDir != NULL)
     {
-        rc = writeLongNM(image, &(nextDir->dir));
-        if(rc <= 0)
-            return rc;
+        if(nextDir->dir.offsetForCE != 0)
+        {
+            rc = writeLongNM(image, &(nextDir->dir));
+            if(rc <= 0)
+                return rc;
+        }
         
         rc = writeLongNMsInDir(image, &(nextDir->dir));
         if(rc <= 0)
@@ -509,9 +514,12 @@ int writeLongNMsInDir(int image, DirToWrite* dir)
     nextFile = dir->files;
     while(nextFile != NULL)
     {
-        rc = writeLongNM(image, (DirToWrite*)(&(nextFile->file)));
-        if(rc <= 0)
-            return rc;
+        if(nextFile->file.offsetForCE != 0)
+        {
+            rc = writeLongNM(image, (DirToWrite*)(&(nextFile->file)));
+            if(rc <= 0)
+                return rc;
+        }
         
         nextFile = nextFile->next;
     }
@@ -837,18 +845,18 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         else
         {
             if(filenameTypes & FNTYPE_JOLIET)
-            {
+            {printf("a\n");fflush(NULL);
                 if( strcmp(nextFile->file.nameJoliet, nextDir->dir.nameJoliet) > 0 )
                     takeDirNext = true;
                 else
                     takeDirNext = false;
             }
             else
-            {
+            {printf("b\n");fflush(NULL);
                 if( strcmp(nextFile->file.name9660, nextDir->dir.name9660) > 0 )
                     takeDirNext = true;
                 else
-                    takeDirNext = false;
+                    takeDirNext = false;printf("b2\n");fflush(NULL);
             }
         }
         

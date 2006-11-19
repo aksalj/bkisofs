@@ -12,6 +12,7 @@
 * 
 ******************************************************************************/
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +39,7 @@ void freeDirToWriteContents(DirToWrite* dir)
     while(currentDir != NULL)
     {
         nextDir = currentDir->next;
-        printf("getting rid of '%s'\n", currentDir->dir.name9660);fflush(NULL);
+        
         freeDirToWriteContents(&(currentDir->dir));
         free(currentDir);
         
@@ -49,7 +50,7 @@ void freeDirToWriteContents(DirToWrite* dir)
     while(currentFile != NULL)
     {
         nextFile = currentFile->next;
-        printf("getting rid of '%s'\n", currentFile->file.name9660);fflush(NULL);
+        
         if(!currentFile->file.onImage)
             free(currentFile->file.pathAndName);
         
@@ -392,3 +393,50 @@ bool nameIsValid(const char* name)
     
     return true;
 }
+
+#ifdef BK_DEBUG
+void printDirToWrite(DirToWrite* dir, int level)
+{
+    DirToWriteLL* nextDir;
+    FileToWriteLL* nextFile;
+    int count;
+    
+    nextDir = dir->directories;
+    while(nextDir != NULL)
+    {
+        for(count = 0; count < level; count ++)
+            printf("  ");
+        printf("dir9 '%s'\n", nextDir->dir.name9660);fflush(NULL);
+        
+        for(count = 0; count < level; count ++)
+            printf("  ");
+        printf("dirJ '%s'\n", nextDir->dir.nameJoliet);fflush(NULL);
+        
+        for(count = 0; count < level; count ++)
+            printf("  ");
+        printf("dirR '%s'\n", nextDir->dir.nameRock);fflush(NULL);
+        
+        printDirToWrite(&(nextDir->dir), level + 1);
+        
+        nextDir = nextDir->next;
+    }
+    
+    nextFile = dir->files;
+    while(nextFile != NULL)
+    {
+        for(count = 0; count < level; count ++)
+            printf("  ");
+        printf("file9 '%s'\n", nextFile->file.name9660);fflush(NULL);
+        
+        for(count = 0; count < level; count ++)
+            printf("  ");
+        printf("fileJ '%s'\n", nextFile->file.nameJoliet);fflush(NULL);
+        
+        for(count = 0; count < level; count ++)
+            printf("  ");
+        printf("fileR '%s'\n", nextFile->file.nameRock);fflush(NULL);
+        
+        nextFile = nextFile->next;
+    }
+}
+#endif

@@ -12,5 +12,6 @@ int makeFilePathFromString(const char* srcFile, FilePath* pathPath);
 int makeLongerPath(const Path* origPath, const char* newDir, Path** newPath);
 int makePathFromString(const char* strPath, Path* pathPath);
 bool nameIsValid(const char* name);
+void printDirToWrite(DirToWrite* dir, int level);
 
 #endif

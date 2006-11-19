@@ -27,6 +27,8 @@
 /* number of bytes in a logical block (in practice always 2048) */
 #define NBYTES_LOGICAL_BLOCK 2048
 
+#define BK_DEBUG
+
 /*******************************************************************************
 * Joliet allows max 128 bytes
 *     + 2 separator1 (9660, just in case)
@@ -68,7 +70,7 @@ typedef struct
     unsigned extentNumber; /* extent number */
     unsigned dataLength; /* bytes, including blank */
     off_t extentLocationOffset2; /* for svd (joliet) */
-    off_t offsetForCE;  /* if the name won't fit inside the directory record */
+    off_t offsetForCE; /* if the name won't fit inside the directory record */
     
     unsigned extentNumber2; /* for svd (joliet) */
     unsigned dataLength2; /* for svd (joliet) */
@@ -95,7 +97,7 @@ typedef struct
     unsigned extentNumber; /* extent number */
     unsigned dataLength; /* bytes, including blank */
     off_t extentLocationOffset2; /* for svd (joliet) */
-    bool needCEforNM; /* if the name won't fit inside the directory record */
+    off_t offsetForCE; /* if the name won't fit inside the directory record */
     
     unsigned size; /* in bytes */
     bool onImage;
