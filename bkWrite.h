@@ -18,13 +18,15 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
                       DirToWrite* dir, int filenameTypes, 
                       void(*progressFunction)(void));
 int writeJolietStringField(int image, const char* name, int fieldSize);
+int writeLongNM(int image, DirToWrite* dir);
+int writeLongNMsInDir(int image, DirToWrite* dir);
 int writePathTable(int image, const DirToWrite* tree, bool isTypeL, 
                    int filenameType);
 int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL, 
                                  int filenameType, int targetLevel, int thisLevel,
                                  int* parentDirNum);
 int writeRockER(int image);
-int writeRockNM(int image, char* name);
+int writeRockNM(int image, char* name, int nameLen, bool doesContinue);
 int writeRockPX(int image, unsigned posixFileMode, bool isADir);
 int writeRockSP(int image);
 int writeVdsetTerminator(int image);

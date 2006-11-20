@@ -75,7 +75,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    printDirToWrite(&newTree, 0);
+    
     if(progressFunction != NULL)
         progressFunction();
     
@@ -387,142 +387,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     printf("freeing memory\n");fflush(NULL);
     freeDirToWriteContents(&newTree);
     close(newImage);
-    
-    return 1;
-}
-
-/* write NM that won't fit in a directory record */
-int writeLongNM(int image, DirToWrite* dir)
-{
-    off_t origPos;
-    int fullNameLen;
-    unsigned char byteBlock[28];
-    bool fitsInOneNM;
-    int firstNMlen;
-    off_t endPos;
-    int rc;
-    printf("long name '%s' @0x%X -> ", dir->nameRock, lseek(image, 0, SEEK_CUR));fflush(NULL);
-    origPos = lseek(image, 0, SEEK_CUR);
-    
-    fullNameLen = strlen(dir->nameRock);
-    
-    /* should have checked for this before getting into this function */
-    if(fullNameLen > 255)
-        return BKERROR_SANITY;
-    
-    if(fullNameLen > 250)
-    {
-        fitsInOneNM = false;
-        firstNMlen = 250;
-    }
-    else
-    {
-        fitsInOneNM = true;
-        firstNMlen = fullNameLen;
-    }
-    
-    /* NM record 1 */
-    byteBlock[0] = 'N';
-    byteBlock[1] = 'M';
-    byteBlock[3] = 1; /* version */
-    if(fitsInOneNM)
-    {
-        byteBlock[2] = fullNameLen + 5;
-        byteBlock[4] = 0x00;
-    }
-    else
-    {
-        byteBlock[2] = 255;
-        byteBlock[4] = 0x01;
-    }
-    
-    rc = write(image, byteBlock, 5);
-    if(rc != 5)
-        return BKERROR_WRITE_GENERIC;
-    
-    rc = write(image, dir->nameRock, firstNMlen);
-    if(rc != firstNMlen)
-        return BKERROR_WRITE_GENERIC;
-    /* END NM record 1 */
-    
-    /* NM record 2 */
-    if(!fitsInOneNM)
-    {
-        byteBlock[2] = fullNameLen - firstNMlen;
-        byteBlock[4] = 0x00;
-        
-        rc = write(image, byteBlock, 5);
-        if(rc != 5)
-            return BKERROR_WRITE_GENERIC;
-        
-        rc = write(image, dir->nameRock + firstNMlen, byteBlock[2]);
-        if(rc != byteBlock[2])
-            return BKERROR_WRITE_GENERIC;
-    }
-    /* END NM record 2 */
-    
-    /* write blank to conclude extent */
-    rc = writeByteBlock(image, 0x00, NBYTES_LOGICAL_BLOCK - 
-                        lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK);
-    if(rc < 0)
-        return rc;
-    printf("%X\n", lseek(image, 0, SEEK_CUR));fflush(NULL);
-    endPos = lseek(image, 0, SEEK_CUR);
-    
-    /* CE record back in the directory record */
-    lseek(image, dir->offsetForCE, SEEK_SET);
-    
-    byteBlock[0] = 'C';
-    byteBlock[1] = 'E';
-    byteBlock[2] = 28; /* length */
-    byteBlock[3] = 1; /* version */
-    write733ToByteArray(byteBlock + 4, origPos); /* block location */
-    /* i'm always using 1 logical block per name */
-    write733ToByteArray(byteBlock + 12, 0); /* offset to start */
-    write733ToByteArray(byteBlock + 20, NBYTES_LOGICAL_BLOCK); /* length */
-    /* END CE record back in the directory record */
-    
-    lseek(image, endPos, SEEK_SET);
-    
-    return 1;
-}
-
-/* write all NMs in the tree that won't fit in directory records */
-int writeLongNMsInDir(int image, DirToWrite* dir)
-{
-    DirToWriteLL* nextDir;
-    FileToWriteLL* nextFile;
-    int rc;
-    printf("dir '%s'\n", dir->nameRock);
-    nextDir = dir->directories;
-    while(nextDir != NULL)
-    {
-        if(nextDir->dir.offsetForCE != 0)
-        {
-            rc = writeLongNM(image, &(nextDir->dir));
-            if(rc <= 0)
-                return rc;
-        }
-        
-        rc = writeLongNMsInDir(image, &(nextDir->dir));
-        if(rc <= 0)
-            return rc;
-        
-        nextDir = nextDir->next;
-    }
-    
-    nextFile = dir->files;
-    while(nextFile != NULL)
-    {
-        if(nextFile->file.offsetForCE != 0)
-        {
-            rc = writeLongNM(image, (DirToWrite*)(&(nextFile->file)));
-            if(rc <= 0)
-                return rc;
-        }
-        
-        nextFile = nextFile->next;
-    }
     
     return 1;
 }
@@ -845,18 +709,18 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         else
         {
             if(filenameTypes & FNTYPE_JOLIET)
-            {printf("a\n");fflush(NULL);
+            {
                 if( strcmp(nextFile->file.nameJoliet, nextDir->dir.nameJoliet) > 0 )
                     takeDirNext = true;
                 else
                     takeDirNext = false;
             }
             else
-            {printf("b\n");fflush(NULL);
+            {
                 if( strcmp(nextFile->file.name9660, nextDir->dir.name9660) > 0 )
                     takeDirNext = true;
                 else
-                    takeDirNext = false;printf("b2\n");fflush(NULL);
+                    takeDirNext = false;
             }
         }
         
@@ -1223,10 +1087,14 @@ int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir,
         {
             if(lseek(image, 0, SEEK_CUR) - startPos < strlen(dir->nameRock) + 5)
             /* have no room for the NM entry in this directory record */
+            {
                 dir->offsetForCE = lseek(image, 0, SEEK_CUR);
+                /* leave room for CE entry */
+                lseek(image, 28, SEEK_CUR);
+            }
             else
             {
-                rc = writeRockNM(image, dir->nameRock);
+                rc = writeRockNM(image, dir->nameRock, strlen(dir->nameRock), false);
                 if(rc < 0)
                     return rc;
             }
@@ -1588,6 +1456,126 @@ int writeJolietStringField(int image, const char* name, int fieldSize)
     return 1;
 }
 
+/* write NM that won't fit in a directory record */
+int writeLongNM(int image, DirToWrite* dir)
+{
+    off_t startPos;
+    int fullNameLen;
+    unsigned char CErecord[28];
+    bool fitsInOneNM;
+    int firstNMlen;
+    off_t endPos;
+    int rc;
+    int lenOfCE;
+    
+    startPos = lseek(image, 0, SEEK_CUR);
+    
+    fullNameLen = strlen(dir->nameRock);
+    
+    /* should have checked for this before getting into this function */
+    if(fullNameLen > 255)
+        return BKERROR_SANITY;
+    
+    if(fullNameLen > 250)
+    {
+        fitsInOneNM = false;
+        firstNMlen = 250;
+    }
+    else
+    {
+        fitsInOneNM = true;
+        firstNMlen = fullNameLen;
+    }
+    
+    /* NM record(s) */
+    if(fitsInOneNM)
+    {
+        rc = writeRockNM(image, dir->nameRock, firstNMlen, false);
+        if(rc <= 0)
+            return rc;
+    }
+    else
+    {
+        rc = writeRockNM(image, dir->nameRock, firstNMlen, true);
+        if(rc <= 0)
+            return rc;
+        rc = writeRockNM(image, dir->nameRock + firstNMlen, fullNameLen - firstNMlen, false);
+        if(rc <= 0)
+            return rc;
+    }
+    
+    lenOfCE = lseek(image, 0, SEEK_CUR) - startPos;
+    
+    /* write blank to conclude extent */
+    rc = writeByteBlock(image, 0x00, NBYTES_LOGICAL_BLOCK - 
+                        lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK);
+    if(rc < 0)
+        return rc;
+    
+    endPos = lseek(image, 0, SEEK_CUR);
+    
+    /* CE record back in the directory record */
+    lseek(image, dir->offsetForCE, SEEK_SET);
+    
+    CErecord[0] = 'C';
+    CErecord[1] = 'E';
+    CErecord[2] = 28; /* length */
+    CErecord[3] = 1; /* version */
+    write733ToByteArray(CErecord + 4, startPos / NBYTES_LOGICAL_BLOCK); /* block location */
+    /* i'm always using 1 logical block per name */
+    write733ToByteArray(CErecord + 12, 0); /* offset to start */
+    write733ToByteArray(CErecord + 20, lenOfCE); /* length */
+    
+    rc = write(image, CErecord, CErecord[2]);
+    if(rc != CErecord[2])
+        return BKERROR_WRITE_GENERIC;
+    /* END CE record back in the directory record */
+    
+    lseek(image, endPos, SEEK_SET);
+    
+    return 1;
+}
+
+/* write all NMs in the tree that won't fit in directory records */
+int writeLongNMsInDir(int image, DirToWrite* dir)
+{
+    DirToWriteLL* nextDir;
+    FileToWriteLL* nextFile;
+    int rc;
+    
+    nextDir = dir->directories;
+    while(nextDir != NULL)
+    {
+        if(nextDir->dir.offsetForCE != 0)
+        {
+            rc = writeLongNM(image, &(nextDir->dir));
+            if(rc <= 0)
+                return rc;
+        }
+        
+        rc = writeLongNMsInDir(image, &(nextDir->dir));
+        if(rc <= 0)
+            return rc;
+        
+        nextDir = nextDir->next;
+    }
+    
+    nextFile = dir->files;
+    while(nextFile != NULL)
+    {
+        if(nextFile->file.offsetForCE != 0)
+        {
+            rc = writeLongNM(image, (DirToWrite*)(&(nextFile->file)));
+            if(rc <= 0)
+                return rc;
+        }
+        
+        nextFile = nextFile->next;
+    }
+    
+    return 1;
+}
+
 /* returns path table size (number of bytes not counting the blank) */
 int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filenameType)
 {
@@ -1835,13 +1823,10 @@ int writeRockER(int image)
     return 1;
 }
 
-int writeRockNM(int image, char* name)
+int writeRockNM(int image, char* name, int nameLen, bool doesContinue)
 {
     int rc;
     unsigned char recordStart[5];
-    int nameLen;
-    
-    nameLen = strlen(name);
     
     /* identification */
     recordStart[0] = 'N';
@@ -1854,7 +1839,10 @@ int writeRockNM(int image, char* name)
     recordStart[3] = 1;
     
     /* flags */
-    recordStart[4] = 0;
+    if(doesContinue)
+        recordStart[4] = 0x01;
+    else
+        recordStart[4] = 0;
     
     rc = writeWrapper(image, recordStart, 5);
     if(rc <= 0)

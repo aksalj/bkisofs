@@ -503,6 +503,7 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     printf("remangled '%s' -> '%s'\n", origName, newName);
 }
 
+/* this is really mangleNameForJoliet() */
 void mangleName(const char* origName, char* newName, bool appendHash)
 {
     char* dot_p;
@@ -515,7 +516,7 @@ void mangleName(const char* origName, char* newName, bool appendHash)
     char hashStr[5]; /* '\0' terminated */
     /* these are the characters we use in the 8.3 hash. Must be 36 chars long */
     static const char* baseChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    printf("mangling '%s'\n", origName);
+    
     /* FIND extension candidate */
     dot_p = strrchr(origName, '.');
     
@@ -537,7 +538,7 @@ void mangleName(const char* origName, char* newName, bool appendHash)
             dot_p = NULL;
     }
     /* END FIND extension candidate */
-    printf("dot_p %d\n", dot_p);
+    
     /* GET base */
     /* The leading characters in the mangled name are taken from
     *  the first characters of the name if they are allowed, otherwise
@@ -549,17 +550,17 @@ void mangleName(const char* origName, char* newName, bool appendHash)
         if ( !charIsValidJoliet(origName[i]) )
             base[i] = '_';
     }
-    printf("i %d\n", i);
+    
     /* make sure base doesn't contain part of the extension */
     if(dot_p != NULL)
     {
         if(i > dot_p - origName)
             i = dot_p - origName;
     }
-    printf("i %d\n", i);
+    
     base[i] = '\0';
     /* END GET base */
-    printf("base: '%s'\n", base);
+    
     /* GET extension */
     /* the extension of the mangled name is taken from the first 3
        ascii chars after the dot */
@@ -576,7 +577,6 @@ void mangleName(const char* origName, char* newName, bool appendHash)
     
     extension[extensionLen] = '\0';
     /* END GET extension */
-    printf("extension: '%s'\n", extension);fflush(NULL);
     
     /* FIND the hash for this prefix */
     hash = hashString(origName, strlen(origName));
@@ -590,11 +590,10 @@ void mangleName(const char* origName, char* newName, bool appendHash)
         hashStr[i] = baseChars[v % 36];
     }
     /* END FIND the hash for this prefix */
-    printf("hash: '%s'\n", hashStr);fflush(NULL);
     
     /* ASSEMBLE name */
     strcpy(newName, base);
-    printf("new base: '%s', limit %d\n", newName, NCHARS_FILE_ID_MAX_JOLIET - 1 - 4 - 1 - 5);
+    
     if(appendHash)
     {
         /* max name len - '~' - hash - '.' - extension */
@@ -611,7 +610,8 @@ void mangleName(const char* origName, char* newName, bool appendHash)
     }
     /* END ASSEMBLE name */
     
-    printf("joliet mangle '%s', len %d\n", newName, strlen(newName));
+    if(appendHash)
+        printf("joliet mangle '%s' -> '%s', len %d\n", origName, newName, strlen(newName));
 }
 
 /******************************************************************************
