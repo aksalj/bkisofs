@@ -1,12 +1,13 @@
 ui:
 -try to make sure popup windows are on top of iso master and definitely not off the screen
--have it remember last location of the open/save/boot record dialogs
 -make sure dialog windows don't show up in the toolbar
+-backspace go back
+-confirmation for unsaved changes
 
 
 bk:
 -add functions for checking validity of names when adding
--make sure 0-len files don't take up a sector, assign 0 for sector number
+-stopExtracting()
 
 
 tests to run before a release:
