@@ -3,6 +3,7 @@ ui:
 -make sure dialog windows don't show up in the toolbar
 -backspace go back
 -confirmation for unsaved changes
+-make sure icons are resized with theme
 
 
 bk:
