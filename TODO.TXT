@@ -1,6 +1,5 @@
 ui:
 -try to make sure popup windows are on top of iso master and definitely not off the screen
--make sure dialog windows don't show up in the toolbar
 -make sure icons are resized with theme
 
 
@@ -19,4 +18,6 @@ tests to run before a release:
 - make a dos bootable cd, see if it boots
  - from scratch
  - starting with an existing no emulation bootable disk
-- remember to update the version number in the about box
+- delete config file, make sure it still works
+- update the version number in the about box
+- remove -g from makefile and BK_DEBUG from bkInternal.h
