@@ -1,6 +1,6 @@
 ui:
 -try to make sure popup windows are on top of iso master and definitely not off the screen
--make sure icons are resized with theme
+-add option to set toolbar icon size
 
 
 bk:
