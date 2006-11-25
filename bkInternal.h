@@ -27,7 +27,7 @@
 /* number of bytes in a logical block (in practice always 2048) */
 #define NBYTES_LOGICAL_BLOCK 2048
 
-#define BK_DEBUG
+//#define BK_DEBUG
 
 /*******************************************************************************
 * Joliet allows max 128 bytes

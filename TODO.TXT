@@ -1,14 +1,19 @@
 ui:
--try to make sure popup windows are on top of iso master and definitely not off the screen
 -add option to set toolbar icon size
+-make sure filename column width returns to normal when leaving a long filename dir
+-add boot record dialog should remember path
 
 
 bk:
 -add functions for checking validity of names when adding
 -stopExtracting()
+-dos doesn't like names to start with underscores
 
 
 tests to run before a release:
+- update the version number in the about box
+- remove -g from makefile and BK_DEBUG from bkInternal.h
+- update changelog.txt
 - open iso from command-line
 - create blank, see if it mounts (try norock, nojoliet)
 - make a bootable windows (also add, delete some files)
@@ -19,5 +24,3 @@ tests to run before a release:
  - from scratch
  - starting with an existing no emulation bootable disk
 - delete config file, make sure it still works
-- update the version number in the about box
-- remove -g from makefile and BK_DEBUG from bkInternal.h
