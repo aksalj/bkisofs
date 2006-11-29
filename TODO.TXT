@@ -1,6 +1,5 @@
 ui:
 -add option to set toolbar icon size
--make sure filename column width returns to normal when leaving a long filename dir
 -add boot record dialog should remember path
 
 
