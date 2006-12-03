@@ -90,6 +90,9 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
     if(rc <= 0)
         return rc;
     
+    if( !nameIsValid(srcDirName) )
+        return BKERROR_NAME_INVALID_CHAR;
+    
     if(itemIsInDir(srcDirName, destDirInTree))
         return BKERROR_DUPLICATE_ADD;
     
@@ -347,6 +350,9 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
     if(rc <= 0)
         return rc;
     
+    if( !nameIsValid(filename) )
+        return BKERROR_NAME_INVALID_CHAR;
+    
     /* FIND dir to add to */
     destDirInTree = tree;
     for(count = 0; count < destDir->numDirs; count++)
@@ -579,7 +585,7 @@ int bk_add_file(VolInfo* volInfo, const char* srcPathAndName,
 
 /*******************************************************************************
 * bk_create_dir()
-* public interface for addFile()
+* 
 * */
 int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
                   const char* newDirName)
