@@ -7,5 +7,5 @@ void shortenNameFor9660(const char* origName, char* newName, bool isADir);
 unsigned hashString(const char *str, unsigned int length);
 int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes);
 void mangleNameFor9660(const char* origName, char* newName, bool isADir);
-void mangleName(const char* origName, char* newName, bool appendHash);
+void mangleNameForJoliet(const char* origName, char* newName, bool appendHash);
 #endif

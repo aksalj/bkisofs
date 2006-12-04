@@ -55,15 +55,14 @@ bool charIsValid9660(char theChar)
 * */
 bool charIsValidJoliet(char theChar)
 {
-    if( (theChar >= '0' && theChar <= '9') ||
-        (theChar >= 'a' && theChar <= 'z') ||
-        (theChar >= 'A' && theChar <= 'Z') ||
-        strchr("_-$~.", theChar) )
-    {
-        return true;
-    }
-    else
+    /* can be any ascii char between decimal 32 and 126 
+    * except '*' (42) '/' (47), ':' (58), ';' (59), '?' (63) and '\' (92) */
+    if(theChar < 32 || theChar > 126 ||
+       theChar == 42 || theChar == 47 || theChar == 58 || 
+       theChar == 59 || theChar == 63 || theChar == 92)
         return false;
+    else
+        return true;
 }
 
 /* 
@@ -144,7 +143,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         if(filenameTypes | FNTYPE_JOLIET)
             //strcpy((*currentNewDir)->dir.nameJoliet, currentOrigDir->dir.name);
-            mangleName(currentOrigDir->dir.name, (*currentNewDir)->dir.nameJoliet, false);
+            mangleNameForJoliet(currentOrigDir->dir.name, (*currentNewDir)->dir.nameJoliet, false);
         else
             (*currentNewDir)->dir.nameJoliet[0] = '\0';
         
@@ -186,7 +185,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
         
         if(filenameTypes | FNTYPE_JOLIET)
             //strcpy((*currentNewFile)->file.nameJoliet, currentOrigFile->file.name);
-            mangleName(currentOrigFile->file.name, (*currentNewFile)->file.nameJoliet, false);
+            mangleNameForJoliet(currentOrigFile->file.name, (*currentNewFile)->file.nameJoliet, false);
         else
             (*currentNewFile)->file.nameJoliet[0] = '\0';
         
@@ -290,7 +289,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             {
                 haveCollisions = true;
                 
-                mangleName(currentDir->dir.nameJoliet, newNameJoliet, true);
+                mangleNameForJoliet(currentDir->dir.nameJoliet, newNameJoliet, true);
                 
                 strcpy(currentDir->dir.nameJoliet, newNameJoliet);
             }
@@ -353,7 +352,7 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             {
                 haveCollisions = true;
                 
-                mangleName(currentFile->file.nameJoliet, newNameJoliet, true);
+                mangleNameForJoliet(currentFile->file.nameJoliet, newNameJoliet, true);
                 
                 strcpy(currentFile->file.nameJoliet, newNameJoliet);
             }
@@ -503,8 +502,7 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     printf("remangled '%s' -> '%s'\n", origName, newName);
 }
 
-/* this is really mangleNameForJoliet() */
-void mangleName(const char* origName, char* newName, bool appendHash)
+void mangleNameForJoliet(const char* origName, char* newName, bool appendHash)
 {
     char* dot_p;
     int i;
