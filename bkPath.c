@@ -387,7 +387,8 @@ bool nameIsValid(const char* name)
     
     for(count = 0; count < nameLen; count++)
     {
-        if( !charIsValid9660(name[count]) )
+        /* can be any ascii char between decimal 32 and 126 except '/' (47) */
+        if(name[count] < 32 || name[count] > 126 || name[count] == 47)
             return false;
     }
     
