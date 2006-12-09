@@ -1,11 +1,9 @@
 ui:
 -add option to set toolbar icon size
--add boot record dialog should remember path
 -fiddle with strcmp() in sortByName() (crashes on viewing ~/denied/unicode)
 
 
 bk:
--add functions for checking validity of names when adding
 -stopExtracting()
 -dos doesn't like names to start with underscores
 
