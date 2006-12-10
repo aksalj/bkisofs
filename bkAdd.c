@@ -230,24 +230,9 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
                 rc = addDir(volInfo, tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
                 {
-                    if(volInfo->warningCbk != NULL)
-                    /* perhaps the user wants to ignore this failure */
-                    {
-                        snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                                 "Failed to add directory '%s': '%s'",
-                                 newSrcPathAndName, bk_get_error_string(rc));
-                        goOn = volInfo->warningCbk(volInfo->warningMessage);
-                        rc = BKWARNING_OPER_PARTLY_FAILED;
-                    }
-                    else
-                        goOn = false;
-                    
-                    if(!goOn)
-                    {
                         free(newSrcPathAndName);
                         freePath(newDestDir);
                         return rc;
-                    }
                 }
             }
             else if(anEntry.st_mode & S_IFREG)
