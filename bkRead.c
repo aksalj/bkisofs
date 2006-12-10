@@ -408,7 +408,7 @@ bool haveNextRecordInSector(int image)
 * note to self: directory identifiers do not end with ";1"
 *
 * */
-int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType, 
+int readDir(int image, VolInfo* volInfo, BkDir* dir, int filenameType, 
             bool readPosix)
 {
     int rc;
@@ -600,14 +600,14 @@ int readDir(int image, VolInfo* volInfo, Dir* dir, int filenameType,
 * Reads the extent pointed to from a directory record of a directory.
 * size is number of bytes
 * */
-int readDirContents(int image, VolInfo* volInfo, Dir* dir, unsigned size, 
+int readDirContents(int image, VolInfo* volInfo, BkDir* dir, unsigned size, 
                     int filenameType, bool readPosix)
 {
     int rc;
     int bytesRead = 0;
     int childrenBytesRead;
-    DirLL** nextDir; /* pointer to pointer to modify pointer :) */
-    FileLL** nextFile; /* ditto */
+    BkDir** nextDir; /* pointer to pointer to modify pointer :) */
+    BkFile** nextFile; /* ditto */
     
     /* skip self and parent */
     rc = skipDR(image);
@@ -632,11 +632,11 @@ int readDirContents(int image, VolInfo* volInfo, Dir* dir, unsigned size,
             {
                 int recordLength;
                 
-                *nextDir = malloc(sizeof(DirLL));
+                *nextDir = malloc(sizeof(BkDir));
                 if(*nextDir == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
-                recordLength = readDir(image, volInfo, &((*nextDir)->dir), filenameType,
+                recordLength = readDir(image, volInfo, *nextDir, filenameType,
                                        readPosix);
                 if(recordLength < 0)
                     return recordLength;
@@ -651,12 +651,12 @@ int readDirContents(int image, VolInfo* volInfo, Dir* dir, unsigned size,
             {
                 int recordLength;
                 
-                *nextFile = malloc(sizeof(FileLL));
+                *nextFile = malloc(sizeof(BkFile));
                 if(*nextFile == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
                 recordLength = readFileInfo(image, volInfo, 
-                                            &((*nextFile)->file), filenameType,
+                                            *nextFile, filenameType,
                                             readPosix);
                 if(recordLength < 0)
                     return recordLength;
@@ -701,7 +701,7 @@ int readDirContents(int image, VolInfo* volInfo, Dir* dir, unsigned size,
 * readFileInfo()
 * Reads the directory record for a file
 * */
-int readFileInfo(int image, VolInfo* volInfo, File* file, int filenameType, 
+int readFileInfo(int image, VolInfo* volInfo, BkFile* file, int filenameType, 
                  bool readPosix)
 {
     int rc;

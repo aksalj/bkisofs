@@ -59,9 +59,9 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
     int rc;
     FilePath filePath;
     int count;
-    Dir* srcDirInTree;
-    DirLL* searchDir;
-    FileLL* searchFile;
+    BkDir* srcDirInTree;
+    BkDir* searchDir;
+    BkFile* searchFile;
     bool found;
     
     rc = makeFilePathFromString(srcPathAndName, &filePath);
@@ -81,10 +81,10 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
         while(searchDir != NULL && !found)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, filePath.path.dirs[count]) == 0)
+            if(strcmp(searchDir->name, filePath.path.dirs[count]) == 0)
             {
                 found = true;
-                srcDirInTree = &(searchDir->dir);
+                srcDirInTree = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -102,13 +102,13 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
     searchFile = srcDirInTree->files;
     while(searchFile != NULL && !found)
     {
-        if(strcmp(searchFile->file.name, filePath.filename) == 0)
+        if(strcmp(searchFile->name, filePath.filename) == 0)
         {
             found = true;
             
             volInfo->bootMediaType = BOOT_MEDIA_NO_EMULATION;
             
-            volInfo->bootRecordSize = searchFile->file.size;
+            volInfo->bootRecordSize = searchFile->size;
             
             if(volInfo->bootRecordPathAndName != NULL)
                 free(volInfo->bootRecordPathAndName);
@@ -116,7 +116,7 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
             
             volInfo->bootRecordIsVisible = true;
             
-            volInfo->bootRecordOnImage = &(searchFile->file);
+            volInfo->bootRecordOnImage = searchFile;
         }
         
         searchFile = searchFile->next;

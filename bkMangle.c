@@ -98,7 +98,7 @@ unsigned hashString(const char *str, unsigned int length)
 * it also creates.
 * filenameTypes is all types required in the end
 * */
-int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
+int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
 {
     int rc;
     bool haveCollisions;
@@ -108,15 +108,15 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     int numJolietCollisions;
     char newNameJoliet[NCHARS_FILE_ID_MAX_JOLIET]; /* for remangling */
     
-    DirLL* currentOrigDir;
-    DirToWriteLL** currentNewDir;
-    FileLL* currentOrigFile;
-    FileToWriteLL** currentNewFile;
+    BkDir* currentOrigDir;
+    DirToWrite** currentNewDir;
+    BkFile* currentOrigFile;
+    FileToWrite** currentNewFile;
     
-    DirToWriteLL* currentDir;
-    FileToWriteLL* currentFile;
-    DirToWriteLL* currentDirToCompare;
-    FileToWriteLL* currentFileToCompare;
+    DirToWrite* currentDir;
+    FileToWrite* currentFile;
+    DirToWrite* currentDirToCompare;
+    FileToWrite* currentFileToCompare;
     
     /* MANGLE all names, create new dir/file lists */
     currentOrigDir = origDir->directories;
@@ -124,32 +124,32 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     while(currentOrigDir != NULL)
     /* have directories */
     {
-        *currentNewDir = malloc(sizeof(DirToWriteLL));
+        *currentNewDir = malloc(sizeof(DirToWrite));
         if(*currentNewDir == NULL)
         {
             newDir->files = NULL;
             return BKERROR_OUT_OF_MEMORY;
         }
         
-        bzero(*currentNewDir, sizeof(DirToWriteLL));
+        bzero(*currentNewDir, sizeof(DirToWrite));
         
-        shortenNameFor9660(currentOrigDir->dir.name, 
-                          (*currentNewDir)->dir.name9660, true);
+        shortenNameFor9660(currentOrigDir->name, 
+                          (*currentNewDir)->name9660, true);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
-            strcpy((*currentNewDir)->dir.nameRock, currentOrigDir->dir.name);
+            strcpy((*currentNewDir)->nameRock, currentOrigDir->name);
         else
-            (*currentNewDir)->dir.nameRock[0] = '\0';
+            (*currentNewDir)->nameRock[0] = '\0';
         
         if(filenameTypes | FNTYPE_JOLIET)
             //strcpy((*currentNewDir)->dir.nameJoliet, currentOrigDir->dir.name);
-            mangleNameForJoliet(currentOrigDir->dir.name, (*currentNewDir)->dir.nameJoliet, false);
+            mangleNameForJoliet(currentOrigDir->name, (*currentNewDir)->nameJoliet, false);
         else
-            (*currentNewDir)->dir.nameJoliet[0] = '\0';
+            (*currentNewDir)->nameJoliet[0] = '\0';
         
-        (*currentNewDir)->dir.posixFileMode = currentOrigDir->dir.posixFileMode;
+        (*currentNewDir)->posixFileMode = currentOrigDir->posixFileMode;
         
-        rc = mangleDir(&(currentOrigDir->dir), &((*currentNewDir)->dir), 
+        rc = mangleDir(currentOrigDir, *currentNewDir, 
                        filenameTypes);
         if(rc < 0)
         {
@@ -169,48 +169,47 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
     while(currentOrigFile != NULL)
     /* have files */
     {
-        *currentNewFile = malloc(sizeof(FileToWriteLL));
+        *currentNewFile = malloc(sizeof(FileToWrite));
         if(*currentNewFile == NULL)
             return BKERROR_OUT_OF_MEMORY;
         
-        bzero(*currentNewFile, sizeof(FileToWriteLL));
+        bzero(*currentNewFile, sizeof(FileToWrite));
         
-        shortenNameFor9660(currentOrigFile->file.name, 
-                          (*currentNewFile)->file.name9660, false);
+        shortenNameFor9660(currentOrigFile->name, 
+                          (*currentNewFile)->name9660, false);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
-            strcpy((*currentNewFile)->file.nameRock, currentOrigFile->file.name);
+            strcpy((*currentNewFile)->nameRock, currentOrigFile->name);
         else
-            (*currentNewFile)->file.nameRock[0] = '\0';
+            (*currentNewFile)->nameRock[0] = '\0';
         
         if(filenameTypes | FNTYPE_JOLIET)
-            //strcpy((*currentNewFile)->file.nameJoliet, currentOrigFile->file.name);
-            mangleNameForJoliet(currentOrigFile->file.name, (*currentNewFile)->file.nameJoliet, false);
+            mangleNameForJoliet(currentOrigFile->name, (*currentNewFile)->nameJoliet, false);
         else
-            (*currentNewFile)->file.nameJoliet[0] = '\0';
+            (*currentNewFile)->nameJoliet[0] = '\0';
         
-        (*currentNewFile)->file.posixFileMode = currentOrigFile->file.posixFileMode;
+        (*currentNewFile)->posixFileMode = currentOrigFile->posixFileMode;
         
-        (*currentNewFile)->file.size = currentOrigFile->file.size;
+        (*currentNewFile)->size = currentOrigFile->size;
         
-        (*currentNewFile)->file.onImage = currentOrigFile->file.onImage;
+        (*currentNewFile)->onImage = currentOrigFile->onImage;
         
-        (*currentNewFile)->file.offset = currentOrigFile->file.position;
+        (*currentNewFile)->offset = currentOrigFile->position;
         
-        if( !currentOrigFile->file.onImage )
+        if( !currentOrigFile->onImage )
         {
-            (*currentNewFile)->file.pathAndName = malloc(strlen(currentOrigFile->file.pathAndName) + 1);
-            if( (*currentNewFile)->file.pathAndName == NULL )
+            (*currentNewFile)->pathAndName = malloc(strlen(currentOrigFile->pathAndName) + 1);
+            if( (*currentNewFile)->pathAndName == NULL )
             {
                 free(*currentNewFile);
                 *currentNewFile = NULL;
                 return BKERROR_OUT_OF_MEMORY;
             }
             
-            strcpy((*currentNewFile)->file.pathAndName, currentOrigFile->file.pathAndName);
+            strcpy((*currentNewFile)->pathAndName, currentOrigFile->pathAndName);
         }
         
-        (*currentNewFile)->file.origFile = &(currentOrigFile->file);
+        (*currentNewFile)->origFile = currentOrigFile;
         
         currentOrigFile = currentOrigFile->next;
         
@@ -243,14 +242,14 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             currentDirToCompare = newDir->directories;
             while(currentDirToCompare != NULL)
             {
-                if(strcmp(currentDir->dir.name9660, 
-                          currentDirToCompare->dir.name9660) == 0)
+                if(strcmp(currentDir->name9660, 
+                          currentDirToCompare->name9660) == 0)
                 {
                     num9660Collisions++;
                 }
                 
-                if(strcmp(currentDir->dir.nameJoliet, 
-                          currentDirToCompare->dir.nameJoliet) == 0)
+                if(strcmp(currentDir->nameJoliet, 
+                          currentDirToCompare->nameJoliet) == 0)
                 {
                     numJolietCollisions++;
                 }
@@ -261,14 +260,14 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             currentFileToCompare = newDir->files;
             while(currentFileToCompare != NULL)
             {
-                if(strcmp(currentDir->dir.name9660, 
-                          currentFileToCompare->file.name9660) == 0)
+                if(strcmp(currentDir->name9660, 
+                          currentFileToCompare->name9660) == 0)
                 {
                     num9660Collisions++;
                 }
                 
-                if(strcmp(currentDir->dir.nameJoliet, 
-                          currentFileToCompare->file.nameJoliet) == 0)
+                if(strcmp(currentDir->nameJoliet, 
+                          currentFileToCompare->nameJoliet) == 0)
                 {
                     numJolietCollisions++;
                 }
@@ -280,18 +279,18 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             {
                 haveCollisions = true;
                 
-                mangleNameFor9660(currentDir->dir.name9660, newName9660, true);
+                mangleNameFor9660(currentDir->name9660, newName9660, true);
                 
-                strcpy(currentDir->dir.name9660, newName9660);
+                strcpy(currentDir->name9660, newName9660);
             }
             
             if(numJolietCollisions != 1)
             {
                 haveCollisions = true;
                 
-                mangleNameForJoliet(currentDir->dir.nameJoliet, newNameJoliet, true);
+                mangleNameForJoliet(currentDir->nameJoliet, newNameJoliet, true);
                 
-                strcpy(currentDir->dir.nameJoliet, newNameJoliet);
+                strcpy(currentDir->nameJoliet, newNameJoliet);
             }
             
             currentDir = currentDir->next;
@@ -306,14 +305,14 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             currentDirToCompare = newDir->directories;
             while(currentDirToCompare != NULL)
             {
-                if(strcmp(currentFile->file.name9660, 
-                          currentDirToCompare->dir.name9660) == 0)
+                if(strcmp(currentFile->name9660, 
+                          currentDirToCompare->name9660) == 0)
                 {
                     num9660Collisions++;
                 }
                 
-                if(strcmp(currentFile->file.nameJoliet, 
-                          currentDirToCompare->dir.nameJoliet) == 0)
+                if(strcmp(currentFile->nameJoliet, 
+                          currentDirToCompare->nameJoliet) == 0)
                 {
                     numJolietCollisions++;
                 }
@@ -324,14 +323,14 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             currentFileToCompare = newDir->files;
             while(currentFileToCompare != NULL)
             {
-                if(strcmp(currentFile->file.name9660, 
-                          currentFileToCompare->file.name9660) == 0)
+                if(strcmp(currentFile->name9660, 
+                          currentFileToCompare->name9660) == 0)
                 {
                     num9660Collisions++;
                 }
                 
-                if(strcmp(currentFile->file.nameJoliet, 
-                          currentFileToCompare->file.nameJoliet) == 0)
+                if(strcmp(currentFile->nameJoliet, 
+                          currentFileToCompare->nameJoliet) == 0)
                 {
                     numJolietCollisions++;
                 }
@@ -343,18 +342,18 @@ int mangleDir(const Dir* origDir, DirToWrite* newDir, int filenameTypes)
             {
                 haveCollisions = true;
                 
-                mangleNameFor9660(currentFile->file.name9660, newName9660, false);
+                mangleNameFor9660(currentFile->name9660, newName9660, false);
                 
-                strcpy(currentFile->file.name9660, newName9660);
+                strcpy(currentFile->name9660, newName9660);
             }
             
             if(numJolietCollisions != 1)
             {
                 haveCollisions = true;
                 
-                mangleNameForJoliet(currentFile->file.nameJoliet, newNameJoliet, true);
+                mangleNameForJoliet(currentFile->nameJoliet, newNameJoliet, true);
                 
-                strcpy(currentFile->file.nameJoliet, newNameJoliet);
+                strcpy(currentFile->nameJoliet, newNameJoliet);
             }
             
             currentFile = currentFile->next;

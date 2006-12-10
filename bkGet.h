@@ -1,2 +1,3 @@
-unsigned estimateIsoSize(const Dir* tree, int filenameTypes);
-int getDirFromString(const Dir* tree, const char* pathStr, Dir** dirFoundPtr);
+unsigned estimateIsoSize(const BkDir* tree, int filenameTypes);
+int getDirFromString(const BkDir* tree, const char* pathStr, 
+                     BkDir** dirFoundPtr);

@@ -30,17 +30,17 @@
 * */
 void freeDirToWriteContents(DirToWrite* dir)
 {
-    DirToWriteLL* currentDir;
-    DirToWriteLL* nextDir;
-    FileToWriteLL* currentFile;
-    FileToWriteLL* nextFile;
+    DirToWrite* currentDir;
+    DirToWrite* nextDir;
+    FileToWrite* currentFile;
+    FileToWrite* nextFile;
     
     currentDir = dir->directories;
     while(currentDir != NULL)
     {
         nextDir = currentDir->next;
         
-        freeDirToWriteContents(&(currentDir->dir));
+        freeDirToWriteContents(currentDir);
         free(currentDir);
         
         currentDir = nextDir;
@@ -51,8 +51,8 @@ void freeDirToWriteContents(DirToWrite* dir)
     {
         nextFile = currentFile->next;
         
-        if(!currentFile->file.onImage)
-            free(currentFile->file.pathAndName);
+        if(!currentFile->onImage)
+            free(currentFile->pathAndName);
         
         free(currentFile);
         

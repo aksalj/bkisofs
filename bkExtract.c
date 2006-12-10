@@ -193,16 +193,16 @@ int bk_extract_file(const VolInfo* volInfo, const char* srcFile,
 * Extracts a directory with all its contents from the iso to the filesystem.
 * don't try to extract root, don't know what will happen
 * */
-int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir, 
-               const char* destDir, bool keepPermissions, 
+int extractDir(VolInfo* volInfo, int image, const BkDir* tree, 
+               const Path* srcDir, const char* destDir, bool keepPermissions, 
                void(*progressFunction)(void))
 {
     int rc;
     int count;
     
     /* vars to find file location on image */
-    const Dir* srcDirInTree;
-    DirLL* searchDir; /* to find a dir in the tree */
+    const BkDir* srcDirInTree;
+    BkDir* searchDir; /* to find a dir in the tree */
     bool dirFound;
     
     /* vars to create destination dir */
@@ -211,10 +211,10 @@ int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir,
     
     /* vars to extract files */
     FilePath filePath;
-    FileLL* currentFile;
+    BkFile* currentFile;
     
     /* vars to extract subdirectories */
-    DirLL* currentDir;
+    BkDir* currentDir;
     Path* newSrcDir;
     
     /* FIND parent dir to know what the contents are */
@@ -227,10 +227,10 @@ int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir,
         while(searchDir != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, srcDir->dirs[count]) == 0)
+            if(strcmp(searchDir->name, srcDir->dirs[count]) == 0)
             {
                 dirFound = true;
-                srcDirInTree = &(searchDir->dir);
+                srcDirInTree = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -274,7 +274,7 @@ int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir,
     currentFile = srcDirInTree->files;
     while(currentFile != NULL)
     {
-        strcpy(filePath.filename, currentFile->file.name);
+        strcpy(filePath.filename, currentFile->name);
         
         rc = extractFile(volInfo, image, tree, &filePath, newDestDir, 
                          keepPermissions, progressFunction);
@@ -309,7 +309,7 @@ int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir,
     currentDir = srcDirInTree->directories;
     while(currentDir != NULL)
     {
-        rc = makeLongerPath(srcDir, currentDir->dir.name, &newSrcDir);
+        rc = makeLongerPath(srcDir, currentDir->name, &newSrcDir);
         if(rc <= 0)
         {
             free(newDestDir);
@@ -327,7 +327,7 @@ int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir,
             {
                 snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
                          "Failed to extract directory '%s' to '%s': '%s'",
-                         currentDir->dir.name, newDestDir, bk_get_error_string(rc));
+                         currentDir->name, newDestDir, bk_get_error_string(rc));
                 goOn = volInfo->warningCbk(volInfo->warningMessage);
                 rc = BKWARNING_OPER_PARTLY_FAILED;
             }
@@ -358,15 +358,15 @@ int extractDir(VolInfo* volInfo, int image, const Dir* tree, const Path* srcDir,
 * destDir must have trailing slash
 * 
 * */
-int extractFile(const VolInfo* volInfo, int image, const Dir* tree, const FilePath* pathAndName, 
-                const char* destDir, bool keepPermissions, 
-                void(*progressFunction)(void))
+int extractFile(const VolInfo* volInfo, int image, const BkDir* tree, 
+                const FilePath* pathAndName, const char* destDir, 
+                bool keepPermissions, void(*progressFunction)(void))
 {
     /* vars to find file location on image */
-    const Dir* parentDir;
-    DirLL* searchDir;
+    const BkDir* parentDir;
+    BkDir* searchDir;
     bool dirFound;
-    FileLL* pointerToIt; /* pointer to the node with file to read */
+    BkFile* pointerToIt; /* pointer to the node with file to read */
     bool fileFound;
     
     /* vars for the source file */
@@ -390,10 +390,10 @@ int extractFile(const VolInfo* volInfo, int image, const Dir* tree, const FilePa
         while(searchDir != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, pathAndName->path.dirs[count]) == 0)
+            if(strcmp(searchDir->name, pathAndName->path.dirs[count]) == 0)
             {
                 dirFound = true;
-                parentDir = &(searchDir->dir);
+                parentDir = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -412,18 +412,18 @@ int extractFile(const VolInfo* volInfo, int image, const Dir* tree, const FilePa
     while(pointerToIt != NULL && !fileFound)
     /* find the file in parentDir */
     {
-        if(strcmp(pointerToIt->file.name, pathAndName->filename) == 0)
+        if(strcmp(pointerToIt->name, pathAndName->filename) == 0)
         /* this is the file */
         {
-            if(pointerToIt->file.onImage)
+            if(pointerToIt->onImage)
             {
                 srcFile = image;
-                lseek(image, pointerToIt->file.position, SEEK_SET);
+                lseek(image, pointerToIt->position, SEEK_SET);
                 srcFileWasOpened = false;
             }
             else
             {
-                srcFile = open(pointerToIt->file.pathAndName, O_RDONLY);
+                srcFile = open(pointerToIt->pathAndName, O_RDONLY);
                 if(srcFile == -1)
                     return BKERROR_OPEN_READ_FAILED;
                 srcFileWasOpened = true;
@@ -452,7 +452,7 @@ int extractFile(const VolInfo* volInfo, int image, const Dir* tree, const FilePa
             
             /* WRITE file */
             if(keepPermissions)
-                destFilePerms = pointerToIt->file.posixFileMode;
+                destFilePerms = pointerToIt->posixFileMode;
             else
                 destFilePerms = volInfo->posixFileDefaults;
             
@@ -467,7 +467,7 @@ int extractFile(const VolInfo* volInfo, int image, const Dir* tree, const FilePa
             
             free(destPathAndName);
             
-            rc = copyByteBlock(srcFile, destFile, pointerToIt->file.size);
+            rc = copyByteBlock(srcFile, destFile, pointerToIt->size);
             if(rc < 0)
             {
                 close(destFile);

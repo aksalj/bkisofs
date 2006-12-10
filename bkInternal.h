@@ -59,7 +59,7 @@ typedef struct
     
 } FilePath;
 
-typedef struct
+typedef struct DirToWrite
 {
     char name9660[13]; /* 8.3 max */
     char nameRock[NCHARS_FILE_ID_MAX_STORE];
@@ -74,19 +74,14 @@ typedef struct
     
     unsigned extentNumber2; /* for svd (joliet) */
     unsigned dataLength2; /* for svd (joliet) */
-    struct DirToWriteLL* directories;
-    struct FileToWriteLL* files;
+    struct DirToWrite* directories;
+    struct FileToWrite* files;
+    
+    struct DirToWrite* next;
     
 } DirToWrite;
 
-typedef struct DirToWriteLL
-{
-    DirToWrite dir;
-    struct DirToWriteLL* next;
-    
-} DirToWriteLL;
-
-typedef struct
+typedef struct FileToWrite
 {
     char name9660[13]; /* 8.3 max */
     char nameRock[NCHARS_FILE_ID_MAX_STORE];
@@ -105,17 +100,12 @@ typedef struct
     char* pathAndName; /* if on filesystem, full path + filename
                        * is to be freed by whenever the File is freed */
     
-    File* origFile; /* this pointer only has one purpose: to potentially 
+    BkFile* origFile; /* this pointer only has one purpose: to potentially 
                     * identify this file as the boot record. it will never
                     * be dereferenced, just compared to. */
     
-} FileToWrite;
-
-typedef struct FileToWriteLL
-{
-    FileToWrite file;
-    struct FileToWriteLL* next;
+    struct FileToWrite* next;
     
-} FileToWriteLL;
+} FileToWrite;
 
 #endif

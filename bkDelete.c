@@ -107,20 +107,20 @@ int bk_delete_file(VolInfo* volInfo, const char* fileStr)
 * deleteDir()
 * deletes directory described by dirToDelete from the directory tree
 * */
-int deleteDir(VolInfo* volInfo, Dir* tree, const Path* dirToDelete)
+int deleteDir(VolInfo* volInfo, BkDir* tree, const Path* dirToDelete)
 {
     int count;
     
     /* vars to find the dir in the tree */
-    Dir* srcDirInTree;
-    DirLL* searchDir;
+    BkDir* srcDirInTree;
+    BkDir* searchDir;
     bool dirFound;
     
     /* vars to delete the directory */
-    Dir* parentDirInTree;
+    BkDir* parentDirInTree;
     bool parentDirFound;
-    DirLL** parentDirLL;
-    DirLL* parentDirNextLL;
+    BkDir** parentDirLL;
+    BkDir* parentDirNextLL;
     
     /* FIND dir to know what the contents are */
     srcDirInTree = tree;
@@ -132,10 +132,10 @@ int deleteDir(VolInfo* volInfo, Dir* tree, const Path* dirToDelete)
         while(searchDir != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, dirToDelete->dirs[count]) == 0)
+            if(strcmp(searchDir->name, dirToDelete->dirs[count]) == 0)
             {
                 dirFound = true;
-                srcDirInTree = &(searchDir->dir);
+                srcDirInTree = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -157,10 +157,10 @@ int deleteDir(VolInfo* volInfo, Dir* tree, const Path* dirToDelete)
         while(searchDir != NULL && !parentDirFound)
         /* find the directory, last one found will be the parent */
         {
-            if(strcmp(searchDir->dir.name, dirToDelete->dirs[count]) == 0)
+            if(strcmp(searchDir->name, dirToDelete->dirs[count]) == 0)
             {
                 parentDirFound = true;
-                parentDirInTree = &(searchDir->dir);
+                parentDirInTree = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -175,7 +175,7 @@ int deleteDir(VolInfo* volInfo, Dir* tree, const Path* dirToDelete)
     dirFound = false;
     while(*parentDirLL != NULL && !dirFound)
     {
-        if(strcmp( (*parentDirLL)->dir.name, 
+        if(strcmp( (*parentDirLL)->name, 
                    dirToDelete->dirs[dirToDelete->numDirs - 1] ) == 0 )
         {
             parentDirNextLL = (*parentDirLL)->next;
@@ -202,15 +202,15 @@ int deleteDir(VolInfo* volInfo, Dir* tree, const Path* dirToDelete)
 * deletes all the contents of a directory
 * recursive
 * */
-void deleteDirContents(VolInfo* volInfo, Dir* dir)
+void deleteDirContents(VolInfo* volInfo, BkDir* dir)
 {
     /* vars to delete files */
-    FileLL* currentFile;
-    FileLL* nextFile;
+    BkFile* currentFile;
+    BkFile* nextFile;
     
     /* vars to delete subdirectories */
-    DirLL* currentDir;
-    DirLL* nextDir;
+    BkDir* currentDir;
+    BkDir* nextDir;
     
     /* DELETE all files */
     currentFile = dir->files;
@@ -218,15 +218,15 @@ void deleteDirContents(VolInfo* volInfo, Dir* dir)
     {
         nextFile = currentFile->next;
         
-        if(!currentFile->file.onImage)
-            free(currentFile->file.pathAndName);
+        if(!currentFile->onImage)
+            free(currentFile->pathAndName);
         
         /* check whether file is being used as a boot record */
         if(volInfo->bootMediaType != BOOT_MEDIA_NONE &&
            volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
         {
             if(volInfo->bootRecordIsVisible && 
-               volInfo->bootRecordOnImage == &(currentFile->file))
+               volInfo->bootRecordOnImage == currentFile)
             {
                 /* and stop using it. perhaps insert a hook here one day to
                 * let the user know the boot record has been/will be deleted */
@@ -246,7 +246,7 @@ void deleteDirContents(VolInfo* volInfo, Dir* dir)
     {
         nextDir = currentDir->next;
         
-        deleteDirContents(volInfo, &(currentDir->dir));
+        deleteDirContents(volInfo, currentDir);
         
         free(currentDir);
         
@@ -259,13 +259,13 @@ void deleteDirContents(VolInfo* volInfo, Dir* dir)
 * deleteFile()
 * deletes file described by pathAndName from the tree
 * */
-int deleteFile(VolInfo* volInfo, Dir* tree, const FilePath* pathAndName)
+int deleteFile(VolInfo* volInfo, BkDir* tree, const FilePath* pathAndName)
 {
-    Dir* parentDir;
-    DirLL* searchDir;
+    BkDir* parentDir;
+    BkDir* searchDir;
     bool dirFound;
-    FileLL** pointerToIt; /* pointer to pointer to the file to delete */
-    FileLL* pointerToNext; /* to assign to the pointer pointed to by the pointer above
+    BkFile** pointerToIt; /* pointer to pointer to the file to delete */
+    BkFile* pointerToNext; /* to assign to the pointer pointed to by the pointer above
                            * no i'm not kidding */
     bool fileFound;
     int count;
@@ -279,10 +279,10 @@ int deleteFile(VolInfo* volInfo, Dir* tree, const FilePath* pathAndName)
         while(searchDir != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, pathAndName->path.dirs[count]) == 0)
+            if(strcmp(searchDir->name, pathAndName->path.dirs[count]) == 0)
             {
                 dirFound = true;
-                parentDir = &(searchDir->dir);
+                parentDir = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -297,20 +297,20 @@ int deleteFile(VolInfo* volInfo, Dir* tree, const FilePath* pathAndName)
     fileFound = false;
     while(*pointerToIt != NULL && !fileFound)
     {
-        if(strcmp((*pointerToIt)->file.name, pathAndName->filename) == 0)
+        if(strcmp((*pointerToIt)->name, pathAndName->filename) == 0)
         /* delete the node */
         {
             pointerToNext = (*pointerToIt)->next;
             
-            if( (*pointerToIt)->file.onImage )
-                free( (*pointerToIt)->file.pathAndName );
+            if( (*pointerToIt)->onImage )
+                free( (*pointerToIt)->pathAndName );
             
             /* check whether file is being used as a boot record */
             if(volInfo->bootMediaType != BOOT_MEDIA_NONE &&
                volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
             {
                 if(volInfo->bootRecordIsVisible && 
-                   volInfo->bootRecordOnImage == &( (*pointerToIt)->file ))
+                   volInfo->bootRecordOnImage == *pointerToIt)
                 {
                     /* and stop using it. perhaps insert a hook here one day to
                     * let the user know the boot record has been/will be deleted */

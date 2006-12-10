@@ -60,20 +60,20 @@ bool rightIsBigger(char* leftStr, char* rightStr)
 
 void sortDir(DirToWrite* dir, int filenameType)
 {
-    DirToWriteLL* nextDir;
+    DirToWrite* nextDir;
     
-    DirToWriteLL* outerDir;
-    DirToWriteLL* innerDir;
+    DirToWrite* outerDir;
+    DirToWrite* innerDir;
     DirToWrite tempDir;
     
-    FileToWriteLL* outerFile;
-    FileToWriteLL* innerFile;
+    FileToWrite* outerFile;
+    FileToWrite* innerFile;
     FileToWrite tempFile;
     
     nextDir = dir->directories;
     while(nextDir != NULL)
     {
-        sortDir(&(nextDir->dir), filenameType);
+        sortDir(nextDir, filenameType);
         
         nextDir = nextDir->next;
     }
@@ -85,13 +85,13 @@ void sortDir(DirToWrite* dir, int filenameType)
         while(innerDir != NULL)
         {//printf("switch %s and %s? ", innerDir->dir.name9660, outerDir->dir.name9660);
             if( (filenameType & FNTYPE_JOLIET &&
-                 rightIsBigger(innerDir->dir.nameJoliet, outerDir->dir.nameJoliet)) || 
+                 rightIsBigger(innerDir->nameJoliet, outerDir->nameJoliet)) || 
                 (filenameType & FNTYPE_9660 &&
-                 rightIsBigger(innerDir->dir.name9660, outerDir->dir.name9660)) )
+                 rightIsBigger(innerDir->name9660, outerDir->name9660)) )
             {//printf("yes\n");
-                tempDir = innerDir->dir;
-                innerDir->dir = outerDir->dir;
-                outerDir->dir = tempDir;
+                tempDir = *innerDir;
+                innerDir = outerDir;
+                *outerDir = tempDir;
             }
             else
                 //printf("no\n");
@@ -108,13 +108,13 @@ void sortDir(DirToWrite* dir, int filenameType)
         while(innerFile != NULL)
         {
             if( (filenameType & FNTYPE_JOLIET &&
-                 rightIsBigger(innerFile->file.nameJoliet, outerFile->file.nameJoliet)) || 
+                 rightIsBigger(innerFile->nameJoliet, outerFile->nameJoliet)) || 
                 (filenameType & FNTYPE_9660 &&
-                 rightIsBigger(innerFile->file.name9660, outerFile->file.name9660)) )
+                 rightIsBigger(innerFile->name9660, outerFile->name9660)) )
             {
-                tempFile = innerFile->file;
-                innerFile->file = outerFile->file;
-                outerFile->file = tempFile;
+                tempFile = *innerFile;
+                innerFile = outerFile;
+                *outerFile = tempFile;
             }
             
             innerFile = innerFile->next;

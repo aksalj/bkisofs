@@ -46,7 +46,7 @@ time_t bk_get_creation_time(const VolInfo* volInfo)
 * gets a pointer to a Dir in tree described by the string pathStr
 * */
 int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr, 
-                           Dir** dirFoundPtr)
+                           BkDir** dirFoundPtr)
 {
     return getDirFromString(&(volInfo->dirTree), pathStr, dirFoundPtr);
 }
@@ -76,13 +76,13 @@ const char* bk_get_volume_name(const VolInfo* volInfo)
 * Recursive
 * Estimate the size of the directory trees + file contents on the iso
 * */
-unsigned estimateIsoSize(const Dir* tree, int filenameTypes)
+unsigned estimateIsoSize(const BkDir* tree, int filenameTypes)
 {
     unsigned estimateDrSize;
     unsigned thisDirSize;
     int numItems; /* files and directories */
-    DirLL* nextDir;
-    FileLL* nextFile;
+    BkDir* nextDir;
+    BkFile* nextFile;
     
     thisDirSize = 0;
     numItems = 0;
@@ -90,8 +90,8 @@ unsigned estimateIsoSize(const Dir* tree, int filenameTypes)
     nextFile = tree->files;
     while(nextFile != NULL)
     {
-        thisDirSize += nextFile->file.size;
-        thisDirSize += nextFile->file.size % NBYTES_LOGICAL_BLOCK;
+        thisDirSize += nextFile->size;
+        thisDirSize += nextFile->size % NBYTES_LOGICAL_BLOCK;
         
         numItems++;
         
@@ -103,7 +103,7 @@ unsigned estimateIsoSize(const Dir* tree, int filenameTypes)
     {
         numItems++;
         
-        thisDirSize += estimateIsoSize(&(nextDir->dir), filenameTypes);
+        thisDirSize += estimateIsoSize(nextDir, filenameTypes);
         
         nextDir = nextDir->next;
     }
@@ -125,14 +125,14 @@ unsigned estimateIsoSize(const Dir* tree, int filenameTypes)
 * recursive
 * gets a pointer to a Dir in tree described by the string pathStr
 * */
-int getDirFromString(const Dir* tree, const char* pathStr, Dir** dirFoundPtr)
+int getDirFromString(const BkDir* tree, const char* pathStr, BkDir** dirFoundPtr)
 {
     int count;
     int pathStrLen;
     bool stopLooking;
     /* name of the directory in the path this instance of the function works on */
     char* currentDirName;
-    DirLL* dirNode;
+    BkDir* dirNode;
     int rc;
     
     pathStrLen = strlen(pathStr);
@@ -141,7 +141,7 @@ int getDirFromString(const Dir* tree, const char* pathStr, Dir** dirFoundPtr)
     /* root, special case */
     {
         /* cast to prevent compiler const warning */
-        *dirFoundPtr = (Dir*)tree;
+        *dirFoundPtr = (BkDir*)tree;
         return 1;
     }
     
@@ -168,20 +168,20 @@ int getDirFromString(const Dir* tree, const char* pathStr, Dir** dirFoundPtr)
             while(dirNode != NULL && !stopLooking)
             /* each child directory in tree */
             {
-                if( strcmp(dirNode->dir.name, currentDirName) == 0)
+                if( strcmp(dirNode->name, currentDirName) == 0)
                 /* found the right child directory */
                 {
                     if(pathStr[count + 1] == '\0')
                     /* this is the directory i'm looking for */
                     {
-                        *dirFoundPtr = &(dirNode->dir);
+                        *dirFoundPtr = dirNode;
                         stopLooking = true;
                         rc = 1;
                     }
                     else
                     /* intermediate directory, go further down the tree */
                     {
-                        rc = getDirFromString(&(dirNode->dir), 
+                        rc = getDirFromString(dirNode, 
                                               &(pathStr[count]), dirFoundPtr);
                         if(rc <= 0)
                         {

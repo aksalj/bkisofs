@@ -3,8 +3,8 @@
 
 #include "bkInternal.h"
 
-int deleteDir(VolInfo* volInfo, Dir* tree, const Path* dirToDelete);
-void deleteDirContents(VolInfo* volInfo, Dir* dir);
-int deleteFile(VolInfo* volInfo, Dir* tree, const FilePath* pathAndName);
+int deleteDir(VolInfo* volInfo, BkDir* tree, const Path* dirToDelete);
+void deleteDirContents(VolInfo* volInfo, BkDir* dir);
+int deleteFile(VolInfo* volInfo, BkDir* tree, const FilePath* pathAndName);
 
 #endif

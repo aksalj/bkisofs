@@ -1,10 +1,11 @@
 ui:
 -add option to set toolbar icon size
--fiddle with strcmp() in sortByName() (crashes on viewing ~/denied/unicode)
 
 bk:
 -stopExtracting()
 -dos doesn't like names to start with underscores
+-findDir() function (look for searchDir)
+-createDir() with initialization
 
 
 tests to run before a release:

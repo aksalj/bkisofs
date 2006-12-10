@@ -31,21 +31,21 @@
 * adds a directory from the filesystem to the image
 *
 * Receives:
-* - Dir*, root of tree to add to
+* - BkDir*, root of tree to add to
 * - char*, path of directory to add, must end with trailing slash
 * - Path*, destination on image
 * */
-int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir)
+int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destDir)
 {
     int count;
     int rc;
     
     /* vars to add dir to tree */
     char srcDirName[NCHARS_FILE_ID_MAX_STORE];
-    Dir* destDirInTree;
-    DirLL* searchDir;
+    BkDir* destDirInTree;
+    BkDir* searchDir;
     bool dirFound;
-    DirLL* oldHead; /* old head of the directories list */
+    BkDir* oldHead; /* old head of the directories list */
     struct stat statStruct; /* to get info on the dir */
     
     /* vars to read contents of a dir on fs */
@@ -72,10 +72,10 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
         while(searchDir != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, destDir->dirs[count]) == 0)
+            if(strcmp(searchDir->name, destDir->dirs[count]) == 0)
             {
                 dirFound = true;
-                destDirInTree = &(searchDir->dir);
+                destDirInTree = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -106,7 +106,7 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
     if( !(statStruct.st_mode & S_IFDIR) )
         return BKERROR_TARGET_NOT_A_DIR;
     
-    destDirInTree->directories = malloc(sizeof(DirLL));
+    destDirInTree->directories = malloc(sizeof(BkDir));
     if(destDirInTree->directories == NULL)
     {
         destDirInTree->directories = oldHead;
@@ -115,12 +115,12 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
     
     destDirInTree->directories->next = oldHead;
     
-    strcpy(destDirInTree->directories->dir.name, srcDirName);
+    strcpy(destDirInTree->directories->name, srcDirName);
     
-    destDirInTree->directories->dir.posixFileMode = statStruct.st_mode;
+    destDirInTree->directories->posixFileMode = statStruct.st_mode;
     
-    destDirInTree->directories->dir.directories = NULL;
-    destDirInTree->directories->dir.files = NULL;
+    destDirInTree->directories->directories = NULL;
+    destDirInTree->directories->files = NULL;
     /* END ADD directory to tree */
     
     /* remember length of original */
@@ -318,17 +318,17 @@ int addDir(VolInfo* volInfo, Dir* tree, const char* srcPath, const Path* destDir
 * Notes:
 *  will only add a regular file (symblic links are followed, see stat(2))
 * */
-int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
+int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir)
 {
     int count;
     int rc;
-    FileLL* oldHead; /* of the files list */
+    BkFile* oldHead; /* of the files list */
     char filename[NCHARS_FILE_ID_MAX_STORE];
     struct stat statStruct;
     
     /* vars to find the dir in the tree */
-    Dir* destDirInTree;
-    DirLL* searchDir;
+    BkDir* destDirInTree;
+    BkDir* searchDir;
     bool dirFound;
     
     rc = getFilenameFromPath(srcPathAndName, filename);
@@ -348,10 +348,10 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
         while(searchDir != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->dir.name, destDir->dirs[count]) == 0)
+            if(strcmp(searchDir->name, destDir->dirs[count]) == 0)
             {
                 dirFound = true;
-                destDirInTree = &(searchDir->dir);
+                destDirInTree = searchDir;
             }
             else
                 searchDir = searchDir->next;
@@ -388,7 +388,7 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
         return BKERROR_ADD_FILE_TOO_BIG;
     }
     
-    destDirInTree->files = malloc(sizeof(FileLL));
+    destDirInTree->files = malloc(sizeof(BkFile));
     if(destDirInTree->files == NULL)
     {
         destDirInTree->files = oldHead;
@@ -397,18 +397,18 @@ int addFile(Dir* tree, const char* srcPathAndName, const Path* destDir)
     
     destDirInTree->files->next = oldHead;
     
-    strcpy(destDirInTree->files->file.name, filename);
+    strcpy(destDirInTree->files->name, filename);
     
-    destDirInTree->files->file.posixFileMode = statStruct.st_mode;
+    destDirInTree->files->posixFileMode = statStruct.st_mode;
     
-    destDirInTree->files->file.size = statStruct.st_size;
+    destDirInTree->files->size = statStruct.st_size;
     
-    destDirInTree->files->file.onImage = false;
+    destDirInTree->files->onImage = false;
     
-    destDirInTree->files->file.position = 0;
+    destDirInTree->files->position = 0;
     
-    destDirInTree->files->file.pathAndName = malloc(strlen(srcPathAndName) + 1);
-    strcpy(destDirInTree->files->file.pathAndName, srcPathAndName);
+    destDirInTree->files->pathAndName = malloc(strlen(srcPathAndName) + 1);
+    strcpy(destDirInTree->files->pathAndName, srcPathAndName);
     /* END ADD file */
     
     return 1;
@@ -576,9 +576,9 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
                   const char* newDirName)
 {
     int nameLen;
-    Dir* destDir;
+    BkDir* destDir;
     int rc;
-    DirLL* oldHead;
+    BkDir* oldHead;
     
     nameLen = strlen(newDirName);
     if(nameLen > NCHARS_FILE_ID_MAX_STORE - 1)
@@ -598,7 +598,7 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     
     oldHead = destDir->directories;
     
-    destDir->directories = malloc(sizeof(DirLL));
+    destDir->directories = malloc(sizeof(BkDir));
     if(destDir->directories == NULL)
     {
         destDir->directories = oldHead;
@@ -607,12 +607,12 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     
     destDir->directories->next = oldHead;
     
-    strcpy(destDir->directories->dir.name, newDirName);
+    strcpy(destDir->directories->name, newDirName);
     
-    destDir->directories->dir.posixFileMode = volInfo->posixDirDefaults;
+    destDir->directories->posixFileMode = volInfo->posixDirDefaults;
     
-    destDir->directories->dir.directories = NULL;
-    destDir->directories->dir.files = NULL;
+    destDir->directories->directories = NULL;
+    destDir->directories->files = NULL;
     
     return 1;
 }
@@ -622,16 +622,16 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
 * checks the contents of a directory (files and dirs) to see whether it
 * has an item named 
 * */
-bool itemIsInDir(const char* name, const Dir* dir)
+bool itemIsInDir(const char* name, const BkDir* dir)
 {
-    DirLL* searchDir;
-    FileLL* searchFile;
+    BkDir* searchDir;
+    BkFile* searchFile;
     
     /* check the directories list */
     searchDir = dir->directories;
     while(searchDir != NULL)
     {
-        if(strcmp(searchDir->dir.name, name) == 0)
+        if(strcmp(searchDir->name, name) == 0)
             return true;
         searchDir = searchDir->next;
     }
@@ -640,7 +640,7 @@ bool itemIsInDir(const char* name, const Dir* dir)
     searchFile = dir->files;
     while(searchFile != NULL)
     {
-        if(strcmp(searchFile->file.name, name) == 0)
+        if(strcmp(searchFile->name, name) == 0)
             return true;
         searchFile = searchFile->next;
     }

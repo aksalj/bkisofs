@@ -45,31 +45,25 @@
 #define BK_WARNING_MAX_LEN 512
 
 /*******************************************************************************
-* Dir
+* BkDir
+* linked list node
 * information about a directory and it's contents */
-typedef struct
+typedef struct BkDir
 {
     char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
     unsigned posixFileMode;
-    struct DirLL* directories;
-    struct FileLL* files;
+    struct BkDir* directories;
+    struct BkFile* files;
     
-} Dir;
+    struct BkDir* next;
+    
+} BkDir;
 
 /*******************************************************************************
-* DirLL
-* list of directories */
-typedef struct DirLL
-{
-    Dir dir;
-    struct DirLL* next;
-    
-} DirLL;
-
-/*******************************************************************************
-* File
+* BkFile
+* linked list node
 * information about a file, whether on the image or on the filesystem */
-typedef struct
+typedef struct BkFile
 {
     char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
     unsigned posixFileMode;
@@ -79,17 +73,9 @@ typedef struct
     char* pathAndName; /* if on filesystem, full path + filename
                        * is to be freed by whenever the File is freed */
     
-} File;
-
-/*******************************************************************************
-* FileLL
-* list of files */
-typedef struct FileLL
-{
-    File file;
-    struct FileLL* next;
+    struct BkFile* next;
     
-} FileLL;
+} BkFile;
 
 /*******************************************************************************
 * VolInfo
@@ -105,13 +91,13 @@ typedef struct
     int imageForReading;
     ino_t imageForReadingInode; /* to know which file was open for reading
                                 * (filename is not reliable) */
-    const File* bootRecordOnImage; /* if visible, pointer to the file in the 
+    const BkFile* bootRecordOnImage; /* if visible, pointer to the file in the 
                                    *  directory tree */
     char warningMessage[BK_WARNING_MAX_LEN];
     
     /* public use, read only */
     time_t creationTime;
-    Dir dirTree;
+    BkDir dirTree;
     unsigned char bootMediaType;
     unsigned bootRecordSize;       /* in bytes */
     bool bootRecordIsOnImage;      /* unused if visible (flag below) */
@@ -126,7 +112,7 @@ typedef struct
     char dataPreparer[129];
     unsigned posixFileDefaults;    /* for extracting */
     unsigned posixDirDefaults;     /* for extracting or creating on iso */
-    bool(*warningCbk)(const char*);  /*  */
+    bool(*warningCbk)(const char*);
     
 } VolInfo;
 
@@ -160,7 +146,7 @@ int bk_extract_file(const VolInfo* volInfo, const char* srcFile,
 unsigned bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
 time_t bk_get_creation_time(const VolInfo* volInfo);
 int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr, 
-                           Dir** dirFoundPtr);
+                           BkDir** dirFoundPtr);
 const char* bk_get_publisher(const VolInfo* volInfo);
 const char* bk_get_volume_name(const VolInfo* volInfo);
 char* bk_get_error_string(int errorId);

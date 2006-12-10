@@ -507,7 +507,7 @@ int copyByteBlock(int src, int dest, unsigned numBytes)
 * */
 int countDirsOnLevel(const DirToWrite* dir, int targetLevel, int thisLevel)
 {
-    DirToWriteLL* nextDir;
+    DirToWrite* nextDir;
     int sum;
     
     if(targetLevel == thisLevel)
@@ -521,7 +521,7 @@ int countDirsOnLevel(const DirToWrite* dir, int targetLevel, int thisLevel)
         nextDir = dir->directories;
         while(nextDir != NULL)
         {
-            sum += countDirsOnLevel(&(nextDir->dir), targetLevel, thisLevel + 1);
+            sum += countDirsOnLevel(nextDir, targetLevel, thisLevel + 1);
             
             nextDir = nextDir->next;
         }
@@ -536,7 +536,7 @@ int countDirsOnLevel(const DirToWrite* dir, int targetLevel, int thisLevel)
 * */
 int countTreeHeight(const DirToWrite* dir, int heightSoFar)
 {
-    DirToWriteLL* nextDir;
+    DirToWrite* nextDir;
     int maxHeight;
     int thisHeight;
     
@@ -550,7 +550,7 @@ int countTreeHeight(const DirToWrite* dir, int heightSoFar)
         nextDir = dir->directories;
         while(nextDir != NULL)
         {
-            thisHeight = countTreeHeight(&(nextDir->dir), heightSoFar + 1);
+            thisHeight = countTreeHeight(nextDir, heightSoFar + 1);
             
             if(thisHeight > maxHeight)
                 maxHeight = thisHeight;
@@ -639,8 +639,8 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     DirToWrite parentDir;
     
     bool takeDirNext;
-    DirToWriteLL* nextDir;
-    FileToWriteLL* nextFile;
+    DirToWrite* nextDir;
+    FileToWrite* nextFile;
     
     if(lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
         return BKERROR_SANITY;
@@ -710,14 +710,14 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         {
             if(filenameTypes & FNTYPE_JOLIET)
             {
-                if( strcmp(nextFile->file.nameJoliet, nextDir->dir.nameJoliet) > 0 )
+                if( strcmp(nextFile->nameJoliet, nextDir->nameJoliet) > 0 )
                     takeDirNext = true;
                 else
                     takeDirNext = false;
             }
             else
             {
-                if( strcmp(nextFile->file.name9660, nextDir->dir.name9660) > 0 )
+                if( strcmp(nextFile->name9660, nextDir->name9660) > 0 )
                     takeDirNext = true;
                 else
                     takeDirNext = false;
@@ -726,7 +726,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         
         if(takeDirNext)
         {
-            rc = writeDr(image, &(nextDir->dir), recordingTime, 
+            rc = writeDr(image, nextDir, recordingTime, 
                          true,  false, false, filenameTypes);
             if(rc < 0)
                 return rc;
@@ -735,7 +735,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         }
         else
         {
-            rc = writeDr(image, (DirToWrite*)&(nextFile->file), recordingTime, 
+            rc = writeDr(image, (DirToWrite*)nextFile, recordingTime, 
                          false,  false, false, filenameTypes);
             if(rc < 0)
                 return rc;
@@ -763,13 +763,13 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     {
         if(filenameTypes & FNTYPE_JOLIET)
         {
-            rc = writeDir(image, &(nextDir->dir), dir->extentNumber2, 
+            rc = writeDir(image, nextDir, dir->extentNumber2, 
                           dir->dataLength2, dir->posixFileMode, recordingTime,
                           filenameTypes, false);
         }
         else
         {
-            rc = writeDir(image, &(nextDir->dir), dir->extentNumber, 
+            rc = writeDir(image, nextDir, dir->extentNumber, 
                           dir->dataLength, dir->posixFileMode, recordingTime,
                           filenameTypes, false);
         }
@@ -858,25 +858,25 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     {
         if(filenameTypes & FNTYPE_JOLIET)
         {
-            lseek(image, nextDir->dir.extentLocationOffset2, SEEK_SET);
+            lseek(image, nextDir->extentLocationOffset2, SEEK_SET);
             
-            rc = write733(image, nextDir->dir.extentNumber2);
+            rc = write733(image, nextDir->extentNumber2);
             if(rc <= 0)
                 return rc;
             
-            rc = write733(image, nextDir->dir.dataLength2);
+            rc = write733(image, nextDir->dataLength2);
             if(rc <= 0)
                 return rc;
         }
         else
         {
-            lseek(image, nextDir->dir.extentLocationOffset, SEEK_SET);
+            lseek(image, nextDir->extentLocationOffset, SEEK_SET);
             
-            rc = write733(image, nextDir->dir.extentNumber);
+            rc = write733(image, nextDir->extentNumber);
             if(rc <= 0)
                 return rc;
             
-            rc = write733(image, nextDir->dir.dataLength);
+            rc = write733(image, nextDir->dataLength);
             if(rc <= 0)
                 return rc;
         }
@@ -1258,8 +1258,8 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
 {
     int rc;
     
-    DirToWriteLL* nextDir;
-    FileToWriteLL* nextFile;
+    DirToWrite* nextDir;
+    FileToWrite* nextFile;
     int numUnusedBytes;
     int srcFile;
     off_t endPos;
@@ -1271,12 +1271,12 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
         if(lseek(newImage, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
             return BKERROR_SANITY;
         
-        nextFile->file.extentNumber = lseek(newImage, 0, SEEK_CUR) / 
+        nextFile->extentNumber = lseek(newImage, 0, SEEK_CUR) / 
                                       NBYTES_LOGICAL_BLOCK;
         
         if(volInfo->bootMediaType != BOOT_MEDIA_NONE && 
            volInfo->bootRecordIsVisible &&
-           nextFile->file.origFile == volInfo->bootRecordOnImage)
+           nextFile->origFile == volInfo->bootRecordOnImage)
         /* this file is the boot record. write its sector number in 
         * the boot catalog */
         {
@@ -1295,23 +1295,23 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
         if(progressFunction != NULL)
             progressFunction();
         
-        if(nextFile->file.onImage)
+        if(nextFile->onImage)
         /* copy file from original image to new one */
         {
-            lseek(oldImage, nextFile->file.offset, SEEK_SET);
+            lseek(oldImage, nextFile->offset, SEEK_SET);
             
-            rc = copyByteBlock(oldImage, newImage, nextFile->file.size);
+            rc = copyByteBlock(oldImage, newImage, nextFile->size);
             if(rc < 0)
                 return rc;
         }
         else
         /* copy file from fs to new image */
         {
-            srcFile = open(nextFile->file.pathAndName, O_RDONLY);
+            srcFile = open(nextFile->pathAndName, O_RDONLY);
             if(srcFile == -1)
                 return BKERROR_OPEN_READ_FAILED;
             
-            rc = copyByteBlock(srcFile, newImage, nextFile->file.size);
+            rc = copyByteBlock(srcFile, newImage, nextFile->size);
             if(rc < 0)
             {
                 close(srcFile);
@@ -1323,9 +1323,9 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
                 return BKERROR_EXOTIC;
         }
         
-        nextFile->file.dataLength = lseek(newImage, 0, SEEK_CUR) - 
-                                    nextFile->file.extentNumber * 
-                                    NBYTES_LOGICAL_BLOCK;
+        nextFile->dataLength = lseek(newImage, 0, SEEK_CUR) - 
+                               nextFile->extentNumber * 
+                               NBYTES_LOGICAL_BLOCK;
         
         /* FILL extent with zeroes */
         numUnusedBytes = NBYTES_LOGICAL_BLOCK - 
@@ -1340,7 +1340,7 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
         
         if(volInfo->bootMediaType != BOOT_MEDIA_NONE && 
            volInfo->bootRecordIsVisible &&
-           nextFile->file.origFile == volInfo->bootRecordOnImage)
+           nextFile->origFile == volInfo->bootRecordOnImage)
         /* this file is the boot record. assume it's isolinux and write the 
         * boot info table */
         {
@@ -1350,18 +1350,18 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
             bzero(bootInfoTable, 56);
             
             /* go to the offset in the file where the boot info table is */
-            lseek(newImage, nextFile->file.extentNumber * 
+            lseek(newImage, nextFile->extentNumber * 
                   NBYTES_LOGICAL_BLOCK + 8, SEEK_SET);
             
             /* sector number of pvd */
             write731ToByteArray(bootInfoTable, 16);
             /* sector number of boot file (this one) */
-            write731ToByteArray(bootInfoTable + 4, nextFile->file.extentNumber);
+            write731ToByteArray(bootInfoTable + 4, nextFile->extentNumber);
             /* boot file length in bytes */
-            write731ToByteArray(bootInfoTable + 8, nextFile->file.size);
+            write731ToByteArray(bootInfoTable + 8, nextFile->size);
             /* 32 bit checksum (the sum of all the 32-bit words in the boot
             * file starting at byte offset 64 */
-            rc = bootInfoTableChecksum(oldImage, &(nextFile->file), &checksum);
+            rc = bootInfoTableChecksum(oldImage, nextFile, &checksum);
             if(rc <= 0)
                 return rc;
             write731ToByteArray(bootInfoTable + 12, checksum);
@@ -1373,26 +1373,26 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
         }
         
         /* WRITE file location and size */
-        lseek(newImage, nextFile->file.extentLocationOffset, SEEK_SET);
+        lseek(newImage, nextFile->extentLocationOffset, SEEK_SET);
         
-        rc = write733(newImage, nextFile->file.extentNumber);
+        rc = write733(newImage, nextFile->extentNumber);
         if(rc <= 0)
             return rc;
         
-        rc = write733(newImage, nextFile->file.dataLength);
+        rc = write733(newImage, nextFile->dataLength);
         if(rc <= 0)
             return rc;
         
         if(filenameTypes & FNTYPE_JOLIET)
         /* also update location and size on joliet tree */
         {
-            lseek(newImage, nextFile->file.extentLocationOffset2, SEEK_SET);
+            lseek(newImage, nextFile->extentLocationOffset2, SEEK_SET);
             
-            rc = write733(newImage, nextFile->file.extentNumber);
+            rc = write733(newImage, nextFile->extentNumber);
             if(rc <= 0)
                 return rc;
             
-            rc = write733(newImage, nextFile->file.dataLength);
+            rc = write733(newImage, nextFile->dataLength);
             if(rc <= 0)
                 return rc;
         }
@@ -1408,7 +1408,7 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
     nextDir = dir->directories;
     while(nextDir != NULL)
     {
-        rc = writeFileContents(oldImage, newImage, volInfo, &(nextDir->dir), 
+        rc = writeFileContents(oldImage, newImage, volInfo, nextDir, 
                                filenameTypes, progressFunction);
         if(rc < 0)
             return rc;
@@ -1539,21 +1539,21 @@ int writeLongNM(int image, DirToWrite* dir)
 /* write all NMs in the tree that won't fit in directory records */
 int writeLongNMsInDir(int image, DirToWrite* dir)
 {
-    DirToWriteLL* nextDir;
-    FileToWriteLL* nextFile;
+    DirToWrite* nextDir;
+    FileToWrite* nextFile;
     int rc;
     
     nextDir = dir->directories;
     while(nextDir != NULL)
     {
-        if(nextDir->dir.offsetForCE != 0)
+        if(nextDir->offsetForCE != 0)
         {
-            rc = writeLongNM(image, &(nextDir->dir));
+            rc = writeLongNM(image, nextDir);
             if(rc <= 0)
                 return rc;
         }
         
-        rc = writeLongNMsInDir(image, &(nextDir->dir));
+        rc = writeLongNMsInDir(image, nextDir);
         if(rc <= 0)
             return rc;
         
@@ -1563,9 +1563,9 @@ int writeLongNMsInDir(int image, DirToWrite* dir)
     nextFile = dir->files;
     while(nextFile != NULL)
     {
-        if(nextFile->file.offsetForCE != 0)
+        if(nextFile->offsetForCE != 0)
         {
-            rc = writeLongNM(image, (DirToWrite*)(&(nextFile->file)));
+            rc = writeLongNM(image, (DirToWrite*)nextFile);
             if(rc <= 0)
                 return rc;
         }
@@ -1651,7 +1651,7 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
                                  int* parentDirNum)
 {
     int rc;
-    DirToWriteLL* nextDir;
+    DirToWrite* nextDir;
     
     unsigned char fileIdLen;
     unsigned char byte;
@@ -1765,7 +1765,7 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
                 }
             }
             
-            rc = writePathTableRecordsOnLevel(image, &(nextDir->dir), isTypeL,
+            rc = writePathTableRecordsOnLevel(image, nextDir, isTypeL,
                                               filenameType, targetLevel, 
                                               thisLevel + 1, parentDirNum);
             if(rc < 0)
