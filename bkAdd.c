@@ -37,13 +37,11 @@
 * */
 int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destDir)
 {
-    int count;
     int rc;
     
     /* vars to add dir to tree */
     char srcDirName[NCHARS_FILE_ID_MAX_STORE];
     BkDir* destDirInTree;
-    BkDir* searchDir;
     bool dirFound;
     BkDir* oldHead; /* old head of the directories list */
     struct stat statStruct; /* to get info on the dir */
@@ -62,28 +60,9 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
     /* must have trailing slash */
         return BKERROR_DIRNAME_NEED_TRAILING_SLASH;
     
-    /* FIND dir to add to */
-    destDirInTree = tree;
-    for(count = 0; count < destDir->numDirs; count++)
-    /* each directory in the path */
-    {
-        searchDir = destDirInTree->directories;
-        dirFound = false;
-        while(searchDir != NULL && !dirFound)
-        /* find the directory */
-        {
-            if(strcmp(searchDir->name, destDir->dirs[count]) == 0)
-            {
-                dirFound = true;
-                destDirInTree = searchDir;
-            }
-            else
-                searchDir = searchDir->next;
-        }
-        if(!dirFound)
-            return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    }
-    /* END FIND dir to add to */
+    dirFound = findDirByPath(destDir, tree, &destDirInTree);
+    if(!dirFound)
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
     /* get the name of the directory to be added */
     rc = getLastDirFromString(srcPath, srcDirName);
@@ -320,7 +299,6 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
 * */
 int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir)
 {
-    int count;
     int rc;
     BkFile* oldHead; /* of the files list */
     char filename[NCHARS_FILE_ID_MAX_STORE];
@@ -328,7 +306,6 @@ int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir)
     
     /* vars to find the dir in the tree */
     BkDir* destDirInTree;
-    BkDir* searchDir;
     bool dirFound;
     
     rc = getFilenameFromPath(srcPathAndName, filename);
@@ -338,28 +315,9 @@ int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir)
     if( !nameIsValid(filename) )
         return BKERROR_NAME_INVALID_CHAR;
     
-    /* FIND dir to add to */
-    destDirInTree = tree;
-    for(count = 0; count < destDir->numDirs; count++)
-    /* each directory in the path */
-    {
-        searchDir = destDirInTree->directories;
-        dirFound = false;
-        while(searchDir != NULL && !dirFound)
-        /* find the directory */
-        {
-            if(strcmp(searchDir->name, destDir->dirs[count]) == 0)
-            {
-                dirFound = true;
-                destDirInTree = searchDir;
-            }
-            else
-                searchDir = searchDir->next;
-        }
-        if(!dirFound)
-            return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    }
-    /* END FIND dir to add to */
+    dirFound = findDirByPath(destDir, tree, &destDirInTree);
+    if(!dirFound)
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
     if(itemIsInDir(filename, destDirInTree))
         return BKERROR_DUPLICATE_ADD;

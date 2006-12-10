@@ -143,7 +143,7 @@ int bk_extract_dir(VolInfo* volInfo, const char* srcDir,
         return rc;
     }
     
-    rc = extractDir(volInfo, volInfo->imageForReading, &(volInfo->dirTree), srcPath, destDir, 
+    rc = extractDir(volInfo, volInfo->imageForReading, srcPath, destDir, 
                     keepPermissions, progressFunction);
     if(rc <= 0)
     {
@@ -161,7 +161,7 @@ int bk_extract_dir(VolInfo* volInfo, const char* srcDir,
 * Extracts a file from the iso to the filesystem.
 * Public function.
 * */
-int bk_extract_file(const VolInfo* volInfo, const char* srcFile, 
+int bk_extract_file(VolInfo* volInfo, const char* srcFile, 
                     const char* destDir, bool keepPermissions, 
                     void(*progressFunction)(void))
 {
@@ -175,7 +175,7 @@ int bk_extract_file(const VolInfo* volInfo, const char* srcFile,
         return rc;
     }
     
-    rc = extractFile(volInfo, volInfo->imageForReading, &(volInfo->dirTree), &srcPath, destDir, 
+    rc = extractFile(volInfo, volInfo->imageForReading, &srcPath, destDir, 
                      keepPermissions, progressFunction);
     if(rc <= 0)
     {
@@ -193,16 +193,14 @@ int bk_extract_file(const VolInfo* volInfo, const char* srcFile,
 * Extracts a directory with all its contents from the iso to the filesystem.
 * don't try to extract root, don't know what will happen
 * */
-int extractDir(VolInfo* volInfo, int image, const BkDir* tree, 
+int extractDir(VolInfo* volInfo, int image, 
                const Path* srcDir, const char* destDir, bool keepPermissions, 
                void(*progressFunction)(void))
 {
     int rc;
-    int count;
     
     /* vars to find file location on image */
-    const BkDir* srcDirInTree;
-    BkDir* searchDir; /* to find a dir in the tree */
+    BkDir* srcDirInTree;
     bool dirFound;
     
     /* vars to create destination dir */
@@ -217,28 +215,9 @@ int extractDir(VolInfo* volInfo, int image, const BkDir* tree,
     BkDir* currentDir;
     Path* newSrcDir;
     
-    /* FIND parent dir to know what the contents are */
-    srcDirInTree = tree;
-    for(count = 0; count < srcDir->numDirs; count++)
-    /* each directory in the path */
-    {
-        searchDir = srcDirInTree->directories;
-        dirFound = false;
-        while(searchDir != NULL && !dirFound)
-        /* find the directory */
-        {
-            if(strcmp(searchDir->name, srcDir->dirs[count]) == 0)
-            {
-                dirFound = true;
-                srcDirInTree = searchDir;
-            }
-            else
-                searchDir = searchDir->next;
-        }
-        if(!dirFound)
-            return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    }
-    /* END FIND parent dir to know what the contents are */
+    dirFound = findDirByPath(srcDir, &(volInfo->dirTree), &srcDirInTree);
+    if(!dirFound)
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
     /* CREATE destination dir */
     /* 1 for '/', 1 for '\0' */
@@ -276,7 +255,7 @@ int extractDir(VolInfo* volInfo, int image, const BkDir* tree,
     {
         strcpy(filePath.filename, currentFile->name);
         
-        rc = extractFile(volInfo, image, tree, &filePath, newDestDir, 
+        rc = extractFile(volInfo, image, &filePath, newDestDir, 
                          keepPermissions, progressFunction);
         if(rc <= 0)
         {
@@ -316,7 +295,7 @@ int extractDir(VolInfo* volInfo, int image, const BkDir* tree,
             return rc;
         }
         
-        rc = extractDir(volInfo, image, tree, newSrcDir, newDestDir, keepPermissions, 
+        rc = extractDir(volInfo, image, newSrcDir, newDestDir, keepPermissions, 
                         progressFunction);
         if(rc <= 0)
         {
@@ -358,13 +337,12 @@ int extractDir(VolInfo* volInfo, int image, const BkDir* tree,
 * destDir must have trailing slash
 * 
 * */
-int extractFile(const VolInfo* volInfo, int image, const BkDir* tree, 
+int extractFile(VolInfo* volInfo, int image, 
                 const FilePath* pathAndName, const char* destDir, 
                 bool keepPermissions, void(*progressFunction)(void))
 {
     /* vars to find file location on image */
-    const BkDir* parentDir;
-    BkDir* searchDir;
+    BkDir* parentDir;
     bool dirFound;
     BkFile* pointerToIt; /* pointer to the node with file to read */
     bool fileFound;
@@ -378,31 +356,11 @@ int extractFile(const VolInfo* volInfo, int image, const BkDir* tree,
     unsigned destFilePerms;
     int destFile; /* returned by open() */
     
-    int count;
     int rc;
     
-    parentDir = tree;
-    for(count = 0; count < pathAndName->path.numDirs; count++)
-    /* each directory in the path */
-    {
-        searchDir = parentDir->directories;
-        dirFound = false;
-        while(searchDir != NULL && !dirFound)
-        /* find the directory */
-        {
-            if(strcmp(searchDir->name, pathAndName->path.dirs[count]) == 0)
-            {
-                dirFound = true;
-                parentDir = searchDir;
-            }
-            else
-                searchDir = searchDir->next;
-        }
-        if(!dirFound)
-            return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    }
-    
-    /* now i have parentDir pointing to the parent directory */
+    dirFound = findDirByPath(&(pathAndName->path), &(volInfo->dirTree), &parentDir);
+    if(!dirFound)
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
     if(progressFunction != NULL)
         progressFunction();

@@ -122,28 +122,9 @@ int deleteDir(VolInfo* volInfo, BkDir* tree, const Path* dirToDelete)
     BkDir** parentDirLL;
     BkDir* parentDirNextLL;
     
-    /* FIND dir to know what the contents are */
-    srcDirInTree = tree;
-    for(count = 0; count < dirToDelete->numDirs; count++)
-    /* each directory in the path */
-    {
-        searchDir = srcDirInTree->directories;
-        dirFound = false;
-        while(searchDir != NULL && !dirFound)
-        /* find the directory */
-        {
-            if(strcmp(searchDir->name, dirToDelete->dirs[count]) == 0)
-            {
-                dirFound = true;
-                srcDirInTree = searchDir;
-            }
-            else
-                searchDir = searchDir->next;
-        }
-        if(!dirFound)
-            return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    }
-    /* END FIND dir to know what the contents are */
+    dirFound = findDirByPath(dirToDelete, tree, &srcDirInTree);
+    if(!dirFound)
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
     deleteDirContents(volInfo, srcDirInTree);
     
@@ -262,36 +243,15 @@ void deleteDirContents(VolInfo* volInfo, BkDir* dir)
 int deleteFile(VolInfo* volInfo, BkDir* tree, const FilePath* pathAndName)
 {
     BkDir* parentDir;
-    BkDir* searchDir;
     bool dirFound;
     BkFile** pointerToIt; /* pointer to pointer to the file to delete */
     BkFile* pointerToNext; /* to assign to the pointer pointed to by the pointer above
                            * no i'm not kidding */
     bool fileFound;
-    int count;
     
-    parentDir = tree;
-    for(count = 0; count < pathAndName->path.numDirs; count++)
-    /* each directory in the path */
-    {
-        searchDir = parentDir->directories;
-        dirFound = false;
-        while(searchDir != NULL && !dirFound)
-        /* find the directory */
-        {
-            if(strcmp(searchDir->name, pathAndName->path.dirs[count]) == 0)
-            {
-                dirFound = true;
-                parentDir = searchDir;
-            }
-            else
-                searchDir = searchDir->next;
-        }
-        if(!dirFound)
-            return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    }
-    
-    /* now i have parentDir pointing to the parent directory */
+    dirFound = findDirByPath(&(pathAndName->path), tree, &parentDir);
+    if(!dirFound)
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
     pointerToIt = &(parentDir->files);
     fileFound = false;

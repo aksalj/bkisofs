@@ -25,6 +25,41 @@
 #include "bkMangle.h"
 
 /******************************************************************************
+* findDirInPath()
+* Finds the directory described by path in tree and returns in via dir.
+* */
+bool findDirByPath(const Path* path, BkDir* tree, BkDir** dir)
+{
+    bool dirFound;
+    int count;
+    BkDir* searchDir;
+    
+    *dir = tree;
+    for(count = 0; count < path->numDirs; count++)
+    /* each directory in the path */
+    {
+        searchDir = (*dir)->directories;
+        dirFound = false;
+        while(searchDir != NULL && !dirFound)
+        /* find the directory */
+        {
+            if(strcmp(searchDir->name, path->dirs[count]) == 0)
+            {
+                dirFound = true;
+                *dir = searchDir;
+            }
+            else
+                searchDir = searchDir->next;
+        }
+        if(!dirFound)
+            return false;
+    }
+    /* END FIND dir to add to */
+    
+    return true;
+}
+
+/******************************************************************************
 * freeDirToWriteContents()
 * Recursively deletes all the dynamically allocated contents of dir.
 * */

@@ -3,6 +3,7 @@
 
 #include "bkInternal.h"
 
+bool findDirByPath(const Path* path, BkDir* tree, BkDir** dir);
 void freeDirToWriteContents(DirToWrite* dir);
 void freePath(Path* path);
 void freePathDirs(Path* path);

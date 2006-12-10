@@ -71,31 +71,9 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
         return rc;
     }
     
-    /* FIND dir where the file is */
-    srcDirInTree = &(volInfo->dirTree);
-    for(count = 0; count < filePath.path.numDirs; count++)
-    /* each directory in the path */
-    {
-        searchDir = srcDirInTree->directories;
-        found = false;
-        while(searchDir != NULL && !found)
-        /* find the directory */
-        {
-            if(strcmp(searchDir->name, filePath.path.dirs[count]) == 0)
-            {
-                found = true;
-                srcDirInTree = searchDir;
-            }
-            else
-                searchDir = searchDir->next;
-        }
-        if(!found)
-        {
-            freePathDirs(&(filePath.path));
-            return BKERROR_FILE_NOT_FOUND_ON_IMAGE;
-        }
-    }
-    /* END FIND dir where the file is */
+    found = findDirByPath(&(filePath.path), &(volInfo->dirTree), &srcDirInTree);
+    if(!found)
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
     /* FIND the file */
     found = false;
