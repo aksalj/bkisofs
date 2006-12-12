@@ -1,10 +1,11 @@
 ui:
 -add option to set toolbar icon size
+-resize the add/exract icons
+
 
 bk:
 -stopExtracting()
 -dos doesn't like names to start with underscores
--findDir() function (look for searchDir)
 -createDir() with initialization
 
 
