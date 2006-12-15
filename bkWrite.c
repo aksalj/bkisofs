@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <strings.h>
 
 #include "bk.h"
 #include "bkInternal.h"

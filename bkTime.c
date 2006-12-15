@@ -16,6 +16,9 @@
 #include <stdio.h>
 #include <time.h>
 
+/* no header for this when compiled with -std=c99 */
+struct tm *localtime_r(const time_t *timep, struct tm *result);
+
 /* epoch time -> 8.4.26.1 */
 void epochToLongString(time_t epoch, char* longString)
 {

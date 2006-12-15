@@ -17,6 +17,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
+#include <strings.h>
 
 #include "bk.h"
 #include "bkInternal.h"

@@ -2,7 +2,7 @@ OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o
 GLOBALDEPS = Makefile bk.h bkInternal.h
 # the _FILE_OFFSET_BITS=64 is to enable stat() for large files
 # DEBUG and -g only used during development
-GLOBALFLAGS = -D_FILE_OFFSET_BITS=64 -Wall
+GLOBALFLAGS = -D_FILE_OFFSET_BITS=64 -Wall -pedantic -std=c99
 
 bk.a: $(OBJECTS)
 	ar -cr bk.a $(OBJECTS)

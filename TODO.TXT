@@ -1,12 +1,18 @@
 ui:
 -add option to set toolbar icon size
 -resize the add/exract icons
+-alt shortcut keys need attention (all languages)
 
 
 bk:
 -stopExtracting()
 -dos doesn't like names to start with underscores
 -createDir() with initialization
+
+
+c99 compatibility issues:
+-localtime_r() - implicit declaration
+-strdup() - implicit declaration
 
 
 tests to run before a release:

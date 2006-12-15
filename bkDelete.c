@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <strings.h>
 
 #include "bk.h"
 #include "bkPath.h"

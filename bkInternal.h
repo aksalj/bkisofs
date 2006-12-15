@@ -26,6 +26,13 @@
 #define NLS_SYSTEM_AREA 16
 /* number of bytes in a logical block (in practice always 2048) */
 #define NBYTES_LOGICAL_BLOCK 2048
+/* c99 doesn't define the following (posix file types) */
+#ifndef S_IFDIR
+#define S_IFDIR  0040000
+#endif
+#ifndef S_IFREG
+#define S_IFREG  0100000
+#endif
 
 //#define BK_DEBUG
 

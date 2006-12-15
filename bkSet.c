@@ -14,6 +14,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <strings.h>
 
 #include "bk.h"
 #include "bkDelete.h"
@@ -58,9 +59,7 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
 {
     int rc;
     FilePath filePath;
-    int count;
     BkDir* srcDirInTree;
-    BkDir* searchDir;
     BkFile* searchFile;
     bool found;
     
