@@ -96,6 +96,7 @@ typedef struct
     const BkFile* bootRecordOnImage; /* if visible, pointer to the file in the 
                                    *  directory tree */
     char warningMessage[BK_WARNING_MAX_LEN];
+    bool rootRead; /* did i read the root record inside volume descriptor? */
     
     /* public use, read only */
     time_t creationTime;

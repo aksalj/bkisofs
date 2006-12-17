@@ -3,11 +3,11 @@
 
 bool dirDrFollows(int image);
 bool haveNextRecordInSector(int image);
-int readDir(int image, VolInfo* volInfo, BkDir* dir, int filenameType, 
+int readDir(VolInfo* volInfo, BkDir* dir, int filenameType, 
             bool readPosix);
-int readDirContents(int image, VolInfo* volInfo, BkDir* dir, unsigned size, 
+int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size, 
                     int filenameType, bool readPosix);
-int readFileInfo(int image, VolInfo* volInfo, BkFile* file, int filenameType, 
+int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType, 
                  bool readPosix);
 unsigned char readNextRecordLen(int image);
 int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU);
