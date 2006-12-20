@@ -34,8 +34,6 @@
 #define S_IFREG  0100000
 #endif
 
-//#define BK_DEBUG
-
 /*******************************************************************************
 * Joliet allows max 128 bytes
 *     + 2 separator1 (9660, just in case)

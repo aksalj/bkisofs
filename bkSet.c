@@ -127,3 +127,8 @@ void bk_set_vol_name(VolInfo* volInfo, const char* volName)
 {
     strncpy(volInfo->volId, volName, 32);
 }
+
+void bk_cancel_operation(VolInfo* volInfo)
+{
+    volInfo->stopOperation = true;
+}

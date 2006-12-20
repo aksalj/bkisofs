@@ -80,6 +80,19 @@ typedef struct BkFile
 } BkFile;
 
 /*******************************************************************************
+* BkLink
+* linked list node
+* soft (rockridge) or hard (9660) link */
+typedef struct BkLink
+{
+    bool isSoft;
+    
+    
+    struct BkLink* next;
+    
+} BkLink;
+
+/*******************************************************************************
 * VolInfo
 * information about a volume (one image)
 * strings are '\0' terminated */
@@ -157,6 +170,7 @@ const char* bk_get_volume_name(const VolInfo* volInfo);
 char* bk_get_error_string(int errorId);
 
 /* setters */
+void bk_cancel_operation(VolInfo* volInfo);
 void bk_destroy_vol_info(VolInfo* volInfo);
 void bk_init_vol_info(VolInfo* volInfo);
 int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName);
