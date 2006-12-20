@@ -2,7 +2,7 @@ ui:
 -add option to set toolbar icon size
 -resize the add/exract icons
 -alt shortcut keys need attention (all languages)
--gettext optional
+-write man page
 
 
 bk:
@@ -15,36 +15,6 @@ c99 compatibility issues:
 -localtime_r() - implicit declaration
 -strdup() - implicit declaration
 
-man page:
-------- isomaster.1
-.TH ISOMASTER 1 "December 14, 2006"
-.if n .ad l
-.SH NAME
-isomaster \- Graphical CD Image Editor
-.SH SYNOPSIS
-.B isomaster
-[ gtk-options ] [ iso ]
-.SH DESCRIPTION
-.I Isomaster
-lets you extract files from an ISO, add files to an ISO, and
-create bootable CDs.
-.SH OPTIONS
-.I Isomaster
-recognizes the standard GTK+ options, including \f3\-\-class\fP,
-\f3\-\-display\fP, \f3\-\-g\-fatal\-warnings\fP,
-\f3\-\-gdk\-debug\fP, \f3\-\-gdk\-no\-debug\fP,
-\f3\-\-gtk\-debug\fP, \f3\-\-gtk\-module\fP,
-\f3\-\-gtk\-no\-debug\fP, \f3\-\-name\fP, and \f3\-\-sync\fP.
-.SH FILES
-.TP
-$HOME/.isomaster
-saved settings
-.SH AUTHOR
-Andrew Smith
-.SH BUGS
-If there are filenames with non-latin characters, things go
-wrong.
--------
 
 tests to run before a release:
 - update the version number in the about box
