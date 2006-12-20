@@ -11,8 +11,8 @@
 #define BKWARNING_MAX_ID                         -10001
 #define BKWARNING_MIN_ID                         -20000
 
-/* unused at the moment
-#define IS_ERROR(number) ( (((number) >= BKERROR_MIN_ID) && ((number) <= BKERROR_MAX_ID)) ? true : false ) */
+//~ #define IS_ERROR(number)   ( (((number) >= BKERROR_MIN_ID) && ((number) <= BKERROR_MAX_ID)) ? true : false )
+//~ #define IS_WARNING(number) ( (((number) >= BKWARNING_MIN_ID) && ((number) <= BKWARNING_MAX_ID)) ? true : false )
 
 #define BKERROR_READ_GENERIC                     -1001
 #define BKERROR_READ_GENERIC_TEXT                "Failed to read expected number of bytes"
@@ -90,6 +90,8 @@
 #define BKERROR_ADD_FILE_TOO_BIG_TEXT            "Cannot add file larger than 4294967295 bytes because the ISO filesystem does not support such large files"
 #define BKERROR_SAVE_OVERWRITE                   -1038
 #define BKERROR_SAVE_OVERWRITE_TEXT              "Cannot overwrite original image when saving"
+#define BKERROR_OPER_CANCELED_BY_USER            -1039
+#define BKERROR_OPER_CANCELED_BY_USER_TEXT       "You have canceled the operation"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

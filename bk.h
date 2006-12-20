@@ -94,9 +94,10 @@ typedef struct
     ino_t imageForReadingInode; /* to know which file was open for reading
                                 * (filename is not reliable) */
     const BkFile* bootRecordOnImage; /* if visible, pointer to the file in the 
-                                   *  directory tree */
+                                     *  directory tree */
     char warningMessage[BK_WARNING_MAX_LEN];
     bool rootRead; /* did i read the root record inside volume descriptor? */
+    bool stopOperation; /* cancel current opertion */
     
     /* public use, read only */
     time_t creationTime;
@@ -136,6 +137,7 @@ void bk_delete_boot_record(VolInfo* volInfo);
 int bk_delete_dir(VolInfo* volInfo, const char* dirStr);
 int bk_delete_file(VolInfo* volInfo, const char* fileStr);
 
+/* extracting */
 int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 
                            unsigned destFilePerms);
 int bk_extract_dir(VolInfo* volInfo, const char* srcDir,

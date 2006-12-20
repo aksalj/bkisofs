@@ -143,6 +143,8 @@ int bk_extract_dir(VolInfo* volInfo, const char* srcDir,
         return rc;
     }
     
+    volInfo->stopOperation = false;
+    
     rc = extractDir(volInfo, volInfo->imageForReading, srcPath, destDir, 
                     keepPermissions, progressFunction);
     if(rc <= 0)
@@ -174,6 +176,8 @@ int bk_extract_file(VolInfo* volInfo, const char* srcFile,
         freePathDirs(&(srcPath.path));
         return rc;
     }
+    
+    volInfo->stopOperation = false;
     
     rc = extractFile(volInfo, volInfo->imageForReading, &srcPath, destDir, 
                      keepPermissions, progressFunction);
@@ -357,6 +361,9 @@ int extractFile(VolInfo* volInfo, int image,
     int destFile; /* returned by open() */
     
     int rc;
+    
+    if(volInfo->stopOperation)
+        return BKERROR_OPER_CANCELED_BY_USER;
     
     dirFound = findDirByPath(&(pathAndName->path), &(volInfo->dirTree), &parentDir);
     if(!dirFound)
