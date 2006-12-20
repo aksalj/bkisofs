@@ -305,7 +305,7 @@ int extractDir(VolInfo* volInfo, int image,
         {
             bool goOn;
             
-            if(volInfo->warningCbk != NULL)
+            if(volInfo->warningCbk != NULL && rc != BKERROR_OPER_CANCELED_BY_USER)
             /* perhaps the user wants to ignore this failure */
             {
                 snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 

@@ -80,19 +80,6 @@ typedef struct BkFile
 } BkFile;
 
 /*******************************************************************************
-* BkLink
-* linked list node
-* soft (rockridge) or hard (9660) link */
-typedef struct BkLink
-{
-    bool isSoft;
-    
-    
-    struct BkLink* next;
-    
-} BkLink;
-
-/*******************************************************************************
 * VolInfo
 * information about a volume (one image)
 * strings are '\0' terminated */
