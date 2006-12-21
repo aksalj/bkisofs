@@ -9,6 +9,9 @@ bk:
 -stopExtracting()
 -dos doesn't like names to start with underscores
 -createDir() with initialization
+-if failed to add directory make sure have opportunity to continue
+-make a deleteThing() instead of dir/file
+-at least get rid of tree from delete parameters
 
 
 c99 compatibility issues:

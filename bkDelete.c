@@ -19,6 +19,7 @@
 #include <strings.h>
 
 #include "bk.h"
+#include "bkInternal.h"
 #include "bkPath.h"
 #include "bkError.h"
 #include "bkDelete.h"
@@ -114,14 +115,14 @@ int deleteDir(VolInfo* volInfo, BkDir* tree, const Path* dirToDelete)
     
     /* vars to find the dir in the tree */
     BkDir* srcDirInTree;
-    BkDir* searchDir;
+    BkFileBase* child;
     bool dirFound;
     
     /* vars to delete the directory */
     BkDir* parentDirInTree;
     bool parentDirFound;
-    BkDir** parentDirLL;
-    BkDir* parentDirNextLL;
+    BkFileBase** parent;
+    BkFileBase* parentNext;
     
     dirFound = findDirByPath(dirToDelete, tree, &srcDirInTree);
     if(!dirFound)
@@ -134,18 +135,21 @@ int deleteDir(VolInfo* volInfo, BkDir* tree, const Path* dirToDelete)
     for(count = 0; count < dirToDelete->numDirs - 1; count++)
     /* each directory in the path except the last one */
     {
-        searchDir = parentDirInTree->directories;
+        child = parentDirInTree->children;
         parentDirFound = false;
-        while(searchDir != NULL && !parentDirFound)
+        while(child != NULL && !parentDirFound)
         /* find the directory, last one found will be the parent */
         {
-            if(strcmp(searchDir->name, dirToDelete->dirs[count]) == 0)
+            if(strcmp(child->name, dirToDelete->dirs[count]) == 0)
             {
+                /* sanity check */
+                if( !IS_DIR(child->posixFileMode) )
+                    return BKERROR_NOT_DIR_IN_PATH;
                 parentDirFound = true;
-                parentDirInTree = searchDir;
+                parentDirInTree = BK_DIR_PTR(child);
             }
             else
-                searchDir = searchDir->next;
+                child = child->next;
         }
         if(!dirFound)
             return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
@@ -153,23 +157,23 @@ int deleteDir(VolInfo* volInfo, BkDir* tree, const Path* dirToDelete)
     /* END GET A pointer to the parent dir */
     
     /* DELETE self */
-    parentDirLL = &(parentDirInTree->directories);
+    parent = &(parentDirInTree->children);
     dirFound = false;
-    while(*parentDirLL != NULL && !dirFound)
+    while(*parent != NULL && !dirFound)
     {
-        if(strcmp( (*parentDirLL)->name, 
+        if(strcmp( (*parent)->name, 
                    dirToDelete->dirs[dirToDelete->numDirs - 1] ) == 0 )
         {
-            parentDirNextLL = (*parentDirLL)->next;
+            parentNext = (*parent)->next;
             
-            free(*parentDirLL);
+            free(*parent);
             
-            *parentDirLL = parentDirNextLL;
+            *parent = parentNext;
             
             dirFound = true;
         }
         else
-            parentDirLL = &((*parentDirLL)->next);
+            parent = &((*parent)->next);
     }
     if(!dirFound)
     /* should not happen since i already found this dir above */
@@ -186,55 +190,43 @@ int deleteDir(VolInfo* volInfo, BkDir* tree, const Path* dirToDelete)
 * */
 void deleteDirContents(VolInfo* volInfo, BkDir* dir)
 {
-    /* vars to delete files */
-    BkFile* currentFile;
-    BkFile* nextFile;
+    BkFileBase* child;
+    BkFileBase* nextChild;
     
-    /* vars to delete subdirectories */
-    BkDir* currentDir;
-    BkDir* nextDir;
-    
-    /* DELETE all files */
-    currentFile = dir->files;
-    while(currentFile != NULL)
+    child = dir->children;
+    while(child != NULL)
     {
-        nextFile = currentFile->next;
+        nextChild = child->next;
         
-        if(!currentFile->onImage)
-            free(currentFile->pathAndName);
-        
-        /* check whether file is being used as a boot record */
-        if(volInfo->bootMediaType != BOOT_MEDIA_NONE &&
-           volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
+        if( IS_DIR(child->posixFileMode) )
         {
-            if(volInfo->bootRecordIsVisible && 
-               volInfo->bootRecordOnImage == currentFile)
+            deleteDirContents(volInfo, BK_DIR_PTR(child));
+        }
+        else if ( IS_REG_FILE(child->posixFileMode) )
+        {
+            BkFile* childFile = BK_FILE_PTR(child);
+            
+            if(!childFile->onImage)
+                free(childFile->pathAndName);
+            
+            /* if file is being used as a boot record */
+            if(volInfo->bootMediaType != BOOT_MEDIA_NONE &&
+               volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
             {
-                /* and stop using it. perhaps insert a hook here one day to
-                * let the user know the boot record has been/will be deleted */
-                bk_delete_boot_record(volInfo);
+                if(volInfo->bootRecordIsVisible && 
+                   volInfo->bootRecordOnImage == childFile)
+                {
+                    /* stop using it. perhaps insert a hook here one day to
+                    * let the user know the boot record has been deleted */
+                    bk_delete_boot_record(volInfo);
+                }
             }
         }
         
-        free(currentFile);
+        free(child);
         
-        currentFile = nextFile;
+        child = nextChild;
     }
-    /* END DELETE all files */
-    
-    /* DELETE all directories */
-    currentDir = dir->directories;
-    while(currentDir != NULL)
-    {
-        nextDir = currentDir->next;
-        
-        deleteDirContents(volInfo, currentDir);
-        
-        free(currentDir);
-        
-        currentDir = nextDir;
-    }
-    /* END DELETE all directories */
 }
 
 /*******************************************************************************
@@ -245,8 +237,8 @@ int deleteFile(VolInfo* volInfo, BkDir* tree, const FilePath* pathAndName)
 {
     BkDir* parentDir;
     bool dirFound;
-    BkFile** pointerToIt; /* pointer to pointer to the file to delete */
-    BkFile* pointerToNext; /* to assign to the pointer pointed to by the pointer above
+    BkFileBase** pointerToIt; /* pointer to pointer to the file to delete */
+    BkFileBase* pointerToNext; /* to assign to the pointer pointed to by the pointer above
                            * no i'm not kidding */
     bool fileFound;
     
@@ -254,24 +246,26 @@ int deleteFile(VolInfo* volInfo, BkDir* tree, const FilePath* pathAndName)
     if(!dirFound)
         return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
     
-    pointerToIt = &(parentDir->files);
+    pointerToIt = &(parentDir->children);
     fileFound = false;
     while(*pointerToIt != NULL && !fileFound)
     {
         if(strcmp((*pointerToIt)->name, pathAndName->filename) == 0)
         /* delete the node */
         {
+            BkFile* fileToDelete = BK_FILE_PTR(*pointerToIt);
+            
             pointerToNext = (*pointerToIt)->next;
             
-            if( (*pointerToIt)->onImage )
-                free( (*pointerToIt)->pathAndName );
+            if( fileToDelete->onImage )
+                free( fileToDelete->pathAndName );
             
             /* check whether file is being used as a boot record */
             if(volInfo->bootMediaType != BOOT_MEDIA_NONE &&
                volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
             {
                 if(volInfo->bootRecordIsVisible && 
-                   volInfo->bootRecordOnImage == *pointerToIt)
+                   volInfo->bootRecordOnImage == fileToDelete)
                 {
                     /* and stop using it. perhaps insert a hook here one day to
                     * let the user know the boot record has been/will be deleted */

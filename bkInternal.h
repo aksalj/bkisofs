@@ -26,13 +26,6 @@
 #define NLS_SYSTEM_AREA 16
 /* number of bytes in a logical block (in practice always 2048) */
 #define NBYTES_LOGICAL_BLOCK 2048
-/* c99 doesn't define the following (posix file types) */
-#ifndef S_IFDIR
-#define S_IFDIR  0040000
-#endif
-#ifndef S_IFREG
-#define S_IFREG  0100000
-#endif
 
 /*******************************************************************************
 * Joliet allows max 128 bytes
@@ -42,6 +35,9 @@
 *     = 142 bytes (71 characters)
 * Only a max of 64 characters of this will be stored. (plus '\0') */
 #define NCHARS_FILE_ID_MAX_JOLIET 65
+
+#define IS_DIR(posix)      (posix & 0040000)
+#define IS_REG_FILE(posix) (posix & 0100000)
 
 /*******************************************************************************
 * Path

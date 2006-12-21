@@ -46,18 +46,28 @@
 /* warning message string lengths in VolInfo */
 #define BK_WARNING_MAX_LEN 512
 
+#define BK_BASE_PTR(item) ((BkFileBase*)(item))
+#define BK_DIR_PTR(item) ((BkDir*)(item))
+#define BK_FILE_PTR(item) ((BkFile*)(item))
+
+typedef struct BkFileBase
+{
+    char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
+    unsigned posixFileMode; /* file type and permissions */
+    
+    struct BkFileBase* next;
+    
+} BkFileBase;
+
 /*******************************************************************************
 * BkDir
 * linked list node
 * information about a directory and it's contents */
 typedef struct BkDir
 {
-    char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
-    unsigned posixFileMode;
-    struct BkDir* directories;
-    struct BkFile* files;
+    BkFileBase base; /* intended to be accessed using a cast */
     
-    struct BkDir* next;
+    BkFileBase* children; /* child directories, files, etc. */
     
 } BkDir;
 
@@ -67,15 +77,14 @@ typedef struct BkDir
 * information about a file, whether on the image or on the filesystem */
 typedef struct BkFile
 {
-    char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
-    unsigned posixFileMode;
-    unsigned size; /* in bytes */
+    BkFileBase base; /* intended to be accessed using a cast */
+    
+    unsigned size; /* in bytes, don't need off_t because it's stored 
+                   * in a 32bit unsigned int on the iso */
     bool onImage;
-    unsigned position; /* if on image, in bytes */
+    off_t position; /* if on image, in bytes */
     char* pathAndName; /* if on filesystem, full path + filename
                        * is to be freed by whenever the File is freed */
-    
-    struct BkFile* next;
     
 } BkFile;
 

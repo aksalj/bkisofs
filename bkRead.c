@@ -61,7 +61,6 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 
     volInfo->imageForReadingInode = statStruct.st_ino;
     
-    
     return 1;
 }
 

@@ -92,6 +92,8 @@
 #define BKERROR_SAVE_OVERWRITE_TEXT              "Cannot overwrite original image when saving"
 #define BKERROR_OPER_CANCELED_BY_USER            -1039
 #define BKERROR_OPER_CANCELED_BY_USER_TEXT       "You have canceled the operation"
+#define BKERROR_NOT_DIR_IN_PATH                  -1040
+#define BKERROR_NOT_DIR_IN_PATH_TEXT             "One of the names in the path is not a directory"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

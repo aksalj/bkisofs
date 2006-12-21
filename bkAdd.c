@@ -45,8 +45,9 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
     char srcDirName[NCHARS_FILE_ID_MAX_STORE];
     BkDir* destDirInTree;
     bool dirFound;
-    BkDir* oldHead; /* old head of the directories list */
+    BkFileBase* oldHead; /* old head of the children list */
     struct stat statStruct; /* to get info on the dir */
+    BkDir* newDir; /* the one i'm creating */
     
     /* vars to read contents of a dir on fs */
     DIR* srcDir;
@@ -77,31 +78,32 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
     if(itemIsInDir(srcDirName, destDirInTree))
         return BKERROR_DUPLICATE_ADD;
     
-    oldHead = destDirInTree->directories;
+    oldHead = destDirInTree->children;
     
     /* ADD directory to tree */
     rc = stat(srcPath, &statStruct);
     if(rc == -1)
         return BKERROR_STAT_FAILED;
     
-    if( !(statStruct.st_mode & S_IFDIR) )
+    if( !IS_DIR(statStruct.st_mode) )
         return BKERROR_TARGET_NOT_A_DIR;
     
-    destDirInTree->directories = malloc(sizeof(BkDir));
-    if(destDirInTree->directories == NULL)
+    destDirInTree->children = malloc(sizeof(BkDir));
+    if(destDirInTree->children == NULL)
     {
-        destDirInTree->directories = oldHead;
+        destDirInTree->children = oldHead;
         return BKERROR_OUT_OF_MEMORY;
     }
     
-    destDirInTree->directories->next = oldHead;
+    newDir = BK_DIR_PTR(destDirInTree->children);
     
-    strcpy(destDirInTree->directories->name, srcDirName);
+    BK_BASE_PTR(newDir)->next = oldHead;
     
-    destDirInTree->directories->posixFileMode = statStruct.st_mode;
+    strcpy(BK_BASE_PTR(newDir)->name, srcDirName);
     
-    destDirInTree->directories->directories = NULL;
-    destDirInTree->directories->files = NULL;
+    BK_BASE_PTR(newDir)->posixFileMode = statStruct.st_mode;
+    
+    newDir->children = NULL;
     /* END ADD directory to tree */
     
     /* remember length of original */
@@ -111,8 +113,8 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
     newSrcPathAndName = malloc(newSrcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
     if(newSrcPathAndName == NULL)
     {
-        free(destDirInTree->directories);
-        destDirInTree->directories = oldHead;
+        free(destDirInTree->children);
+        destDirInTree->children = oldHead;
         return BKERROR_OUT_OF_MEMORY;
     }
     
@@ -122,8 +124,8 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
     rc = makeLongerPath(destDir, srcDirName, &newDestDir);
     if(rc <= 0)
     {
-        free(destDirInTree->directories);
-        destDirInTree->directories = oldHead;
+        free(destDirInTree->children);
+        destDirInTree->children = oldHead;
         free(newSrcPathAndName);
         freePath(newDestDir);
         return rc;
@@ -133,8 +135,8 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
     srcDir = opendir(srcPath);
     if(srcDir == NULL)
     {
-        free(destDirInTree->directories);
-        destDirInTree->directories = oldHead;
+        free(destDirInTree->children);
+        destDirInTree->children = oldHead;
         free(newSrcPathAndName);
         freePath(newDestDir);
         return BKERROR_OPENDIR_FAILED;
@@ -203,8 +205,7 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
                 }
             }
             
-            if(anEntry.st_mode & S_IFDIR)
-            /* directory */
+            if( IS_DIR(anEntry.st_mode) )
             {
                 strcat(newSrcPathAndName, "/");
                 
@@ -216,8 +217,7 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
                         return rc;
                 }
             }
-            else if(anEntry.st_mode & S_IFREG)
-            /* regular file */
+            else if( IS_REG_FILE(anEntry.st_mode) )
             {
                 rc = addFile(tree, newSrcPathAndName, newDestDir);
                 if(rc <= 0)
@@ -302,9 +302,10 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
 int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir)
 {
     int rc;
-    BkFile* oldHead; /* of the files list */
+    BkFileBase* oldHead; /* of the files list */
     char filename[NCHARS_FILE_ID_MAX_STORE];
     struct stat statStruct;
+    BkFile* newFile;
     
     /* vars to find the dir in the tree */
     BkDir* destDirInTree;
@@ -324,51 +325,53 @@ int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir)
     if(itemIsInDir(filename, destDirInTree))
         return BKERROR_DUPLICATE_ADD;
     
-    oldHead = destDirInTree->files;
+    oldHead = destDirInTree->children;
     
     /* ADD file */
     rc = stat(srcPathAndName, &statStruct);
     if(rc == -1)
     {
-        destDirInTree->files = oldHead;
+        destDirInTree->children = oldHead;
         return BKERROR_STAT_FAILED;
     }
     
-    if( !(statStruct.st_mode & S_IFREG) )
+    if( !IS_REG_FILE(statStruct.st_mode) )
     /* not a regular file */
     {
-        destDirInTree->files = oldHead;
+        destDirInTree->children = oldHead;
         return BKERROR_NO_SPECIAL_FILES;
     }
     
     if(statStruct.st_size > 0xFFFFFFFF)
     /* size won't fit in a 32bit variable on the iso */
     {
-        destDirInTree->files = oldHead;
+        destDirInTree->children = oldHead;
         return BKERROR_ADD_FILE_TOO_BIG;
     }
     
-    destDirInTree->files = malloc(sizeof(BkFile));
-    if(destDirInTree->files == NULL)
+    destDirInTree->children = malloc(sizeof(BkFile));
+    if(destDirInTree->children == NULL)
     {
-        destDirInTree->files = oldHead;
+        destDirInTree->children = oldHead;
         return BKERROR_OUT_OF_MEMORY;
     }
     
-    destDirInTree->files->next = oldHead;
+    newFile = BK_FILE_PTR(destDirInTree->children);
     
-    strcpy(destDirInTree->files->name, filename);
+    BK_BASE_PTR(newFile)->next = oldHead;
     
-    destDirInTree->files->posixFileMode = statStruct.st_mode;
+    strcpy(BK_BASE_PTR(newFile)->name, filename);
     
-    destDirInTree->files->size = statStruct.st_size;
+    BK_BASE_PTR(newFile)->posixFileMode = statStruct.st_mode;
     
-    destDirInTree->files->onImage = false;
+    newFile->size = statStruct.st_size;
     
-    destDirInTree->files->position = 0;
+    newFile->onImage = false;
     
-    destDirInTree->files->pathAndName = malloc(strlen(srcPathAndName) + 1);
-    strcpy(destDirInTree->files->pathAndName, srcPathAndName);
+    newFile->position = 0;
+    
+    newFile->pathAndName = malloc(strlen(srcPathAndName) + 1);
+    strcpy(newFile->pathAndName, srcPathAndName);
     /* END ADD file */
     
     return 1;
@@ -538,7 +541,8 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     int nameLen;
     BkDir* destDir;
     int rc;
-    BkDir* oldHead;
+    BkFileBase* oldHead;
+    BkDir* newDir;
     
     nameLen = strlen(newDirName);
     if(nameLen > NCHARS_FILE_ID_MAX_STORE - 1)
@@ -556,23 +560,24 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     if(itemIsInDir(newDirName, destDir))
         return BKERROR_DUPLICATE_CREATE_DIR;
     
-    oldHead = destDir->directories;
+    oldHead = destDir->children;
     
-    destDir->directories = malloc(sizeof(BkDir));
-    if(destDir->directories == NULL)
+    destDir->children = malloc(sizeof(BkDir));
+    if(destDir->children == NULL)
     {
-        destDir->directories = oldHead;
+        destDir->children = oldHead;
         return BKERROR_OUT_OF_MEMORY;
     }
     
-    destDir->directories->next = oldHead;
+    newDir = BK_DIR_PTR(destDir->children);
     
-    strcpy(destDir->directories->name, newDirName);
+    BK_BASE_PTR(newDir)->next = oldHead;
     
-    destDir->directories->posixFileMode = volInfo->posixDirDefaults;
+    strcpy(BK_BASE_PTR(newDir)->name, newDirName);
     
-    destDir->directories->directories = NULL;
-    destDir->directories->files = NULL;
+    BK_BASE_PTR(newDir)->posixFileMode = volInfo->posixDirDefaults;
+    
+    destDir->children = NULL;
     
     return 1;
 }
@@ -584,25 +589,14 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
 * */
 bool itemIsInDir(const char* name, const BkDir* dir)
 {
-    BkDir* searchDir;
-    BkFile* searchFile;
+    BkFileBase* child;
     
-    /* check the directories list */
-    searchDir = dir->directories;
-    while(searchDir != NULL)
+    child = dir->children;
+    while(child != NULL)
     {
-        if(strcmp(searchDir->name, name) == 0)
+        if(strcmp(child->name, name) == 0)
             return true;
-        searchDir = searchDir->next;
-    }
-
-    /* check the files list */
-    searchFile = dir->files;
-    while(searchFile != NULL)
-    {
-        if(strcmp(searchFile->name, name) == 0)
-            return true;
-        searchFile = searchFile->next;
+        child = child->next;
     }
     
     return false;
