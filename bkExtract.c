@@ -211,12 +211,12 @@ int extractDir(VolInfo* volInfo, int image,
     char* newDestDir;
     unsigned destDirPerms;
     
+    BkFileBase* child;
+    
     /* vars to extract files */
     FilePath filePath;
-    BkFile* currentFile;
     
     /* vars to extract subdirectories */
-    BkDir* currentDir;
     Path* newSrcDir;
     
     dirFound = findDirByPath(srcDir, &(volInfo->dirTree), &srcDirInTree);
@@ -234,7 +234,7 @@ int extractDir(VolInfo* volInfo, int image,
     strcat(newDestDir, "/");
     
     if(keepPermissions)
-        destDirPerms = srcDirInTree->posixFileMode;
+        destDirPerms = BK_BASE_PTR(srcDirInTree)->posixFileMode;
     else
         destDirPerms = volInfo->posixDirDefaults;
     
@@ -252,15 +252,31 @@ int extractDir(VolInfo* volInfo, int image,
     }
     /* END CREATE destination dir */
     
-    /* BEGIN extract each file in directory */
+    /* EXTRACT children */
     filePath.path = *srcDir; /* filePath.path is readonly so pointer sharing is ok here */
-    currentFile = srcDirInTree->files;
-    while(currentFile != NULL)
+    child = srcDirInTree->children;
+    while(child != NULL)
     {
-        strcpy(filePath.filename, currentFile->name);
+        if( IS_REG_FILE(child->posixFileMode) )
+        {
+            strcpy(filePath.filename, child->name);
         
-        rc = extractFile(volInfo, image, &filePath, newDestDir, 
-                         keepPermissions, progressFunction);
+            rc = extractFile(volInfo, image, &filePath, newDestDir, 
+                             keepPermissions, progressFunction);
+        }
+        else
+        {
+            rc = makeLongerPath(srcDir, child->name, &newSrcDir);
+            if(rc <= 0)
+            {
+                free(newDestDir);
+                return rc;
+            }
+            
+            rc = extractDir(volInfo, image, newSrcDir, newDestDir, keepPermissions, 
+                            progressFunction);
+        }
+        
         if(rc <= 0)
         {
             bool goOn;
@@ -269,8 +285,8 @@ int extractDir(VolInfo* volInfo, int image,
             /* perhaps the user wants to ignore this failure */
             {
                 snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                         "Failed to extract file '%s' to '%s': '%s'",
-                         filePath.filename, newDestDir, bk_get_error_string(rc));
+                         "Failed to extract file/directory '%s' to '%s': '%s'",
+                         child->name, newDestDir, bk_get_error_string(rc));
                 goOn = volInfo->warningCbk(volInfo->warningMessage);
                 rc = BKWARNING_OPER_PARTLY_FAILED;
             }
@@ -284,51 +300,9 @@ int extractDir(VolInfo* volInfo, int image,
             }
         }
         
-        currentFile = currentFile->next;
+        child = child->next;
     }
-    /* END extract each file in directory */
-    
-    /* BEGIN extract each subdirectory */
-    currentDir = srcDirInTree->directories;
-    while(currentDir != NULL)
-    {
-        rc = makeLongerPath(srcDir, currentDir->name, &newSrcDir);
-        if(rc <= 0)
-        {
-            free(newDestDir);
-            return rc;
-        }
-        
-        rc = extractDir(volInfo, image, newSrcDir, newDestDir, keepPermissions, 
-                        progressFunction);
-        if(rc <= 0)
-        {
-            bool goOn;
-            
-            if(volInfo->warningCbk != NULL && rc != BKERROR_OPER_CANCELED_BY_USER)
-            /* perhaps the user wants to ignore this failure */
-            {
-                snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                         "Failed to extract directory '%s' to '%s': '%s'",
-                         currentDir->name, newDestDir, bk_get_error_string(rc));
-                goOn = volInfo->warningCbk(volInfo->warningMessage);
-                rc = BKWARNING_OPER_PARTLY_FAILED;
-            }
-            else
-                goOn = false;
-            
-            if(!goOn)
-            {
-                free(newDestDir);
-                return rc;
-            }
-        }
-        
-        freePath(newSrcDir);
-        
-        currentDir = currentDir->next;
-    }
-    /* END extract each subdirectory */
+    /* END EXTRACT children */
     
     free(newDestDir);
     
@@ -348,6 +322,7 @@ int extractFile(VolInfo* volInfo, int image,
     /* vars to find file location on image */
     BkDir* parentDir;
     bool dirFound;
+    BkFileBase* child;
     BkFile* pointerToIt; /* pointer to the node with file to read */
     bool fileFound;
     
@@ -372,14 +347,21 @@ int extractFile(VolInfo* volInfo, int image,
     if(progressFunction != NULL)
         progressFunction();
     
-    pointerToIt = parentDir->files;
+    child = parentDir->children;
     fileFound = false;
-    while(pointerToIt != NULL && !fileFound)
+    while(child != NULL && !fileFound)
     /* find the file in parentDir */
     {
-        if(strcmp(pointerToIt->name, pathAndName->filename) == 0)
+        if(strcmp(child->name, pathAndName->filename) == 0)
         /* this is the file */
         {
+            if( !IS_REG_FILE(child->posixFileMode) )
+                return BKERROR_WRONG_EXTRACT_FILE;
+            
+            fileFound = true;
+            
+            pointerToIt = BK_FILE_PTR(child);
+            
             if(pointerToIt->onImage)
             {
                 srcFile = image;
@@ -393,8 +375,6 @@ int extractFile(VolInfo* volInfo, int image,
                     return BKERROR_OPEN_READ_FAILED;
                 srcFileWasOpened = true;
             }
-            
-            fileFound = true;
             
             destPathAndName = malloc(strlen(destDir) + strlen(pathAndName->filename) + 1);
             if(destPathAndName == NULL)
@@ -417,7 +397,7 @@ int extractFile(VolInfo* volInfo, int image,
             
             /* WRITE file */
             if(keepPermissions)
-                destFilePerms = pointerToIt->posixFileMode;
+                destFilePerms = child->posixFileMode;
             else
                 destFilePerms = volInfo->posixFileDefaults;
             
@@ -452,7 +432,7 @@ int extractFile(VolInfo* volInfo, int image,
         }
         else
         {
-            pointerToIt = pointerToIt->next;
+            child = child->next;
         }
     }
     if(!fileFound)

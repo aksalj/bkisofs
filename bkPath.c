@@ -32,24 +32,27 @@ bool findDirByPath(const Path* path, BkDir* tree, BkDir** dir)
 {
     bool dirFound;
     int count;
-    BkDir* searchDir;
+    BkFileBase* child;
     
     *dir = tree;
     for(count = 0; count < path->numDirs; count++)
     /* each directory in the path */
     {
-        searchDir = (*dir)->directories;
+        child = (*dir)->children;
         dirFound = false;
-        while(searchDir != NULL && !dirFound)
+        while(child != NULL && !dirFound)
         /* find the directory */
         {
-            if(strcmp(searchDir->name, path->dirs[count]) == 0)
+            if(strcmp(child->name, path->dirs[count]) == 0)
             {
+                if( !IS_DIR(child->posixFileMode) )
+                    return BKERROR_TARGET_NOT_A_DIR;
+                
                 dirFound = true;
-                *dir = searchDir;
+                *dir = BK_DIR_PTR(child);
             }
             else
-                searchDir = searchDir->next;
+                child = child->next;
         }
         if(!dirFound)
             return false;
