@@ -29,7 +29,7 @@ void bk_init_vol_info(VolInfo* volInfo)
 {
     bzero(volInfo, sizeof(VolInfo));
     
-    volInfo->dirTree.posixFileMode = 040755;
+    volInfo->dirTree.base.posixFileMode = 040755;
     volInfo->posixFileDefaults = 0100644;
     volInfo->posixDirDefaults = 040755;
 }
@@ -60,7 +60,7 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
     int rc;
     FilePath filePath;
     BkDir* srcDirInTree;
-    BkFile* searchFile;
+    BkFileBase* child;
     bool found;
     
     rc = makeFilePathFromString(srcPathAndName, &filePath);
@@ -76,16 +76,22 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
     
     /* FIND the file */
     found = false;
-    searchFile = srcDirInTree->files;
-    while(searchFile != NULL && !found)
+    child = srcDirInTree->children;
+    while(child != NULL && !found)
     {
-        if(strcmp(searchFile->name, filePath.filename) == 0)
+        if(strcmp(child->name, filePath.filename) == 0)
         {
+            if( !IS_REG_FILE(child->posixFileMode) )
+            {
+                freePathDirs(&(filePath.path));
+                return BKERROR_NOT_REG_FILE_FOR_BR;
+            }
+            
             found = true;
             
             volInfo->bootMediaType = BOOT_MEDIA_NO_EMULATION;
             
-            volInfo->bootRecordSize = searchFile->size;
+            volInfo->bootRecordSize = BK_FILE_PTR(child)->size;
             
             if(volInfo->bootRecordPathAndName != NULL)
                 free(volInfo->bootRecordPathAndName);
@@ -93,10 +99,10 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
             
             volInfo->bootRecordIsVisible = true;
             
-            volInfo->bootRecordOnImage = searchFile;
+            volInfo->bootRecordOnImage = BK_FILE_PTR(child);
         }
         
-        searchFile = searchFile->next;
+        child = child->next;
     }
     if(!found)
     {

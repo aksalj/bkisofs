@@ -10,7 +10,7 @@ int writeByteBlock(int image, unsigned char byteToWrite, int numBytes);
 int writeDir(int image, DirToWrite* dir, int parentLbNum, 
              int parentNumBytes, int parentPosix, time_t recordingTime, 
              int filenameTypes, bool isRoot);
-int writeDr(int image, DirToWrite* dir, time_t recordingTime, bool isADir, 
+int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir, 
             bool isSelfOrParent, bool isFirstRecord, int filenameTypes);
 int writeElToritoBootCatalog(int image, const VolInfo* volInfo);
 int writeElToritoVd(int image, const VolInfo* volInfo);
@@ -18,7 +18,7 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
                       DirToWrite* dir, int filenameTypes, 
                       void(*progressFunction)(void));
 int writeJolietStringField(int image, const char* name, int fieldSize);
-int writeLongNM(int image, DirToWrite* dir);
+int writeLongNM(int image, BaseToWrite* dir);
 int writeLongNMsInDir(int image, DirToWrite* dir);
 int writePathTable(int image, const DirToWrite* tree, bool isTypeL, 
                    int filenameType);

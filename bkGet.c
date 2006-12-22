@@ -81,31 +81,27 @@ unsigned estimateIsoSize(const BkDir* tree, int filenameTypes)
     unsigned estimateDrSize;
     unsigned thisDirSize;
     int numItems; /* files and directories */
-    BkDir* nextDir;
-    BkFile* nextFile;
+    BkFileBase* child;
     
     thisDirSize = 0;
     numItems = 0;
     
-    nextFile = tree->files;
-    while(nextFile != NULL)
+    child = tree->children;
+    while(child != NULL)
     {
-        thisDirSize += nextFile->size;
-        thisDirSize += nextFile->size % NBYTES_LOGICAL_BLOCK;
+        if(IS_REG_FILE(child->posixFileMode))
+        {
+            thisDirSize += BK_FILE_PTR(child)->size;
+            thisDirSize += BK_FILE_PTR(child)->size % NBYTES_LOGICAL_BLOCK;
+        }
+        else
+        {
+            thisDirSize += estimateIsoSize(BK_DIR_PTR(child), filenameTypes);
+        }
         
         numItems++;
         
-        nextFile = nextFile->next;
-    }
-    
-    nextDir = tree->directories;
-    while(nextDir != NULL)
-    {
-        numItems++;
-        
-        thisDirSize += estimateIsoSize(nextDir, filenameTypes);
-        
-        nextDir = nextDir->next;
+        child = child->next;
     }
     
     estimateDrSize = 70;
@@ -132,7 +128,7 @@ int getDirFromString(const BkDir* tree, const char* pathStr, BkDir** dirFoundPtr
     bool stopLooking;
     /* name of the directory in the path this instance of the function works on */
     char* currentDirName;
-    BkDir* dirNode;
+    BkFileBase* child;
     int rc;
     
     pathStrLen = strlen(pathStr);
@@ -164,24 +160,25 @@ int getDirFromString(const BkDir* tree, const char* pathStr, BkDir** dirFoundPtr
             strncpy(currentDirName, &(pathStr[1]), count - 1);
             currentDirName[count - 1] = '\0';
             
-            dirNode = tree->directories;
-            while(dirNode != NULL && !stopLooking)
+            child = tree->children;
+            while(child != NULL && !stopLooking)
             /* each child directory in tree */
             {
-                if( strcmp(dirNode->name, currentDirName) == 0)
+                if( strcmp(child->name, currentDirName) == 0 &&
+                    IS_DIR(child->posixFileMode) )
                 /* found the right child directory */
                 {
                     if(pathStr[count + 1] == '\0')
                     /* this is the directory i'm looking for */
                     {
-                        *dirFoundPtr = dirNode;
+                        *dirFoundPtr = BK_DIR_PTR(child);
                         stopLooking = true;
                         rc = 1;
                     }
                     else
                     /* intermediate directory, go further down the tree */
                     {
-                        rc = getDirFromString(dirNode, 
+                        rc = getDirFromString(BK_DIR_PTR(child), 
                                               &(pathStr[count]), dirFoundPtr);
                         if(rc <= 0)
                         {
@@ -193,7 +190,7 @@ int getDirFromString(const BkDir* tree, const char* pathStr, BkDir** dirFoundPtr
                         
                 }
                 
-                dirNode = dirNode->next;
+                child = child->next;
             }
             
             free(currentDirName);

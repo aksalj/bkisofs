@@ -12,6 +12,7 @@ bk:
 -if failed to add directory make sure have opportunity to continue
 -make a deleteThing() instead of dir/file
 -at least get rid of tree from delete parameters
+-i think sorting should swap structs not pointers on line 93, 99 of bkSort.c
 
 
 c99 compatibility issues:

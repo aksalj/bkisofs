@@ -904,7 +904,7 @@ int readRockridgeFilename(int image, char* dest, unsigned lenSU,
     unsigned logicalBlockOfCE;
     unsigned offsetInLogicalBlockOfCE;
     unsigned lengthOfCE; /* in bytes */
-    printf("!!!\n");fflush(NULL);
+    
     suFields = malloc(lenSU);
     if(suFields == NULL)
         return BKERROR_OUT_OF_MEMORY;

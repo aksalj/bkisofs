@@ -60,66 +60,50 @@ bool rightIsBigger(char* leftStr, char* rightStr)
 
 void sortDir(DirToWrite* dir, int filenameType)
 {
-    DirToWrite* nextDir;
+    BaseToWrite* child;
     
-    DirToWrite* outerDir;
-    DirToWrite* innerDir;
+    BaseToWrite* outerChild;
+    BaseToWrite* innerChild;
     DirToWrite tempDir;
-    
-    FileToWrite* outerFile;
-    FileToWrite* innerFile;
     FileToWrite tempFile;
     
-    nextDir = dir->directories;
-    while(nextDir != NULL)
+    child = dir->children;
+    while(child != NULL)
     {
-        sortDir(nextDir, filenameType);
+        if(IS_DIR(child->posixFileMode))
+            sortDir(DIRTW_PTR(child), filenameType);
         
-        nextDir = nextDir->next;
+        child = child->next;
     }
     
-    outerDir = dir->directories;
-    while(outerDir != NULL)
+    outerChild = dir->children;
+    while(outerChild != NULL)
     {
-        innerDir = outerDir->next;
-        while(innerDir != NULL)
-        {//printf("switch %s and %s? ", innerDir->dir.name9660, outerDir->dir.name9660);
-            if( (filenameType & FNTYPE_JOLIET &&
-                 rightIsBigger(innerDir->nameJoliet, outerDir->nameJoliet)) || 
-                (filenameType & FNTYPE_9660 &&
-                 rightIsBigger(innerDir->name9660, outerDir->name9660)) )
-            {//printf("yes\n");
-                tempDir = *innerDir;
-                innerDir = outerDir;
-                *outerDir = tempDir;
-            }
-            else
-                //printf("no\n");
-                innerDir = innerDir->next;
-        }
-        //printf("----\n");
-        outerDir = outerDir->next;
-    }
-    
-    outerFile = dir->files;
-    while(outerFile != NULL)
-    {
-        innerFile = outerFile->next;
-        while(innerFile != NULL)
+        innerChild = outerChild->next;
+        while(innerChild != NULL)
         {
             if( (filenameType & FNTYPE_JOLIET &&
-                 rightIsBigger(innerFile->nameJoliet, outerFile->nameJoliet)) || 
+                 rightIsBigger(innerChild->nameJoliet, outerChild->nameJoliet)) || 
                 (filenameType & FNTYPE_9660 &&
-                 rightIsBigger(innerFile->name9660, outerFile->name9660)) )
+                 rightIsBigger(innerChild->name9660, outerChild->name9660)) )
             {
-                tempFile = *innerFile;
-                innerFile = outerFile;
-                *outerFile = tempFile;
+                if(IS_DIR(innerChild->posixFileMode))
+                {
+                    tempDir = *DIRTW_PTR(innerChild);
+                    innerChild = outerChild;
+                    *DIRTW_PTR(outerChild) = tempDir;
+                }
+                else
+                {
+                    tempFile = *FILETW_PTR(innerChild);
+                    innerChild = outerChild;
+                    *FILETW_PTR(outerChild) = tempFile;
+                }
             }
-            
-            innerFile = innerFile->next;
+            else
+                innerChild = innerChild->next;
         }
         
-        outerFile = outerFile->next;
+        outerChild = outerChild->next;
     }
 }

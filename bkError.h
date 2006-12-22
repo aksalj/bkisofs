@@ -94,8 +94,10 @@
 #define BKERROR_OPER_CANCELED_BY_USER_TEXT       "You have canceled the operation"
 #define BKERROR_NOT_DIR_IN_PATH                  -1040
 #define BKERROR_NOT_DIR_IN_PATH_TEXT             "One of the names in the path is not a directory"
-#define BKERROR_WRONG_EXTRACT_FILE               -1040
+#define BKERROR_WRONG_EXTRACT_FILE               -1041
 #define BKERROR_WRONG_EXTRACT_FILE_TEXT          "Tried to extract something that's not a file using the file extracting function"
+#define BKERROR_NOT_REG_FILE_FOR_BR              -1042
+#define BKERROR_NOT_REG_FILE_FOR_BR_TEXT         "Can only use a regular file as a boot record"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

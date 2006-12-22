@@ -68,33 +68,26 @@ bool findDirByPath(const Path* path, BkDir* tree, BkDir** dir)
 * */
 void freeDirToWriteContents(DirToWrite* dir)
 {
-    DirToWrite* currentDir;
-    DirToWrite* nextDir;
-    FileToWrite* currentFile;
-    FileToWrite* nextFile;
+    BaseToWrite* currentChild;
+    BaseToWrite* nextChild;
     
-    currentDir = dir->directories;
-    while(currentDir != NULL)
+    currentChild = dir->children;
+    while(currentChild != NULL)
     {
-        nextDir = currentDir->next;
+        nextChild = currentChild->next;
         
-        freeDirToWriteContents(currentDir);
-        free(currentDir);
+        if( IS_DIR(currentChild->posixFileMode) )
+        {
+            freeDirToWriteContents(DIRTW_PTR(currentChild));
+        }
+        else
+        {
+            if(!FILETW_PTR(currentChild)->onImage)
+                free(FILETW_PTR(currentChild)->pathAndName);
+        }
+        free(currentChild);
         
-        currentDir = nextDir;
-    }
-    
-    currentFile = dir->files;
-    while(currentFile != NULL)
-    {
-        nextFile = currentFile->next;
-        
-        if(!currentFile->onImage)
-            free(currentFile->pathAndName);
-        
-        free(currentFile);
-        
-        currentFile = nextFile;
+        currentChild = nextChild;
     }
 }
 
