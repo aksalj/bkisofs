@@ -62,10 +62,9 @@ void sortDir(DirToWrite* dir, int filenameType)
 {
     BaseToWrite* child;
     
-    BaseToWrite* outerChild;
-    BaseToWrite* innerChild;
-    DirToWrite tempDir;
-    FileToWrite tempFile;
+    BaseToWrite** outerChild;
+    BaseToWrite** innerChild;
+    BaseToWrite* tempChild;
     
     child = dir->children;
     while(child != NULL)
@@ -76,34 +75,25 @@ void sortDir(DirToWrite* dir, int filenameType)
         child = child->next;
     }
     
-    outerChild = dir->children;
-    while(outerChild != NULL)
+    outerChild = &(dir->children);
+    while(*outerChild != NULL)
     {
-        innerChild = outerChild->next;
-        while(innerChild != NULL)
+        innerChild = &((*outerChild)->next);
+        while(*innerChild != NULL)
         {
             if( (filenameType & FNTYPE_JOLIET &&
-                 rightIsBigger(innerChild->nameJoliet, outerChild->nameJoliet)) || 
+                 rightIsBigger((*innerChild)->nameJoliet, (*outerChild)->nameJoliet)) || 
                 (filenameType & FNTYPE_9660 &&
-                 rightIsBigger(innerChild->name9660, outerChild->name9660)) )
+                 rightIsBigger((*innerChild)->name9660, (*outerChild)->name9660)) )
             {
-                if(IS_DIR(innerChild->posixFileMode))
-                {
-                    tempDir = *DIRTW_PTR(innerChild);
-                    innerChild = outerChild;
-                    *DIRTW_PTR(outerChild) = tempDir;
-                }
-                else
-                {
-                    tempFile = *FILETW_PTR(innerChild);
-                    innerChild = outerChild;
-                    *FILETW_PTR(outerChild) = tempFile;
-                }
+                tempChild = *innerChild;
+                *innerChild = *outerChild;
+                *outerChild = tempChild;
             }
             else
-                innerChild = innerChild->next;
+                innerChild = &((*innerChild)->next);
         }
         
-        outerChild = outerChild->next;
+        outerChild = &((*outerChild)->next);
     }
 }

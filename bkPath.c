@@ -73,7 +73,7 @@ void freeDirToWriteContents(DirToWrite* dir)
     
     currentChild = dir->children;
     while(currentChild != NULL)
-    {
+    {printf("'%s'\n", currentChild->nameRock);fflush(NULL);
         nextChild = currentChild->next;
         
         if( IS_DIR(currentChild->posixFileMode) )
@@ -88,7 +88,7 @@ void freeDirToWriteContents(DirToWrite* dir)
         free(currentChild);
         
         currentChild = nextChild;
-    }
+    }printf("done\n");fflush(NULL);
 }
 
 /******************************************************************************
@@ -426,49 +426,54 @@ bool nameIsValid(const char* name)
     return true;
 }
 
-#ifdef BK_DEBUG
+#ifdef DEBUG
 void printDirToWrite(DirToWrite* dir, int level)
 {
-    DirToWriteLL* nextDir;
-    FileToWriteLL* nextFile;
+    BaseToWrite* child;
     int count;
     
-    nextDir = dir->directories;
-    while(nextDir != NULL)
+    child = dir->children;
+    while(child != NULL)
     {
-        for(count = 0; count < level; count ++)
-            printf("  ");
-        printf("dir9 '%s'\n", nextDir->dir.name9660);fflush(NULL);
+        if(IS_DIR(child->posixFileMode))
+        {
+            for(count = 0; count < level; count ++)
+                printf("  ");
+            printf("dir9 '%s'\n", child->name9660);fflush(NULL);
+            
+            for(count = 0; count < level; count ++)
+                printf("  ");
+            printf("dirJ '%s'\n", child->nameJoliet);fflush(NULL);
+            
+            for(count = 0; count < level; count ++)
+                printf("  ");
+            printf("dirR '%s'\n", child->nameRock);fflush(NULL);
+            
+            printDirToWrite(DIRTW_PTR(child), level + 1);
+        }
         
-        for(count = 0; count < level; count ++)
-            printf("  ");
-        printf("dirJ '%s'\n", nextDir->dir.nameJoliet);fflush(NULL);
-        
-        for(count = 0; count < level; count ++)
-            printf("  ");
-        printf("dirR '%s'\n", nextDir->dir.nameRock);fflush(NULL);
-        
-        printDirToWrite(&(nextDir->dir), level + 1);
-        
-        nextDir = nextDir->next;
+        child = child->next;
     }
     
-    nextFile = dir->files;
-    while(nextFile != NULL)
+    child = dir->children;
+    while(child != NULL)
     {
-        for(count = 0; count < level; count ++)
-            printf("  ");
-        printf("file9 '%s'\n", nextFile->file.name9660);fflush(NULL);
+        if(!IS_DIR(child->posixFileMode))
+        {
+            for(count = 0; count < level; count ++)
+                printf("  ");
+            printf("file9 '%s'\n", child->name9660);fflush(NULL);
+            
+            for(count = 0; count < level; count ++)
+                printf("  ");
+            printf("fileJ '%s'\n", child->nameJoliet);fflush(NULL);
+            
+            for(count = 0; count < level; count ++)
+                printf("  ");
+            printf("fileR '%s'\n", child->nameRock);fflush(NULL);
+        }
         
-        for(count = 0; count < level; count ++)
-            printf("  ");
-        printf("fileJ '%s'\n", nextFile->file.nameJoliet);fflush(NULL);
-        
-        for(count = 0; count < level; count ++)
-            printf("  ");
-        printf("fileR '%s'\n", nextFile->file.nameRock);fflush(NULL);
-        
-        nextFile = nextFile->next;
+        child = child->next;
     }
 }
 #endif

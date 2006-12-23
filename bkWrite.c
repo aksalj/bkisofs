@@ -73,7 +73,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    
+    printDirToWrite(&newTree, 0);
     if(progressFunction != NULL)
         progressFunction();
     
