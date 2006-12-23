@@ -62,10 +62,6 @@ void sortDir(DirToWrite* dir, int filenameType)
 {
     BaseToWrite* child;
     
-    BaseToWrite** outerChild;
-    BaseToWrite** innerChild;
-    BaseToWrite* tempChild;
-    
     child = dir->children;
     while(child != NULL)
     {
@@ -75,25 +71,5 @@ void sortDir(DirToWrite* dir, int filenameType)
         child = child->next;
     }
     
-    outerChild = &(dir->children);
-    while(*outerChild != NULL)
-    {
-        innerChild = &((*outerChild)->next);
-        while(*innerChild != NULL)
-        {
-            if( (filenameType & FNTYPE_JOLIET &&
-                 rightIsBigger((*innerChild)->nameJoliet, (*outerChild)->nameJoliet)) || 
-                (filenameType & FNTYPE_9660 &&
-                 rightIsBigger((*innerChild)->name9660, (*outerChild)->name9660)) )
-            {
-                tempChild = *innerChild;
-                *innerChild = *outerChild;
-                *outerChild = tempChild;
-            }
-            else
-                innerChild = &((*innerChild)->next);
-        }
-        
-        outerChild = &((*outerChild)->next);
-    }
+    // bubble sort goes here
 }
