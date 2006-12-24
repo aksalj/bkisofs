@@ -20,9 +20,6 @@ c99 compatibility issues:
 -strdup() - implicit declaration
 
 
-translations changes: Failed to add directory %s: '%s'
-
-
 tests to run before a release:
 - update the version number in the about box
 - remove -g from makefile and BK_DEBUG from bkInternal.h

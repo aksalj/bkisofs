@@ -141,8 +141,7 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
 
 /* deleting */
 void bk_delete_boot_record(VolInfo* volInfo);
-int bk_delete_dir(VolInfo* volInfo, const char* dirStr);
-int bk_delete_file(VolInfo* volInfo, const char* fileStr);
+int bk_delete(VolInfo* volInfo, const char* pathAndName);
 
 /* extracting */
 int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 

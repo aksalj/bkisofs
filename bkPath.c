@@ -543,18 +543,18 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
     int numChildrenDone = 0;
     int nextChildLen = 0;
     const char* nextChild = &(strPath[1]);
-    for(count = 1; count < pathStrLen; count++)
-    {
+    for(count = 1; count <= pathStrLen; count++)
+    {printf("strPath[count] is '%c'\n", strPath[count]);fflush(NULL);
         if(strPath[count] == '/' || strPath[count] == '\0')
         {
-            if(strPath[count - 1] == '/')
+            if(strPath[count] == '/' && strPath[count - 1] == '/')
             /* double slash */
             {
                 nextChild = &(strPath[count + 1]);
                 continue;
             }
             else
-            /* this is the slash following a dir name */
+            /* this is the end of the string or the slash following a dir name  */
             {
                 pathPath->children[numChildrenDone] = (char*)malloc(nextChildLen + 1);
                 if(pathPath->children[numChildrenDone] == NULL)
@@ -562,7 +562,7 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
                 
                 strncpy(pathPath->children[numChildrenDone], nextChild, nextChildLen);
                 pathPath->children[numChildrenDone][nextChildLen] = '\0';
-                printf(" '%s' (%d of %d)\n", pathPath->children[numChildrenDone], numChildrenDone, pathPath->numChildren);
+                printf(" '%s' (%d of %d)\n", pathPath->children[numChildrenDone], numChildrenDone+1, pathPath->numChildren);
                 numChildrenDone++;
                 nextChildLen = 0;
                 
