@@ -73,7 +73,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    printDirToWrite(&newTree, 0);
+    
     if(progressFunction != NULL)
         progressFunction();
     
@@ -229,6 +229,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     printf("sorting 9660\n");
     sortDir(&newTree, FNTYPE_9660);
+    //printDirToWrite(&newTree, 0, FNTYPE_9660 | FNTYPE_JOLIET);
     
     pRealRootDrOffset = lseek(newImage, 0, SEEK_CUR);
     

@@ -3,6 +3,7 @@ ui:
 -resize the add/exract icons
 -alt shortcut keys need attention (all languages)
 -write man page
+-writing progress bar not centered
 
 
 bk:
@@ -12,7 +13,6 @@ bk:
 -if failed to add directory make sure have opportunity to continue
 -make a deleteThing() instead of dir/file
 -at least get rid of tree from delete parameters
--i think sorting should swap structs not pointers on line 93, 99 of bkSort.c
 
 
 c99 compatibility issues:
@@ -34,3 +34,4 @@ tests to run before a release:
  - from scratch
  - starting with an existing no emulation bootable disk
 - delete config file, make sure it still works
+- ls -R orig.iso | wc -l and ls -R new.iso | wc -l
