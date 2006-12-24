@@ -1,9 +1,8 @@
 #ifndef bkAdd_h
 #define bkAdd_h
 
-int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, 
-           const Path* destDir);
-int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir);
+int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir);
+int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir);
 bool itemIsInDir(const char* name, const BkDir* dir);
 
 #endif

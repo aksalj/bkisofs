@@ -15,4 +15,9 @@ int makePathFromString(const char* strPath, Path* pathPath);
 bool nameIsValid(const char* name);
 void printDirToWrite(DirToWrite* dir, int level, int filenameTypes);
 
+bool findDirByNewPath(const NewPath* path, BkDir* tree, BkDir** dir);
+void freePathContents(NewPath* path);
+int getLastNameFromPath(const char* srcPathAndName, char* lastName);
+int makeNewPathFromString(const char* strPath, NewPath* pathPath);
+
 #endif

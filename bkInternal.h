@@ -43,6 +43,13 @@
 #define DIRTW_PTR(item) ((DirToWrite*)(item))
 #define FILETW_PTR(item) ((FileToWrite*)(item))
 
+typedef struct
+{
+    unsigned numChildren;
+    char** children;
+    
+} NewPath;
+
 /*******************************************************************************
 * Path
 * full path of a directory on the image

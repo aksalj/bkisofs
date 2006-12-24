@@ -28,117 +28,116 @@
 #include "bkGet.h"
 #include "bkMangle.h"
 
-/*******************************************************************************
-* addDir()
-* adds a directory from the filesystem to the image
-*
-* Receives:
-* - BkDir*, root of tree to add to
-* - char*, path of directory to add, must end with trailing slash
-* - Path*, destination on image
-* */
-int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destDir)
+int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
 {
     int rc;
+    char lastName[NCHARS_FILE_ID_MAX_STORE];
+    BkFileBase* oldHead; /* of the children list */
+    struct stat statStruct;
     
-    /* vars to add dir to tree */
-    char srcDirName[NCHARS_FILE_ID_MAX_STORE];
-    BkDir* destDirInTree;
-    bool dirFound;
-    BkFileBase* oldHead; /* old head of the children list */
-    struct stat statStruct; /* to get info on the dir */
-    BkDir* newDir; /* the one i'm creating */
+    rc = getLastNameFromPath(srcPathAndName, lastName);
+    if(rc <= 0)
+        return rc;
+    printf("add '%s' (%s) to '%s'\n", lastName, srcPathAndName, BK_BASE_PTR(destDir)->name);fflush(NULL);
+    if( !nameIsValid(lastName) )
+        return BKERROR_NAME_INVALID_CHAR;
+    
+    oldHead = destDir->children;
+    
+    rc = stat(srcPathAndName, &statStruct);
+    if(rc == -1)
+        return BKERROR_STAT_FAILED;
+    
+    if( IS_DIR(statStruct.st_mode) )
+    {
+        BkDir* newDir;
+        
+        newDir = malloc(sizeof(BkDir));
+        if(newDir == NULL)
+            return BKERROR_OUT_OF_MEMORY;
+        
+        strcpy(BK_BASE_PTR(newDir)->name, lastName);
+        
+        BK_BASE_PTR(newDir)->posixFileMode = statStruct.st_mode;
+        
+        BK_BASE_PTR(newDir)->next = oldHead;
+        
+        newDir->children = NULL;
+        
+        /* ADD dir contents */
+        rc = addDirContents(volInfo, srcPathAndName, newDir);
+        if(rc < 0)
+        {
+            free(newDir);
+            return rc;
+        }
+        /* END ADD dir contents */
+        
+        destDir->children = BK_BASE_PTR(newDir);
+    }
+    else if( IS_REG_FILE(statStruct.st_mode) )
+    {
+        BkFile* newFile;
+        
+        if(statStruct.st_size > 0xFFFFFFFF)
+        /* size won't fit in a 32bit variable on the iso */
+            return BKERROR_ADD_FILE_TOO_BIG;
+        
+        newFile = malloc(sizeof(BkFile));
+        if(newFile == NULL)
+            return BKERROR_OUT_OF_MEMORY;
+        
+        strcpy(BK_BASE_PTR(newFile)->name, lastName);
+        
+        BK_BASE_PTR(newFile)->posixFileMode = statStruct.st_mode;
+        
+        BK_BASE_PTR(newFile)->next = oldHead;
+        
+        newFile->size = statStruct.st_size;
+        
+        newFile->onImage = false;
+        
+        newFile->position = 0;
+        
+        newFile->pathAndName = malloc(strlen(srcPathAndName) + 1);
+        strcpy(newFile->pathAndName, srcPathAndName);
+        
+        destDir->children = BK_BASE_PTR(newFile);
+    }
+    else
+        return BKERROR_NO_SPECIAL_FILES;
+    
+    return 1;
+}
+
+int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
+{
+    int rc;
+    int srcPathLen;
+    char* newSrcPathAndName;
     
     /* vars to read contents of a dir on fs */
     DIR* srcDir;
     struct dirent* dirEnt;
-    struct stat anEntry;
     
-    /* vars for children */
-    Path* newDestDir;
-    int newSrcPathLen; /* length of new path (including trailing '/' but not filename) */
-    char* newSrcPathAndName; /* both for child dirs and child files */
+    srcPathLen = strlen(srcPath);
     
-    if(srcPath[strlen(srcPath) - 1] != '/')
-    /* must have trailing slash */
-        return BKERROR_DIRNAME_NEED_TRAILING_SLASH;
-    
-    dirFound = findDirByPath(destDir, tree, &destDirInTree);
-    if(!dirFound)
-        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    
-    /* get the name of the directory to be added */
-    rc = getLastDirFromString(srcPath, srcDirName);
-    if(rc <= 0)
-        return rc;
-    
-    if( !nameIsValid(srcDirName) )
-        return BKERROR_NAME_INVALID_CHAR;
-    
-    if(itemIsInDir(srcDirName, destDirInTree))
-        return BKERROR_DUPLICATE_ADD;
-    
-    oldHead = destDirInTree->children;
-    
-    /* ADD directory to tree */
-    rc = stat(srcPath, &statStruct);
-    if(rc == -1)
-        return BKERROR_STAT_FAILED;
-    
-    if( !IS_DIR(statStruct.st_mode) )
-        return BKERROR_TARGET_NOT_A_DIR;
-    
-    destDirInTree->children = malloc(sizeof(BkDir));
-    if(destDirInTree->children == NULL)
-    {
-        destDirInTree->children = oldHead;
-        return BKERROR_OUT_OF_MEMORY;
-    }
-    
-    newDir = BK_DIR_PTR(destDirInTree->children);
-    
-    BK_BASE_PTR(newDir)->next = oldHead;
-    
-    strcpy(BK_BASE_PTR(newDir)->name, srcDirName);
-    
-    BK_BASE_PTR(newDir)->posixFileMode = statStruct.st_mode;
-    
-    newDir->children = NULL;
-    /* END ADD directory to tree */
-    
-    /* remember length of original */
-    newSrcPathLen = strlen(srcPath);
-    
-    /* including the file/dir name and the trailing '/' and the '\0' */
-    newSrcPathAndName = malloc(newSrcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
+    /* including the new name and the possibly needed trailing '/' */
+    newSrcPathAndName = malloc(srcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
     if(newSrcPathAndName == NULL)
-    {
-        free(destDirInTree->children);
-        destDirInTree->children = oldHead;
         return BKERROR_OUT_OF_MEMORY;
-    }
     
     strcpy(newSrcPathAndName, srcPath);
-    
-    /* destination for children */
-    rc = makeLongerPath(destDir, srcDirName, &newDestDir);
-    if(rc <= 0)
+    if(srcPath[srcPathLen - 1] != '/')
     {
-        free(destDirInTree->children);
-        destDirInTree->children = oldHead;
-        free(newSrcPathAndName);
-        freePath(newDestDir);
-        return rc;
+        strcat(newSrcPathAndName, "/");
+        srcPathLen++;
     }
     
-    /* ADD contents of directory */
     srcDir = opendir(srcPath);
     if(srcDir == NULL)
     {
-        free(destDirInTree->children);
-        destDirInTree->children = oldHead;
         free(newSrcPathAndName);
-        freePath(newDestDir);
         return BKERROR_OPENDIR_FAILED;
     }
     
@@ -146,233 +145,103 @@ int addDir(VolInfo* volInfo, BkDir* tree, const char* srcPath, const Path* destD
     * if it does, it returns NULL (same as end of dir) */
     while( (dirEnt = readdir(srcDir)) != NULL )
     {
-        if( strcmp(dirEnt->d_name, ".") != 0 && strcmp(dirEnt->d_name, "..") != 0 )
-        /* not "." or ".." (safely ignore those two) */
+        if( strcmp(dirEnt->d_name, ".") == 0 || strcmp(dirEnt->d_name, "..") == 0 )
+        /* ignore "." and ".." */
+            continue;
+        
+        if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX_STORE - 1)
+        {
+            closedir(srcDir);
+            free(newSrcPathAndName);
+            return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+        }
+        
+        /* append file/dir name */
+        strcpy(newSrcPathAndName + srcPathLen, dirEnt->d_name);
+        printf("addDirContents() '%s' to '%s'\n", newSrcPathAndName, BK_BASE_PTR(destDir)->name);fflush(NULL);
+        rc = add(volInfo, newSrcPathAndName, destDir);
+        if(rc <= 0 && rc != BKWARNING_OPER_PARTLY_FAILED)
         {
             bool goOn;
             
-            if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX_STORE - 1)
+            if(volInfo->warningCbk != NULL && !volInfo->stopOperation)
+            /* perhaps the user wants to ignore this failure */
             {
-                if(volInfo->warningCbk != NULL)
-                /* perhaps the user wants to ignore this failure */
-                {
-                    snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                             "Failed to add item '%s': '%s'",
-                             dirEnt->d_name, 
-                             bk_get_error_string(BKERROR_MAX_NAME_LENGTH_EXCEEDED));
-                    goOn = volInfo->warningCbk(volInfo->warningMessage);
-                    rc = BKWARNING_OPER_PARTLY_FAILED;
-                }
-                else
-                    goOn = false;
-                
-                if(goOn)
-                    continue;
-                else
-                {
-                    free(newSrcPathAndName);
-                    freePath(newDestDir);
-                    return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
-                }
-            }
-            
-            /* append file/dir name */
-            strcpy(newSrcPathAndName + newSrcPathLen, dirEnt->d_name);
-            
-            rc = stat(newSrcPathAndName, &anEntry);
-            if(rc == -1)
-            {
-                if(volInfo->warningCbk != NULL)
-                /* perhaps the user wants to ignore this failure */
-                {
-                    snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                             "Failed to add item '%s': '%s'",
-                             newSrcPathAndName, 
-                             bk_get_error_string(BKERROR_STAT_FAILED));
-                    goOn = volInfo->warningCbk(volInfo->warningMessage);
-                    rc = BKWARNING_OPER_PARTLY_FAILED;
-                }
-                else
-                    goOn = false;
-                
-                if(goOn)
-                    continue;
-                else
-                {
-                    free(newSrcPathAndName);
-                    freePath(newDestDir);
-                    return BKERROR_STAT_FAILED;
-                }
-            }
-            
-            if( IS_DIR(anEntry.st_mode) )
-            {
-                strcat(newSrcPathAndName, "/");
-                
-                rc = addDir(volInfo, tree, newSrcPathAndName, newDestDir);
-                if(rc <= 0)
-                {
-                        free(newSrcPathAndName);
-                        freePath(newDestDir);
-                        return rc;
-                }
-            }
-            else if( IS_REG_FILE(anEntry.st_mode) )
-            {
-                rc = addFile(tree, newSrcPathAndName, newDestDir);
-                if(rc <= 0)
-                {
-                    if(volInfo->warningCbk != NULL)
-                    /* perhaps the user wants to ignore this failure */
-                    {
-                        snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                                 "Failed to add file '%s': '%s'",
-                                 newSrcPathAndName, bk_get_error_string(rc));
-                        goOn = volInfo->warningCbk(volInfo->warningMessage);
-                        rc = BKWARNING_OPER_PARTLY_FAILED;
-                    }
-                    else
-                        goOn = false;
-                    
-                    if(!goOn)
-                    {
-                        free(newSrcPathAndName);
-                        freePath(newDestDir);
-                        return rc;
-                    }
-                }
+                snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                         "Failed to add item '%s': '%s'",
+                         dirEnt->d_name, 
+                         bk_get_error_string(rc));
+                goOn = volInfo->warningCbk(volInfo->warningMessage);
+                rc = BKWARNING_OPER_PARTLY_FAILED;
             }
             else
-            /* not regular file or directory */
-            {
-                if(volInfo->warningCbk != NULL)
-                /* perhaps the user wants to ignore this failure */
-                {
-                    snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                             "Failed to add item '%s': '%s'",
-                             newSrcPathAndName, 
-                             bk_get_error_string(BKERROR_NO_SPECIAL_FILES));
-                    goOn = volInfo->warningCbk(volInfo->warningMessage);
-                    rc = BKWARNING_OPER_PARTLY_FAILED;
-                }
-                else
-                    goOn = false;
-                
-                if(goOn)
-                    continue;
-                else
-                {
-                    free(newSrcPathAndName);
-                    freePath(newDestDir);
-                    return BKERROR_NO_SPECIAL_FILES;
-                }
-            }
+                goOn = false;
             
-        } /* if */
-        
-    } /* while */
+            if(goOn)
+                continue;
+            else
+            {
+                volInfo->stopOperation = true;
+                closedir(srcDir);
+                free(newSrcPathAndName);
+                return rc;
+            }
+        }
+    }
+    
+    free(newSrcPathAndName);
     
     rc = closedir(srcDir);
     if(rc != 0)
     /* exotic error */
-    {
-        free(newSrcPathAndName);
-        freePath(newDestDir);
         return BKERROR_EXOTIC;
-    }
-    /* END ADD contents of directory */
-    
-    free(newSrcPathAndName);
-    freePath(newDestDir);
     
     return 1;
 }
 
-/*******************************************************************************
-* addFile()
-* adds a file from the filesystem to the image
-*
-* Receives:
-* - Dir*, root of tree to add to
-* - char*, path and name of file to add, must end with trailing slash
-* - Path*, destination on image
-* Notes:
-*  will only add a regular file (symblic links are followed, see stat(2))
-* */
-int addFile(BkDir* tree, const char* srcPathAndName, const Path* destDir)
+int bk_add(VolInfo* volInfo, const char* srcPathAndName, 
+           const char* destPathStr)
 {
     int rc;
-    BkFileBase* oldHead; /* of the files list */
-    char filename[NCHARS_FILE_ID_MAX_STORE];
-    struct stat statStruct;
-    BkFile* newFile;
+    NewPath destPath;
+    char lastName[NCHARS_FILE_ID_MAX_STORE];
     
     /* vars to find the dir in the tree */
     BkDir* destDirInTree;
     bool dirFound;
     
-    rc = getFilenameFromPath(srcPathAndName, filename);
+    rc = makeNewPathFromString(destPathStr, &destPath);
     if(rc <= 0)
+    {
+        freePathContents(&destPath);
         return rc;
+    }
     
-    if( !nameIsValid(filename) )
-        return BKERROR_NAME_INVALID_CHAR;
+    rc = getLastNameFromPath(srcPathAndName, lastName);
+    if(rc <= 0)
+    {
+        freePathContents(&destPath);
+        return rc;
+    }
+    printf("bk_add() '%s' (%s)\n", lastName, srcPathAndName);fflush(NULL);
     
-    dirFound = findDirByPath(destDir, tree, &destDirInTree);
+    dirFound = findDirByNewPath(&destPath, &(volInfo->dirTree), &destDirInTree);
     if(!dirFound)
+    {
+        freePathContents(&destPath);
         return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
+    }
     
-    if(itemIsInDir(filename, destDirInTree))
+    freePathContents(&destPath);
+    
+    if(itemIsInDir(lastName, destDirInTree))
         return BKERROR_DUPLICATE_ADD;
     
-    oldHead = destDirInTree->children;
+    volInfo->stopOperation = false;
     
-    /* ADD file */
-    rc = stat(srcPathAndName, &statStruct);
-    if(rc == -1)
-    {
-        destDirInTree->children = oldHead;
-        return BKERROR_STAT_FAILED;
-    }
-    
-    if( !IS_REG_FILE(statStruct.st_mode) )
-    /* not a regular file */
-    {
-        destDirInTree->children = oldHead;
-        return BKERROR_NO_SPECIAL_FILES;
-    }
-    
-    if(statStruct.st_size > 0xFFFFFFFF)
-    /* size won't fit in a 32bit variable on the iso */
-    {
-        destDirInTree->children = oldHead;
-        return BKERROR_ADD_FILE_TOO_BIG;
-    }
-    
-    destDirInTree->children = malloc(sizeof(BkFile));
-    if(destDirInTree->children == NULL)
-    {
-        destDirInTree->children = oldHead;
-        return BKERROR_OUT_OF_MEMORY;
-    }
-    
-    newFile = BK_FILE_PTR(destDirInTree->children);
-    
-    BK_BASE_PTR(newFile)->next = oldHead;
-    
-    strcpy(BK_BASE_PTR(newFile)->name, filename);
-    
-    BK_BASE_PTR(newFile)->posixFileMode = statStruct.st_mode;
-    
-    newFile->size = statStruct.st_size;
-    
-    newFile->onImage = false;
-    
-    newFile->position = 0;
-    
-    newFile->pathAndName = malloc(strlen(srcPathAndName) + 1);
-    strcpy(newFile->pathAndName, srcPathAndName);
-    /* END ADD file */
+    rc = add(volInfo, srcPathAndName, destDirInTree);
+    if(rc <= 0)
+        return rc;
     
     return 1;
 }
@@ -433,105 +302,6 @@ int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName,
 }
 
 /*******************************************************************************
-* bk_add_dir()
-* public interface for addDir()
-* */
-int bk_add_dir(VolInfo* volInfo, const char* srcPathAndName, 
-               const char* destPathStr)
-{
-    int rc;
-    Path* destPath;
-    
-    destPath = malloc(sizeof(Path));
-    if(destPath == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    destPath->numDirs = 0;
-    destPath->dirs = NULL;
-    
-    if(destPathStr[0] == '/' && destPathStr[1] == '\0')
-    /* root, special case */
-    {
-        rc = addDir(volInfo, &(volInfo->dirTree), srcPathAndName, destPath);
-        if(rc <= 0)
-        {
-            freePath(destPath);
-            return rc;
-        }
-    }
-    else
-    /* not root */
-    {
-        rc = makePathFromString(destPathStr, destPath);
-        if(rc <= 0)
-        {
-            freePath(destPath);
-            return rc;
-        }
-        
-        rc = addDir(volInfo, &(volInfo->dirTree), srcPathAndName, destPath);
-        if(rc <= 0)
-        {
-            freePath(destPath);
-            return rc;
-        }
-    }
-    
-    freePath(destPath);
-    
-    return 1;
-}
-
-/*******************************************************************************
-* bk_add_file()
-* public interface for addFile()
-* */
-int bk_add_file(VolInfo* volInfo, const char* srcPathAndName, 
-                const char* destPathStr)
-{
-    int rc;
-    Path* destPath;
-    
-    destPath = malloc(sizeof(Path));
-    if(destPath == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    destPath->numDirs = 0;
-    destPath->dirs = NULL;
-    
-    if(destPathStr[0] == '/' && destPathStr[1] == '\0')
-    /* root, special case */
-    {
-        rc = addFile(&(volInfo->dirTree), srcPathAndName, destPath);
-        if(rc <= 0)
-        {
-            freePath(destPath);
-            return rc;
-        }
-    }
-    else
-    {
-        rc = makePathFromString(destPathStr, destPath);
-        if(rc <= 0)
-        {
-            freePath(destPath);
-            return rc;
-        }
-        
-        rc = addFile(&(volInfo->dirTree), srcPathAndName, destPath);
-        if(rc <= 0)
-        {
-            freePath(destPath);
-            return rc;
-        }
-    }
-    
-    freePath(destPath);
-    
-    return 1;
-}
-
-/*******************************************************************************
 * bk_create_dir()
 * 
 * */
@@ -562,22 +332,19 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     
     oldHead = destDir->children;
     
-    destDir->children = malloc(sizeof(BkDir));
-    if(destDir->children == NULL)
-    {
-        destDir->children = oldHead;
+    newDir = malloc(sizeof(BkDir));
+    if(newDir == NULL)
         return BKERROR_OUT_OF_MEMORY;
-    }
-    
-    newDir = BK_DIR_PTR(destDir->children);
-    
-    BK_BASE_PTR(newDir)->next = oldHead;
     
     strcpy(BK_BASE_PTR(newDir)->name, newDirName);
     
     BK_BASE_PTR(newDir)->posixFileMode = volInfo->posixDirDefaults;
     
-    destDir->children = NULL;
+    BK_BASE_PTR(newDir)->next = oldHead;
+    
+    newDir->children = NULL;
+    
+    destDir->children = BK_BASE_PTR(newDir);
     
     return 1;
 }

@@ -62,6 +62,40 @@ bool findDirByPath(const Path* path, BkDir* tree, BkDir** dir)
     return true;
 }
 
+bool findDirByNewPath(const NewPath* path, BkDir* tree, BkDir** dir)
+{
+    bool dirFound;
+    int count;
+    BkFileBase* child;
+    printf("findDirByNewPath(numchildren %d): ", path->numChildren);fflush(NULL);
+    *dir = tree;
+    for(count = 0; count < path->numChildren; count++)
+    /* each directory in the path */
+    {
+        child = (*dir)->children;
+        dirFound = false;
+        while(child != NULL && !dirFound)
+        /* find the directory */
+        {
+            if(strcmp(child->name, path->children[count]) == 0)
+            {
+                if( !IS_DIR(child->posixFileMode) )
+                    return false;
+                
+                dirFound = true;
+                *dir = BK_DIR_PTR(child);
+            }
+            else
+                child = child->next;
+        }
+        if(!dirFound)
+            return false;
+    }
+    /* END FIND dir to add to */
+    printf("'%s'\n", BK_BASE_PTR(*dir)->name);fflush(NULL);
+    return true;
+}
+
 /******************************************************************************
 * freeDirToWriteContents()
 * Recursively deletes all the dynamically allocated contents of dir.
@@ -102,6 +136,24 @@ void freePath(Path* path)
     free(path);
 }
 
+void freePathContents(NewPath* path)
+{
+    int count;
+    
+    for(count = 0; count < path->numChildren; count++)
+    {
+        /* if the path was not allocated properly (maybe ran out of memory)
+        * the first unallocated item is null */
+        if(path->children[count] == NULL)
+            break;
+        
+        free(path->children[count]);
+    }
+    
+    if(path->children != NULL)
+        free(path->children);
+}
+
 /******************************************************************************
 * freePathDirs()
 * Recursively deletes the dynamically allocated path contents.
@@ -122,6 +174,61 @@ void freePathDirs(Path* path)
     
     if(path->dirs != NULL)
         free(path->dirs);
+}
+
+int getLastNameFromPath(const char* srcPathAndName, char* lastName)
+{
+    int count;
+    int srcLen;
+    int lastCharIndex;
+    int firstCharIndex;
+    bool lastCharFound;
+    int count2;
+    
+    srcLen = strlen(srcPathAndName);
+    
+    /* FIND the last name */
+    lastCharIndex = srcLen;
+    lastCharFound = false;
+    for(count = srcLen; count >= 0; count--)
+    {
+        if(srcPathAndName[count] != '/')
+        {
+            if(!lastCharFound)
+            {
+                lastCharIndex = count;
+                lastCharFound = true;
+
+                firstCharIndex = lastCharIndex;
+            }
+            else
+            {
+                firstCharIndex = count;
+            }
+        }
+        else
+        {
+            if(lastCharFound)
+                break;
+        }
+    }
+    if(!lastCharFound)
+        return BKERROR_MISFORMED_PATH;
+    /* END FIND the last name */
+    
+    if(lastCharIndex - firstCharIndex + 1 > NCHARS_FILE_ID_MAX_STORE - 1)
+        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+    
+    /* copy the name */
+    for(count = firstCharIndex, count2 = 0; count <= lastCharIndex; count++, count2++)
+    {
+        lastName[count2] = srcPathAndName[count];
+    }
+    lastName[count2] = '\0';
+    
+    printf("getLastNameFromPath(): '%s' -> '%s'\n", srcPathAndName, lastName);fflush(NULL);
+    
+    return 1;
 }
 
 /******************************************************************************
@@ -400,6 +507,75 @@ int makePathFromString(const char* strPath, Path* pathPath)
     }
     
     if(numDirsDone != pathPath->numDirs)
+        return BKERROR_SANITY;
+    
+    return 1;
+}
+
+int makeNewPathFromString(const char* strPath, NewPath* pathPath)
+{
+    int count;
+    int pathStrLen;
+    
+    pathStrLen = strlen(strPath);
+    printf("makeNewPathFromString(%s):\n", strPath);fflush(NULL);
+    if(strPath[0] != '/')
+        return BKERROR_MISFORMED_PATH;
+    
+    /* count number of children */
+    pathPath->numChildren = 0;
+    for(count = 1; count < pathStrLen; count++)
+    {
+        if(strPath[count] != '/' && strPath[count - 1] == '/')
+            pathPath->numChildren++;
+    }
+    printf(" %d children\n", pathPath->numChildren);fflush(NULL);
+    if(pathPath->numChildren == 0)
+    {
+        pathPath->children = NULL;
+        return 1;
+    }
+    
+    pathPath->children = (char**)malloc(sizeof(char*) * pathPath->numChildren);
+    if(pathPath->children == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    int numChildrenDone = 0;
+    int nextChildLen = 0;
+    const char* nextChild = &(strPath[1]);
+    for(count = 1; count < pathStrLen; count++)
+    {
+        if(strPath[count] == '/' || strPath[count] == '\0')
+        {
+            if(strPath[count - 1] == '/')
+            /* double slash */
+            {
+                nextChild = &(strPath[count + 1]);
+                continue;
+            }
+            else
+            /* this is the slash following a dir name */
+            {
+                pathPath->children[numChildrenDone] = (char*)malloc(nextChildLen + 1);
+                if(pathPath->children[numChildrenDone] == NULL)
+                    return BKERROR_OUT_OF_MEMORY;
+                
+                strncpy(pathPath->children[numChildrenDone], nextChild, nextChildLen);
+                pathPath->children[numChildrenDone][nextChildLen] = '\0';
+                printf(" '%s' (%d of %d)\n", pathPath->children[numChildrenDone], numChildrenDone, pathPath->numChildren);
+                numChildrenDone++;
+                nextChildLen = 0;
+                
+                nextChild = &(strPath[count + 1]);
+            }
+        }
+        else
+        {
+            nextChildLen++;
+        }
+    }
+    
+    if(numChildrenDone != pathPath->numChildren)
         return BKERROR_SANITY;
     
     return 1;
