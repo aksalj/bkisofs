@@ -146,12 +146,9 @@ int bk_delete(VolInfo* volInfo, const char* pathAndName);
 /* extracting */
 int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 
                            unsigned destFilePerms);
-int bk_extract_dir(VolInfo* volInfo, const char* srcDir,
-                   const char* destDir, bool keepPermissions,
-                   void(*progressFunction)(void));
-int bk_extract_file(VolInfo* volInfo, const char* srcFile, 
-                    const char* destDir, bool keepPermissions, 
-                    void(*progressFunction)(void));
+int bk_extract(VolInfo* volInfo, const char* srcPathAndName, 
+               const char* destDir, bool keepPermissions, 
+               void(*progressFunction)(void));
 
 /* getters */
 unsigned bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);

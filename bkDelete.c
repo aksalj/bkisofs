@@ -17,6 +17,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <strings.h>
+#include <stdio.h>
 
 #include "bk.h"
 #include "bkInternal.h"
@@ -62,7 +63,6 @@ int bk_delete(VolInfo* volInfo, const char* pathAndName)
     /* i want the parent directory */
     path.numChildren--;
     dirFound = findDirByNewPath(&path, &(volInfo->dirTree), &parentDir);
-    
     path.numChildren++;
     if(!dirFound)
     {

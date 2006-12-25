@@ -113,130 +113,142 @@ int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName,
     return 1;
 }
 
-/*******************************************************************************
-* bk_extract_dir()
-* Extracts a directory with all its contents from the iso to the filesystem.
-* Public function.
-* */
-int bk_extract_dir(VolInfo* volInfo, const char* srcDir,
-                   const char* destDir, bool keepPermissions,
-                   void(*progressFunction)(void))
-{
-    int rc;
-    Path* srcPath;
-    
-    if(srcDir[0] == '/' && srcDir[1] == '\0')
-    /* root, not allowed */
-        return BKERROR_EXTRACT_ROOT;
-    
-    srcPath = malloc(sizeof(Path));
-    if(srcPath == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    srcPath->numDirs = 0;
-    srcPath->dirs = NULL;
-    
-    rc = makePathFromString(srcDir, srcPath);
-    if(rc <= 0)
-    {
-        freePath(srcPath);
-        return rc;
-    }
-    
-    volInfo->stopOperation = false;
-    
-    rc = extractDir(volInfo, volInfo->imageForReading, srcPath, destDir, 
-                    keepPermissions, progressFunction);
-    if(rc <= 0)
-    {
-        freePath(srcPath);
-        return rc;
-    }
-    
-    freePath(srcPath);
-    
-    return 1;
-}
-
-/*******************************************************************************
-* bk_extract_file()
-* Extracts a file from the iso to the filesystem.
-* Public function.
-* */
-int bk_extract_file(VolInfo* volInfo, const char* srcFile, 
-                    const char* destDir, bool keepPermissions, 
-                    void(*progressFunction)(void))
-{
-    int rc;
-    FilePath srcPath;
-    
-    rc = makeFilePathFromString(srcFile, &srcPath);
-    if(rc <= 0)
-    {
-        freePathDirs(&(srcPath.path));
-        return rc;
-    }
-    
-    volInfo->stopOperation = false;
-    
-    rc = extractFile(volInfo, volInfo->imageForReading, &srcPath, destDir, 
-                     keepPermissions, progressFunction);
-    if(rc <= 0)
-    {
-        freePathDirs(&(srcPath.path));
-        return rc;
-    }
-    
-    freePathDirs(&(srcPath.path));
-    
-    return 1;
-}
-
-/*******************************************************************************
-* extractDir()
-* Extracts a directory with all its contents from the iso to the filesystem.
-* don't try to extract root, don't know what will happen
-* */
-int extractDir(VolInfo* volInfo, int image, 
-               const Path* srcDir, const char* destDir, bool keepPermissions, 
+int bk_extract(VolInfo* volInfo, const char* srcPathAndName, 
+               const char* destDir, bool keepPermissions, 
                void(*progressFunction)(void))
 {
     int rc;
-    
-    /* vars to find file location on image */
-    BkDir* srcDirInTree;
+    NewPath srcPath;
+    BkDir* parentDir;
     bool dirFound;
+    printf("want to extract '%s' to '%s'\n", srcPathAndName, destDir);fflush(NULL);
+    rc = makeNewPathFromString(srcPathAndName, &srcPath);
+    if(rc <= 0)
+    {
+        freePathContents(&srcPath);
+        return rc;
+    }
+    
+    if(srcPath.numChildren == 0)
+    {
+        freePathContents(&srcPath);
+        return BKERROR_EXTRACT_ROOT;
+    }
+    
+    volInfo->stopOperation = false;
+    
+    /* i want the parent directory */
+    srcPath.numChildren--;
+    dirFound = findDirByNewPath(&srcPath, &(volInfo->dirTree), &parentDir);
+    srcPath.numChildren++;
+    if(!dirFound)
+    {
+        freePathContents(&srcPath);
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
+    }
+    
+    rc = extract(volInfo, parentDir, srcPath.children[srcPath.numChildren - 1], 
+                 destDir, keepPermissions, progressFunction);
+    if(rc <= 0)
+    {
+        freePathContents(&srcPath);
+        return rc;
+    }
+    
+    freePathContents(&srcPath);
+    
+    return 1;
+}
+
+int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract, 
+            const char* destDir, bool keepPermissions, 
+            void(*progressFunction)(void))
+{
+    BkFileBase* child;
+    int rc;
+    printf("extract(%s) from '%s' to '%s'\n", nameToExtract, BK_BASE_PTR(parentDir)->name, destDir);fflush(NULL);
+    child = parentDir->children;
+    while(child != NULL)
+    {
+        if(progressFunction != NULL)
+            progressFunction();
+        if(volInfo->stopOperation)
+            return BKERROR_OPER_CANCELED_BY_USER;
+        
+        if(strcmp(child->name, nameToExtract) == 0)
+        {
+            if( IS_DIR(child->posixFileMode) )
+            {
+                rc = extractDir(volInfo, BK_DIR_PTR(child), destDir, 
+                                keepPermissions, progressFunction);
+            }
+            else if ( IS_REG_FILE(child->posixFileMode) )
+            {
+                rc = extractFile(volInfo, BK_FILE_PTR(child), destDir, 
+                                 keepPermissions, progressFunction);
+            }
+            else
+            {
+                printf("trying to extract something that's not a file or directory, ignored\n");fflush(NULL);
+            }
+            
+            if(rc <= 0)
+            {
+                bool goOn;
+                
+                if(volInfo->warningCbk != NULL && !volInfo->stopOperation)
+                /* perhaps the user wants to ignore this failure */
+                {
+                    snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                             "Failed to extract item '%s': '%s'",
+                             child->name, 
+                             bk_get_error_string(rc));
+                    goOn = volInfo->warningCbk(volInfo->warningMessage);
+                    rc = BKWARNING_OPER_PARTLY_FAILED;
+                }
+                else
+                    goOn = false;
+                
+                if(!goOn)
+                {
+                    volInfo->stopOperation = true;
+                    return rc;
+                }
+            }
+        }
+        
+        child = child->next;
+    }
+    
+    return 1;
+}
+
+int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir, 
+               bool keepPermissions, void(*progressFunction)(void))
+{
+    int rc;
+    BkFileBase* child;
     
     /* vars to create destination dir */
     char* newDestDir;
     unsigned destDirPerms;
-    
-    BkFileBase* child;
-    
-    /* vars to extract files */
-    FilePath filePath;
-    
-    /* vars to extract subdirectories */
-    Path* newSrcDir;
-    
-    dirFound = findDirByPath(srcDir, &(volInfo->dirTree), &srcDirInTree);
-    if(!dirFound)
-        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    
-    /* CREATE destination dir */
-    /* 1 for '/', 1 for '\0' */
-    newDestDir = malloc(strlen(destDir) + strlen( (srcDir->dirs)[srcDir->numDirs - 1] ) + 2);
+    printf("extractDir(%s) to '%s'\n", BK_BASE_PTR(srcDir)->name, destDir);fflush(NULL);
+    /* CREATE destination dir on filesystem */
+    /* 1 for '\0' */
+    newDestDir = malloc(strlen(destDir) + strlen(BK_BASE_PTR(srcDir)->name) + 2);
     if(newDestDir == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
     strcpy(newDestDir, destDir);
-    strcat(newDestDir, (srcDir->dirs)[srcDir->numDirs - 1]);
-    strcat(newDestDir, "/");
+    if(destDir[strlen(destDir) - 1] != '/')
+        strcat(newDestDir, "/");
+    strcat(newDestDir, BK_BASE_PTR(srcDir)->name);
     
     if(keepPermissions)
-        destDirPerms = BK_BASE_PTR(srcDirInTree)->posixFileMode;
+        destDirPerms = BK_BASE_PTR(BK_BASE_PTR(srcDir))->posixFileMode;
     else
         destDirPerms = volInfo->posixDirDefaults;
+    //!! make sure user has write permissions
     
     if(access(newDestDir, F_OK) == 0)
     {
@@ -250,54 +262,17 @@ int extractDir(VolInfo* volInfo, int image,
         free(newDestDir);
         return BKERROR_MKDIR_FAILED;
     }
-    /* END CREATE destination dir */
+    /* END CREATE destination dir on filesystem */
     
     /* EXTRACT children */
-    filePath.path = *srcDir; /* filePath.path is readonly so pointer sharing is ok here */
-    child = srcDirInTree->children;
+    child = srcDir->children;
     while(child != NULL)
     {
-        if( IS_REG_FILE(child->posixFileMode) )
-        {
-            strcpy(filePath.filename, child->name);
-        
-            rc = extractFile(volInfo, image, &filePath, newDestDir, 
-                             keepPermissions, progressFunction);
-        }
-        else
-        {
-            rc = makeLongerPath(srcDir, child->name, &newSrcDir);
-            if(rc <= 0)
-            {
-                free(newDestDir);
-                return rc;
-            }
-            
-            rc = extractDir(volInfo, image, newSrcDir, newDestDir, keepPermissions, 
-                            progressFunction);
-        }
-        
+        rc = extract(volInfo, srcDir, child->name, newDestDir, keepPermissions, progressFunction);
         if(rc <= 0)
         {
-            bool goOn;
-            
-            if(volInfo->warningCbk != NULL && rc != BKERROR_OPER_CANCELED_BY_USER)
-            /* perhaps the user wants to ignore this failure */
-            {
-                snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                         "Failed to extract file/directory '%s' to '%s': '%s'",
-                         child->name, newDestDir, bk_get_error_string(rc));
-                goOn = volInfo->warningCbk(volInfo->warningMessage);
-                rc = BKWARNING_OPER_PARTLY_FAILED;
-            }
-            else
-                goOn = false;
-            
-            if(!goOn)
-            {
-                free(newDestDir);
-                return rc;
-            }
+            free(newDestDir);
+            return rc;
         }
         
         child = child->next;
@@ -309,138 +284,86 @@ int extractDir(VolInfo* volInfo, int image,
     return 1;
 }
 
-/*******************************************************************************
-* extractFile()
-* Extracts a file from the iso to the filesystem.
-* destDir must have trailing slash
-* 
-* */
-int extractFile(VolInfo* volInfo, int image, 
-                const FilePath* pathAndName, const char* destDir, 
+int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir, 
                 bool keepPermissions, void(*progressFunction)(void))
 {
-    /* vars to find file location on image */
-    BkDir* parentDir;
-    bool dirFound;
-    BkFileBase* child;
-    BkFile* pointerToIt; /* pointer to the node with file to read */
-    bool fileFound;
-    
-    /* vars for the source file */
-    int srcFile; /* returned by open() */
+    int srcFile;
     bool srcFileWasOpened;
-    
-    /* vars to create destination file */
     char* destPathAndName;
     unsigned destFilePerms;
     int destFile; /* returned by open() */
-    
     int rc;
     
-    if(volInfo->stopOperation)
-        return BKERROR_OPER_CANCELED_BY_USER;
-    
-    dirFound = findDirByPath(&(pathAndName->path), &(volInfo->dirTree), &parentDir);
-    if(!dirFound)
-        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
-    
-    if(progressFunction != NULL)
-        progressFunction();
-    
-    child = parentDir->children;
-    fileFound = false;
-    while(child != NULL && !fileFound)
-    /* find the file in parentDir */
+    if(srcFileInTree->onImage)
     {
-        if(strcmp(child->name, pathAndName->filename) == 0)
-        /* this is the file */
-        {
-            if( !IS_REG_FILE(child->posixFileMode) )
-                return BKERROR_WRONG_EXTRACT_FILE;
-            
-            fileFound = true;
-            
-            pointerToIt = BK_FILE_PTR(child);
-            
-            if(pointerToIt->onImage)
-            {
-                srcFile = image;
-                lseek(image, pointerToIt->position, SEEK_SET);
-                srcFileWasOpened = false;
-            }
-            else
-            {
-                srcFile = open(pointerToIt->pathAndName, O_RDONLY);
-                if(srcFile == -1)
-                    return BKERROR_OPEN_READ_FAILED;
-                srcFileWasOpened = true;
-            }
-            
-            destPathAndName = malloc(strlen(destDir) + strlen(pathAndName->filename) + 1);
-            if(destPathAndName == NULL)
-            {
-                if(srcFileWasOpened)
-                    close(srcFile);
-                return BKERROR_OUT_OF_MEMORY;
-            }
-            
-            strcpy(destPathAndName, destDir);
-            strcat(destPathAndName, pathAndName->filename);
-            
-            if(access(destPathAndName, F_OK) == 0)
-            {
-                if(srcFileWasOpened)
-                    close(srcFile);
-                free(destPathAndName);
-                return BKERROR_DUPLICATE_EXTRACT;
-            }
-            
-            /* WRITE file */
-            if(keepPermissions)
-                destFilePerms = child->posixFileMode;
-            else
-                destFilePerms = volInfo->posixFileDefaults;
-            
-            destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
-            if(destFile == -1)
-            {
-                if(srcFileWasOpened)
-                    close(srcFile);
-                free(destPathAndName);
-                return BKERROR_OPEN_WRITE_FAILED;
-            }
-            
-            free(destPathAndName);
-            
-            rc = copyByteBlock(srcFile, destFile, pointerToIt->size);
-            if(rc < 0)
-            {
-                close(destFile);
-                if(srcFileWasOpened)
-                    close(srcFile);
-                return rc;
-            }
-            
-            close(destFile);
-            if(destFile == -1)
-            {
-                if(srcFileWasOpened)
-                    close(srcFile);
-                return BKERROR_EXOTIC;
-            }
-            /* END WRITE file */
-        }
-        else
-        {
-            child = child->next;
-        }
+        srcFile = volInfo->imageForReading;
+        lseek(volInfo->imageForReading, srcFileInTree->position, SEEK_SET);
+        srcFileWasOpened = false;
     }
-    if(!fileFound)
+    else
+    {
+        srcFile = open(srcFileInTree->pathAndName, O_RDONLY);
+        if(srcFile == -1)
+            return BKERROR_OPEN_READ_FAILED;
+        srcFileWasOpened = true;
+    }
+    
+    destPathAndName = malloc(strlen(destDir) + 
+                             strlen(BK_BASE_PTR(srcFileInTree)->name) + 2);
+    if(destPathAndName == NULL)
     {
         if(srcFileWasOpened)
             close(srcFile);
-        return BKERROR_FILE_NOT_FOUND_ON_IMAGE;
+        return BKERROR_OUT_OF_MEMORY;
     }
+    
+    strcpy(destPathAndName, destDir);
+    if(destDir[strlen(destDir) - 1] != '/')
+        strcat(destPathAndName, "/");
+    strcat(destPathAndName, BK_BASE_PTR(srcFileInTree)->name);
+    printf("extractFile(%s) to '%s' ->'%s'\n", BK_BASE_PTR(srcFileInTree)->name, destDir, destPathAndName);fflush(NULL);
+    if(access(destPathAndName, F_OK) == 0)
+    {
+        if(srcFileWasOpened)
+            close(srcFile);
+        free(destPathAndName);
+        return BKERROR_DUPLICATE_EXTRACT;
+    }
+    
+    /* WRITE file */
+    if(keepPermissions)
+        destFilePerms = BK_BASE_PTR(srcFileInTree)->posixFileMode;
+    else
+        destFilePerms = volInfo->posixFileDefaults;
+    
+    destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
+    if(destFile == -1)
+    {
+        if(srcFileWasOpened)
+            close(srcFile);
+        free(destPathAndName);
+        return BKERROR_OPEN_WRITE_FAILED;
+    }
+    
+    free(destPathAndName);
+    
+    rc = copyByteBlock(srcFile, destFile, srcFileInTree->size);
+    if(rc < 0)
+    {
+        close(destFile);
+        if(srcFileWasOpened)
+            close(srcFile);
+        return rc;
+    }
+    
+    close(destFile);
+    if(destFile == -1)
+    {
+        if(srcFileWasOpened)
+            close(srcFile);
+        return BKERROR_EXOTIC;
+    }
+    /* END WRITE file */
     
     if(srcFileWasOpened)
         close(srcFile);
