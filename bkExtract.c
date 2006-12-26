@@ -248,7 +248,9 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         destDirPerms = BK_BASE_PTR(BK_BASE_PTR(srcDir))->posixFileMode;
     else
         destDirPerms = volInfo->posixDirDefaults;
-    //!! make sure user has write permissions
+    /* want to make sure user has write and execute permissions to new directory 
+    * so that can extract stuff into it */
+    destDirPerms |= 0300;
     
     if(access(newDestDir, F_OK) == 0)
     {

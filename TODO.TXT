@@ -7,11 +7,9 @@ ui:
 
 
 bk:
--stopExtracting()
 -dos doesn't like names to start with underscores
 -createDir() with initialization
 -if failed to add directory make sure have opportunity to continue
--fix permissions for extracted dirs (see !!)
 
 c99 compatibility issues:
 -localtime_r() - implicit declaration
