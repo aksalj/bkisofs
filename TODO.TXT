@@ -1,11 +1,7 @@
 ui:
 -alt shortcut keys need attention (all languages)
 -write man page
--writing,extracting progress bar not centered
--credits for translators
--try to remember scroll position when reloading views
--fs path entry autocomplete
--make it obvious top is fs and bottom is iso
+-make it obvious top is fs and bottom is iso (write a manual)
 
 
 bk:
