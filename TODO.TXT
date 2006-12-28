@@ -1,15 +1,16 @@
 ui:
--add option to set toolbar icon size
--resize the add/exract icons
 -alt shortcut keys need attention (all languages)
 -write man page
 -writing,extracting progress bar not centered
+-credits for translators
+-try to remember scroll position when reloading views
+-fs path entry autocomplete
+-make it obvious top is fs and bottom is iso
 
 
 bk:
 -dos doesn't like names to start with underscores
--createDir() with initialization
--if failed to add directory make sure have opportunity to continue
+
 
 c99 compatibility issues:
 -localtime_r() - implicit declaration
