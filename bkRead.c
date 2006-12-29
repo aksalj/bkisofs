@@ -61,6 +61,15 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 
     volInfo->imageForReadingInode = statStruct.st_ino;
     
+    /* skip the first 150 sectors if the image is an NRG */
+    int len = strlen(filename);
+    if( (filename[len - 3] == 'N' || filename[len - 3] == 'n') &&
+        (filename[len - 2] == 'R' || filename[len - 2] == 'r') &&
+        (filename[len - 1] == 'G' || filename[len - 1] == 'g') )
+    {
+        lseek(volInfo->imageForReading, NBYTES_LOGICAL_BLOCK * 16, SEEK_SET);
+    }
+    
     return 1;
 }
 
