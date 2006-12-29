@@ -107,6 +107,10 @@ typedef struct
     char warningMessage[BK_WARNING_MAX_LEN];
     bool rootRead; /* did i read the root record inside volume descriptor? */
     bool stopOperation; /* cancel current opertion */
+    int imageForWriting;
+    unsigned char* writeCache;
+    unsigned char* writeCacheStatus;
+    off_t writeCacheOffset;
     
     /* public use, read only */
     time_t creationTime;
@@ -162,7 +166,7 @@ char* bk_get_error_string(int errorId);
 /* setters */
 void bk_cancel_operation(VolInfo* volInfo);
 void bk_destroy_vol_info(VolInfo* volInfo);
-void bk_init_vol_info(VolInfo* volInfo);
+int bk_init_vol_info(VolInfo* volInfo);
 int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName);
 void bk_set_publisher(VolInfo* volInfo, const char* publisher);
 void bk_set_vol_name(VolInfo* volInfo, const char* volName);

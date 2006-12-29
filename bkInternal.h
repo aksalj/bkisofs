@@ -43,6 +43,8 @@
 #define DIRTW_PTR(item) ((DirToWrite*)(item))
 #define FILETW_PTR(item) ((FileToWrite*)(item))
 
+#define WRITE_CACHE_SIZE 512000
+
 typedef struct
 {
     unsigned numChildren;

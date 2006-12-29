@@ -25,13 +25,23 @@
 * bk_init_vol_info()
 *
 * */
-void bk_init_vol_info(VolInfo* volInfo)
+int bk_init_vol_info(VolInfo* volInfo)
 {
     bzero(volInfo, sizeof(VolInfo));
+    
+    volInfo->writeCache = malloc(WRITE_CACHE_SIZE);
+    if(volInfo->writeCache == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    volInfo->writeCacheStatus = malloc(WRITE_CACHE_SIZE);
+    if(volInfo->writeCacheStatus == NULL)
+        return BKERROR_OUT_OF_MEMORY;
     
     volInfo->dirTree.base.posixFileMode = 040755;
     volInfo->posixFileDefaults = 0100644;
     volInfo->posixDirDefaults = 040755;
+    
+    return 1;
 }
 
 /*******************************************************************************
@@ -43,6 +53,12 @@ void bk_init_vol_info(VolInfo* volInfo)
 void bk_destroy_vol_info(VolInfo* volInfo)
 {
     deleteDirContents(volInfo, &(volInfo->dirTree));
+    
+    if(volInfo->writeCache != NULL)
+        free(volInfo->writeCache);
+    
+    if(volInfo->writeCacheStatus != NULL)
+        free(volInfo->writeCacheStatus);
     
     if(volInfo->bootRecordPathAndName != NULL)
         free(volInfo->bootRecordPathAndName);
