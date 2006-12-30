@@ -28,7 +28,7 @@ int wcFlush(VolInfo* volInfo)
     off_t numBytesToSkip;
     off_t numBytesToWrite;
     int rc;
-    printf("want to wcFlush (offset is 0x%X+%d)\n", (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)volInfo->wcOffset);fflush(NULL);
+    //printf("want to wcFlush (offset is 0x%X+%d)\n", (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)volInfo->wcOffset);fflush(NULL);
     //~ for(count = 0, count2 = 0; count < WRITE_CACHE_SIZE; count++)
         //~ printf("%d", volInfo->writeCacheStatus[count]);
     //~ for(count = 0, count2 = 0; count < WRITE_CACHE_SIZE; count++)
@@ -37,6 +37,9 @@ int wcFlush(VolInfo* volInfo)
     //~ for(count = 0, count2 = 0; count < WRITE_CACHE_SIZE; count++)
         //~ if(volInfo->writeCacheStatus[count] == CACHED_STATUS_UNSET)count2++;
     //~ printf("%d bytes unset\n", (int)count2);
+    
+    if(volInfo->writeProgressFunction != NULL)
+        volInfo->writeProgressFunction();
     
     if(volInfo->wcNumBytesUsed > WRITE_CACHE_SIZE)
         return BKERROR_SANITY;
@@ -71,7 +74,7 @@ int wcFlush(VolInfo* volInfo)
         else
             return BKERROR_SANITY;
     }
-    printf("before seek (offset is 0x%X, skipping 0x%X)\n\n", (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)numBytesToSkip);fflush(NULL);
+    //printf("before seek (offset is 0x%X, skipping 0x%X)\n\n", (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)numBytesToSkip);fflush(NULL);
     lseek(volInfo->imageForWriting, numBytesToSkip, SEEK_CUR);
     
     wcInit(volInfo);
@@ -94,7 +97,7 @@ void wcInit(VolInfo* volInfo)
 int wcSeekForward(VolInfo* volInfo, off_t numBytes)
 {
     int rc;
-    printf("want to wcSeekForward %d bytes\n", (unsigned)numBytes);fflush(NULL);
+    //printf("want to wcSeekForward %d bytes\n", (unsigned)numBytes);fflush(NULL);
     if(volInfo->wcOffset + numBytes >= WRITE_CACHE_SIZE)
     {
         rc = wcFlush(volInfo);
@@ -118,7 +121,7 @@ int wcSeekSet(VolInfo* volInfo, off_t position)
 {
     int rc;
     off_t origPos;
-    printf("want to wcSeekSet to 0x%X\n", (unsigned)position);fflush(NULL);
+    //printf("want to wcSeekSet to 0x%X\n", (unsigned)position);fflush(NULL);
     origPos = lseek(volInfo->imageForWriting, 0, SEEK_CUR);
     
     if(position < origPos || position >= origPos + WRITE_CACHE_SIZE)
@@ -151,7 +154,7 @@ int wcWrite(VolInfo* volInfo, const char* block, off_t numBytes)
     off_t numBytesNow;
     off_t numBytesLeft;
     int rc;
-    printf("want to wcwrite %d bytes (offset is 0x%X+%d)\n", (unsigned)numBytes, (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)volInfo->wcOffset);fflush(NULL);
+    //printf("want to wcwrite %d bytes (offset is 0x%X+%d)\n", (unsigned)numBytes, (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)volInfo->wcOffset);fflush(NULL);
     numBytesAvailable = WRITE_CACHE_SIZE - volInfo->wcOffset;
     
     if(numBytes < numBytesAvailable)

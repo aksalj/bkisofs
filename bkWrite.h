@@ -14,9 +14,7 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
             bool isSelfOrParent, bool isFirstRecord, int filenameTypes);
 int writeElToritoBootCatalog(VolInfo* volInfo);
 int writeElToritoVd(VolInfo* volInfo);
-int writeFileContents(VolInfo* volInfo, 
-                      DirToWrite* dir, int filenameTypes, 
-                      void(*progressFunction)(void));
+int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes);
 int writeJolietStringField(VolInfo* volInfo, const char* name, int fieldSize);
 int writeLongNM(VolInfo* volInfo, BaseToWrite* dir);
 int writeLongNMsInDir(VolInfo* volInfo, DirToWrite* dir);

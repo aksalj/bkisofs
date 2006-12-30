@@ -3,12 +3,11 @@ ui:
 -write man page
 -make it obvious top is fs and bottom is iso (write a manual)
 -if write error happens the progress window is still there
--permissions aren't kept on the saved caesar3 cd
 
 
 bk:
 -dos doesn't like names to start with underscores
--need error checking for wcSeek...()
+-cancel writing
 
 
 c99 compatibility issues:

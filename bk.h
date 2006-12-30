@@ -112,6 +112,7 @@ typedef struct
     unsigned char* writeCacheStatus;
     off_t wcOffset;
     off_t wcNumBytesUsed;
+    void(*writeProgressFunction)(void);
     
     /* public use, read only */
     time_t creationTime;

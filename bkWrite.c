@@ -36,7 +36,7 @@
 #include "bkPath.h"
 #include "bkCache.h"
 
-/*******************************************************************************
+/******************************************************************************
 * bk_write_image()
 * Writes everything from first to last byte of the iso.
 * Public function.
@@ -62,6 +62,8 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     off_t bootCatalogSectorNumberOffset;
     off_t currPos;
     
+    volInfo->writeProgressFunction = progressFunction;
+    
     rc = stat(newImagePathAndName, &statStruct);
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
         return BKERROR_SAVE_OVERWRITE;
@@ -79,9 +81,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    
-    if(progressFunction != NULL)
-        progressFunction();
     
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
     volInfo->imageForWriting = open(newImagePathAndName, 
@@ -111,7 +110,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         close(volInfo->imageForWriting);
         return bootCatalogSectorNumberOffset;
     }
-    printf("at %X\n", (int)wcSeekTell(volInfo));
+    
     if(volInfo->bootMediaType != BOOT_MEDIA_NONE)
     {
         /* el torito volume descriptor */
@@ -136,9 +135,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             return bootCatalogSectorNumberOffset;
         }
     }
-    
-    if(progressFunction != NULL)
-        progressFunction();
     
     printf("writing terminator at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     /* volume descriptor set terminator */
@@ -280,9 +276,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     pRealRootDrOffset = wcSeekTell(volInfo);
     
-    if(progressFunction != NULL)
-        progressFunction();
-    
     printf("writing primary directory tree at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     /* 9660 and maybe rockridge dir tree */
     rc = writeDir(volInfo, &newTree, 0, 0, 0, creationTime, 
@@ -305,9 +298,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         printf("writing supplementary directory tree at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
         sRealRootDrOffset = wcSeekTell(volInfo);
         
-        if(progressFunction != NULL)
-            progressFunction();
-        
         rc = writeDir(volInfo, &newTree, 0, 0, 0, creationTime, 
                       FNTYPE_JOLIET, true);
         if(rc <= 0)
@@ -321,9 +311,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     }
     
     printf("writing 9660 path tables at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
-    
-    if(progressFunction != NULL)
-        progressFunction();
     
     lPathTable9660Loc = wcSeekTell(volInfo);
     rc = writePathTable(volInfo, &newTree, true, FNTYPE_9660);
@@ -367,13 +354,9 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         }
     }
     
-    if(progressFunction != NULL)
-        progressFunction();
-    
     printf("writing files at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     /* all files and offsets/sizes */
-    rc = writeFileContents(volInfo, &newTree, filenameTypes, 
-                           progressFunction);
+    rc = writeFileContents(volInfo, &newTree, filenameTypes);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
@@ -383,9 +366,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     if(filenameTypes & FNTYPE_ROCKRIDGE)
     {
-        if(progressFunction != NULL)
-            progressFunction();
-        
         printf("writing long NMs at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
         rc = writeLongNMsInDir(volInfo, &newTree);
         if(rc <= 0)
@@ -404,9 +384,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         return rc;
     }
     
-    if(progressFunction != NULL)
-        progressFunction();
-    
     printf("writing pvd at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     rc = writeVolDescriptor(volInfo, pRealRootDrOffset, 
                             pRootDirSize, lPathTable9660Loc, mPathTable9660Loc, 
@@ -420,9 +397,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     if(filenameTypes & FNTYPE_JOLIET)
     {
-        if(progressFunction != NULL)
-            progressFunction();
-        
         rc = wcSeekSet(volInfo, svdOffset);
         if(rc <= 0)
         {
@@ -452,7 +426,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     return 1;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * bootInfoTableChecksum()
 * Calculate the checksum to be written into the boot info table.
 * */
@@ -523,7 +497,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     return 1;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * countDirsOnLevel()
 * a 'level' is described in ecma119 6.8.2
 * it's needed for path tables, don't remember exactly what for
@@ -554,7 +528,7 @@ int countDirsOnLevel(const DirToWrite* dir, int targetLevel, int thisLevel)
     }
 }
 
-/*******************************************************************************
+/******************************************************************************
 * countTreeHeight()
 * caller should set heightSoFar to 1
 * */
@@ -582,7 +556,7 @@ int countTreeHeight(const DirToWrite* dir, int heightSoFar)
     return maxHeight;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * elToritoChecksum()
 * Algorithm: the sum of all words, including the checksum must trunkate to 
 * a 16-bit 0x0000
@@ -603,7 +577,7 @@ unsigned short elToritoChecksum(const unsigned char* record)
     return 0xFFFF - sum + 1;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * writeByteBlock()
 * Fills numBytes with byteToWrite.
 * Writes 1024 bytes at a time, this should be enough as this functions is only
@@ -639,7 +613,7 @@ int writeByteBlock(VolInfo* volInfo, unsigned char byteToWrite, int numBytes)
     return 1;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * writeByteBlockFromFile()
 * copies numBytes from src into the image to write in blocks of 10K
 * */
@@ -677,7 +651,7 @@ int writeByteBlockFromFile(int src, VolInfo* volInfo, unsigned numBytes)
     return 1;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * writeDir()
 * Writes the contents of a directory. Also writes locations and sizes of
 * directory records for directories but not for files.
@@ -697,7 +671,7 @@ int writeDir(VolInfo* volInfo, DirToWrite* dir, int parentLbNum,
     DirToWrite parentDir;
     
     BaseToWrite* child;
-    printf("writedir\n");
+    
     if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
         return BKERROR_SANITY;
     
@@ -935,7 +909,7 @@ int writeDir(VolInfo* volInfo, DirToWrite* dir, int parentLbNum,
         return dir->base.dataLength;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * writeDr()
 * Writes a directory record.
 * Note that it uses only the members of DirToWrite and FileToWrite that are
@@ -1194,7 +1168,7 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
     return 1;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * writeElToritoBootCatalog()
 * Write the el torito boot catalog (validation entry and inital/default entry).
 * Returns the offset where the boot record sector number should
@@ -1261,7 +1235,7 @@ int writeElToritoBootCatalog(VolInfo* volInfo)
     return (int)bootRecordSectorNumberOffset;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * writeElToritoVd()
 * Write the el torito volume descriptor.
 * Returns the offset where the boot catalog sector number should 
@@ -1272,7 +1246,7 @@ int writeElToritoVd(VolInfo* volInfo)
     char buffer[NBYTES_LOGICAL_BLOCK];
     off_t bootCatalogSectorNumberOffset;
     int rc;
-    printf("vd at %X\n", (int)wcSeekTell(volInfo));
+    
     bzero(buffer, NBYTES_LOGICAL_BLOCK);
     
     if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
@@ -1302,14 +1276,12 @@ int writeElToritoVd(VolInfo* volInfo)
     return (int)bootCatalogSectorNumberOffset;
 }
 
-/*******************************************************************************
+/******************************************************************************
 * writeFileContents()
 * Write file contents into an extent and also write the file's location and 
 * size into the directory records back in the tree.
 * */
-int writeFileContents(VolInfo* volInfo, 
-                      DirToWrite* dir, int filenameTypes, 
-                      void(*progressFunction)(void))
+int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
 {
     int rc;
     
@@ -1350,9 +1322,6 @@ int writeFileContents(VolInfo* volInfo,
                 if(rc <= 0)
                     return rc;
             }
-            
-            if(progressFunction != NULL)
-                progressFunction();
             
             if(FILETW_PTR(child)->onImage)
             /* copy file from original image to new one */
@@ -1469,8 +1438,7 @@ int writeFileContents(VolInfo* volInfo,
         }
         else if( IS_DIR(child->posixFileMode) )
         {
-            rc = writeFileContents(volInfo, DIRTW_PTR(child), 
-                                   filenameTypes, progressFunction);
+            rc = writeFileContents(volInfo, DIRTW_PTR(child), filenameTypes);
             if(rc < 0)
                 return rc;
         }
