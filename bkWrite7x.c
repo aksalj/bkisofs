@@ -12,24 +12,31 @@
 * 
 ******************************************************************************/
 
+/******************************************************************************
+* Functions in this file write to volInfo.imageForWriting and are probably
+* unsutable for anything else, except for the ones that write to arrays.
+******************************************************************************/
+
 #include <unistd.h>
 
+#include "bkInternal.h"
 #include "bkWrite7x.h"
+#include "bkCache.h"
 #include "bkError.h"
 
-int write711(int image, unsigned char value)
+int write711(VolInfo* volInfo, unsigned char value)
 {
-    return writeWrapper(image, &value, 1);
+    return wcWrite(volInfo, (char*)&value, 1);
 }
 
-int write712(int image, signed char value)
+int write712(VolInfo* volInfo, signed char value)
 {
-    return writeWrapper(image, &value, 1);
+    return wcWrite(volInfo, (char*)&value, 1);
 }
 
-int write721(int image, unsigned short value)
+int write721(VolInfo* volInfo, unsigned short value)
 {
-    return writeWrapper(image, &value, 2);
+    return wcWrite(volInfo, (char*)&value, 2);
 }
 
 void write721ToByteArray(unsigned char* dest, unsigned short value)
@@ -38,7 +45,7 @@ void write721ToByteArray(unsigned char* dest, unsigned short value)
     dest[1] = (value >> 8) & 0xFF;
 }
 
-int write722(int image, unsigned short value)
+int write722(VolInfo* volInfo, unsigned short value)
 {
     unsigned short preparedValue;
     
@@ -46,15 +53,15 @@ int write722(int image, unsigned short value)
     preparedValue <<= 8;
     preparedValue |= value >> 8;
     
-    return writeWrapper(image, &preparedValue, 2);
+    return wcWrite(volInfo, (char*)&preparedValue, 2);
 }
 
-int write723(int image, unsigned short value)
+int write723(VolInfo* volInfo, unsigned short value)
 {
     int rc;
     short preparedValue;
     
-    rc = writeWrapper(image, &value, 2);
+    rc = wcWrite(volInfo, (char*)&value, 2);
     if(rc <= 0)
         return rc;
     
@@ -62,16 +69,16 @@ int write723(int image, unsigned short value)
     preparedValue <<= 8;
     preparedValue |= value >> 8;
     
-    rc = writeWrapper(image, &preparedValue, 2);
+    rc = wcWrite(volInfo, (char*)&preparedValue, 2);
     if(rc <= 0)
         return rc;
     
     return rc;
 }
 
-int write731(int image, unsigned value)
+int write731(VolInfo* volInfo, unsigned value)
 {
-    return writeWrapper(image, &value, 4);
+    return wcWrite(volInfo, (char*)&value, 4);
 }
 
 void write731ToByteArray(unsigned char* dest, unsigned value)
@@ -82,7 +89,7 @@ void write731ToByteArray(unsigned char* dest, unsigned value)
     dest[3] = value >> 24;
 }
 
-int write732(int image, unsigned value)
+int write732(VolInfo* volInfo, unsigned value)
 {
     unsigned preparedValue;
     
@@ -97,15 +104,15 @@ int write732(int image, unsigned value)
     
     preparedValue |= (value >> 24);
     
-    return writeWrapper(image, &preparedValue, 4);
+    return wcWrite(volInfo, (char*)&preparedValue, 4);
 }
 
-int write733(int image, unsigned value)
+int write733(VolInfo* volInfo, unsigned value)
 {
     int rc;
     unsigned preparedValue;
     
-    rc = writeWrapper(image, &value, 4);
+    rc = wcWrite(volInfo, (char*)&value, 4);
     if(rc <= 0)
         return rc;
     
@@ -120,7 +127,7 @@ int write733(int image, unsigned value)
     
     preparedValue |= (value >> 24);
     
-    rc = writeWrapper(image, &preparedValue, 4);
+    rc = wcWrite(volInfo, (char*)&preparedValue, 4);
     if(rc <= 0)
         return rc;
     
@@ -147,20 +154,4 @@ void write733ToByteArray(unsigned char* dest, unsigned value)
     dest[5] = (value >> 16) & 0xFF;
     dest[6] = (value >> 8) & 0xFF;
     dest[7] = value & 0xFF;
-}
-
-/*******************************************************************************
-* writeWrapper()
-* Simply a wrapper around write(), possibly utterly pointeless but perhaps it 
-* will facilitate migration to a caching system.
-* */
-int writeWrapper(int fileDescriptor, const void* data, size_t numBytes)
-{
-    int rc;
-    
-    rc = write(fileDescriptor, data, numBytes);
-    if(rc != numBytes)
-        return BKERROR_WRITE_GENERIC;
-    
-    return 1;
 }

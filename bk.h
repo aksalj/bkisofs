@@ -110,7 +110,8 @@ typedef struct
     int imageForWriting;
     unsigned char* writeCache;
     unsigned char* writeCacheStatus;
-    off_t writeCacheOffset;
+    off_t wcOffset;
+    off_t wcNumBytesUsed;
     
     /* public use, read only */
     time_t creationTime;

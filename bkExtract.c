@@ -25,7 +25,6 @@
 #include "bkExtract.h"
 #include "bkPath.h"
 #include "bkError.h"
-#include "bkWrite.h"
 
 /*******************************************************************************
 * bk_extract_boot_record()
@@ -156,6 +155,40 @@ int bk_extract(VolInfo* volInfo, const char* srcPathAndName,
     }
     
     freePathContents(&srcPath);
+    
+    return 1;
+}
+
+int copyByteBlock(int src, int dest, unsigned numBytes)
+{
+    int rc;
+    int count;
+    char block[102400]; /* 100K */
+    int numBlocks;
+    int sizeLastBlock;
+    
+    numBlocks = numBytes / 102400;
+    sizeLastBlock = numBytes % 102400;
+    
+    for(count = 0; count < numBlocks; count++)
+    {
+        rc = read(src, block, 102400);
+        if(rc != 102400)
+            return BKERROR_READ_GENERIC;
+        rc = write(dest, block, 102400);
+        if(rc <= 0)
+            return rc;
+    }
+    
+    if(sizeLastBlock > 0)
+    {
+        rc = read(src, block, sizeLastBlock);
+        if(rc != sizeLastBlock)
+                return BKERROR_READ_GENERIC;
+        rc = write(dest, block, sizeLastBlock);
+        if(rc <= 0)
+                return rc;
+    }
     
     return 1;
 }

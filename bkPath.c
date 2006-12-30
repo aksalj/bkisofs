@@ -544,7 +544,7 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
     int nextChildLen = 0;
     const char* nextChild = &(strPath[1]);
     for(count = 1; count <= pathStrLen; count++)
-    {printf("strPath[count] is '%c'\n", strPath[count]);fflush(NULL);
+    {printf("strPath[count] is '%c' (0x%X)\n", strPath[count], strPath[count]);fflush(NULL);
         if(strPath[count] == '/' || (strPath[count] == '\0' && strPath[count - 1] != '/'))
         {
             if(strPath[count] == '/' && strPath[count - 1] == '/')

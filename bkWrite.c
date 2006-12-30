@@ -12,6 +12,11 @@
 * 
 ******************************************************************************/
 
+/******************************************************************************
+* Functions in this file write to volInfo.imageForWriting and are probably
+* unsutable for anything else.
+******************************************************************************/
+
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
@@ -29,6 +34,7 @@
 #include "bkError.h"
 #include "bkSort.h"
 #include "bkPath.h"
+#include "bkCache.h"
 
 /*******************************************************************************
 * bk_write_image()
@@ -41,7 +47,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
 {
     int rc;
     struct stat statStruct;
-    int newImage;
     DirToWrite newTree;
     off_t svdOffset;
     off_t pRealRootDrOffset;
@@ -61,7 +66,8 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
         return BKERROR_SAVE_OVERWRITE;
     
-    /* because mangleDir works on dir's children i need to copy the root manually */
+    /* because mangleDir works on dir's children i need to 
+    * copy the root manually */
     bzero(&newTree, sizeof(DirToWrite));
     newTree.base.posixFileMode = volInfo->dirTree.base.posixFileMode;
     
@@ -78,34 +84,42 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         progressFunction();
     
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
-    newImage = open(newImagePathAndName, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-    if(newImage == -1)
+    volInfo->imageForWriting = open(newImagePathAndName, 
+                                    O_WRONLY | O_CREAT | O_TRUNC, 
+                                    S_IRUSR | S_IWUSR);
+    if(volInfo->imageForWriting == -1)
     {
         freeDirToWriteContents(&newTree);
         return BKERROR_OPEN_WRITE_FAILED;
     }
     
-    printf("writing blank at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    printf("writing blank at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     /* system area, always zeroes */
-    rc = writeByteBlock(newImage, 0, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA);
+    rc = writeByteBlock(volInfo, 0, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(newImage);
+        close(volInfo->imageForWriting);
         return rc;
     }
     
     /* skip pvd (1 block), write it after files */
-    lseek(newImage, NBYTES_LOGICAL_BLOCK, SEEK_CUR);
-    
+    rc = wcSeekForward(volInfo, NBYTES_LOGICAL_BLOCK);
+    if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
+        close(volInfo->imageForWriting);
+        return bootCatalogSectorNumberOffset;
+    }
+    printf("at %X\n", (int)wcSeekTell(volInfo));
     if(volInfo->bootMediaType != BOOT_MEDIA_NONE)
     {
         /* el torito volume descriptor */
-        bootCatalogSectorNumberOffset = writeElToritoVd(newImage, volInfo);
+        bootCatalogSectorNumberOffset = writeElToritoVd(volInfo);
         if(bootCatalogSectorNumberOffset <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return bootCatalogSectorNumberOffset;
         }
     }
@@ -113,44 +127,62 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(filenameTypes & FNTYPE_JOLIET)
     /* skip svd (1 block), write it after pvd */
     {
-        svdOffset = lseek(newImage, 0, SEEK_CUR);
-        lseek(newImage, NBYTES_LOGICAL_BLOCK, SEEK_CUR);
+        svdOffset = wcSeekTell(volInfo);
+        rc = wcSeekForward(volInfo, NBYTES_LOGICAL_BLOCK);
+        if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            close(volInfo->imageForWriting);
+            return bootCatalogSectorNumberOffset;
+        }
     }
     
     if(progressFunction != NULL)
         progressFunction();
     
-    printf("writing terminator at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    printf("writing terminator at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     /* volume descriptor set terminator */
-    rc = writeVdsetTerminator(newImage);
+    rc = writeVdsetTerminator(volInfo);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(newImage);
+        close(volInfo->imageForWriting);
         return rc;
     }
     
     if(volInfo->bootMediaType != BOOT_MEDIA_NONE)
     {
         /* write boot catalog sector number */
-        currPos = lseek(newImage, 0, SEEK_CUR);
-        lseek(newImage, bootCatalogSectorNumberOffset, SEEK_SET);
-        rc = write731(newImage, currPos / NBYTES_LOGICAL_BLOCK);
+        currPos = wcSeekTell(volInfo);
+        rc = wcSeekSet(volInfo, bootCatalogSectorNumberOffset);
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
-        lseek(newImage, currPos, SEEK_SET);
+        rc = write731(volInfo, currPos / NBYTES_LOGICAL_BLOCK);
+        if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            close(volInfo->imageForWriting);
+            return rc;
+        }
+        wcSeekSet(volInfo, currPos);
+        if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            close(volInfo->imageForWriting);
+            return rc;
+        }
         
         /* write el torito booting catalog */
         volInfo->bootRecordSectorNumberOffset = 
-                                writeElToritoBootCatalog(newImage, volInfo);
+                                writeElToritoBootCatalog(volInfo);
         if(volInfo->bootRecordSectorNumberOffset <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return volInfo->bootRecordSectorNumberOffset;
         }
     }
@@ -177,34 +209,49 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             if(srcFile == -1)
             {
                 freeDirToWriteContents(&newTree);
-                close(newImage);
+                close(volInfo->imageForWriting);
                 return BKERROR_OPEN_READ_FAILED;
             }
             srcFileOpened = true;
         }
         
         /* write boot record sector number */
-        currPos = lseek(newImage, 0, SEEK_CUR);
-        lseek(newImage, volInfo->bootRecordSectorNumberOffset, SEEK_SET);
-        rc = write731(newImage, currPos / NBYTES_LOGICAL_BLOCK);
+        currPos = wcSeekTell(volInfo);
+        rc = wcSeekSet(volInfo, volInfo->bootRecordSectorNumberOffset);
+        if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            close(volInfo->imageForWriting);
+            return BKERROR_OPEN_READ_FAILED;
+        }
+        
+        rc = write731(volInfo, currPos / NBYTES_LOGICAL_BLOCK);
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
             if(srcFileOpened)
                 close(srcFile);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
-        lseek(newImage, currPos, SEEK_SET);
+        wcSeekSet(volInfo, currPos);
+        if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            if(srcFileOpened)
+                close(srcFile);
+            close(volInfo->imageForWriting);
+            return rc;
+        }
         
         /* file contents */
-        rc = copyByteBlock(srcFile, newImage, volInfo->bootRecordSize);
+        rc = writeByteBlockFromFile(srcFile, volInfo, volInfo->bootRecordSize);
         if(rc < 0)
         {
             freeDirToWriteContents(&newTree);
             if(srcFileOpened)
                 close(srcFile);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
         
@@ -212,13 +259,13 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
                     volInfo->bootRecordSize % NBYTES_LOGICAL_BLOCK;
         
         /* fill the last sector with 0s */
-        rc = writeByteBlock(newImage, 0x00, blankSize);
+        rc = writeByteBlock(volInfo, 0x00, blankSize);
         if(rc < 0)
         {
             freeDirToWriteContents(&newTree);
             if(srcFileOpened)
                 close(srcFile);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
         
@@ -231,19 +278,19 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     sortDir(&newTree, FNTYPE_9660);
     //printDirToWrite(&newTree, 0, FNTYPE_9660 | FNTYPE_JOLIET);
     
-    pRealRootDrOffset = lseek(newImage, 0, SEEK_CUR);
+    pRealRootDrOffset = wcSeekTell(volInfo);
     
     if(progressFunction != NULL)
         progressFunction();
     
-    printf("writing primary directory tree at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    printf("writing primary directory tree at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     /* 9660 and maybe rockridge dir tree */
-    rc = writeDir(newImage, &newTree, 0, 0, 0, creationTime, 
+    rc = writeDir(volInfo, &newTree, 0, 0, 0, creationTime, 
                   filenameTypes & (FNTYPE_9660 | FNTYPE_ROCKRIDGE), true);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(newImage);
+        close(volInfo->imageForWriting);
         return rc;
     }
     
@@ -255,67 +302,67 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         printf("sorting joliet\n");
         sortDir(&newTree, FNTYPE_JOLIET);
         
-        printf("writing supplementary directory tree at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
-        sRealRootDrOffset = lseek(newImage, 0, SEEK_CUR);
+        printf("writing supplementary directory tree at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
+        sRealRootDrOffset = wcSeekTell(volInfo);
         
         if(progressFunction != NULL)
             progressFunction();
         
-        rc = writeDir(newImage, &newTree, 0, 0, 0, creationTime, 
+        rc = writeDir(volInfo, &newTree, 0, 0, 0, creationTime, 
                       FNTYPE_JOLIET, true);
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
         
         sRootDirSize = rc;
     }
     
-    printf("writing 9660 path tables at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    printf("writing 9660 path tables at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     
     if(progressFunction != NULL)
         progressFunction();
     
-    lPathTable9660Loc = lseek(newImage, 0, SEEK_CUR);
-    rc = writePathTable(newImage, &newTree, true, FNTYPE_9660);
+    lPathTable9660Loc = wcSeekTell(volInfo);
+    rc = writePathTable(volInfo, &newTree, true, FNTYPE_9660);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(newImage);
+        close(volInfo->imageForWriting);
         return rc;
     }
     pathTable9660Size = rc;
     
-    mPathTable9660Loc = lseek(newImage, 0, SEEK_CUR);
-    rc = writePathTable(newImage, &newTree, false, FNTYPE_9660);
+    mPathTable9660Loc = wcSeekTell(volInfo);
+    rc = writePathTable(volInfo, &newTree, false, FNTYPE_9660);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(newImage);
+        close(volInfo->imageForWriting);
         return rc;
     }
     
     if(filenameTypes & FNTYPE_JOLIET)
     {
-        printf("writing joliet path tables at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
-        lPathTableJolietLoc = lseek(newImage, 0, SEEK_CUR);
-        rc = writePathTable(newImage, &newTree, true, FNTYPE_JOLIET);
+        printf("writing joliet path tables at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
+        lPathTableJolietLoc = wcSeekTell(volInfo);
+        rc = writePathTable(volInfo, &newTree, true, FNTYPE_JOLIET);
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
         pathTableJolietSize = rc;
         
-        mPathTableJolietLoc = lseek(newImage, 0, SEEK_CUR);
-        rc = writePathTable(newImage, &newTree, false, FNTYPE_JOLIET);
+        mPathTableJolietLoc = wcSeekTell(volInfo);
+        rc = writePathTable(volInfo, &newTree, false, FNTYPE_JOLIET);
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
     }
@@ -323,13 +370,14 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(progressFunction != NULL)
         progressFunction();
     
-    printf("writing files at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
+    printf("writing files at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
     /* all files and offsets/sizes */
-    rc = writeFileContents(volInfo->imageForReading, newImage, volInfo, &newTree, filenameTypes, progressFunction);
+    rc = writeFileContents(volInfo, &newTree, filenameTypes, 
+                           progressFunction);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(newImage);
+        close(volInfo->imageForWriting);
         return rc;
     }
     
@@ -338,29 +386,35 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(progressFunction != NULL)
             progressFunction();
         
-        printf("writing long NMs at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
-        rc = writeLongNMsInDir(newImage, &newTree);
+        printf("writing long NMs at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
+        rc = writeLongNMsInDir(volInfo, &newTree);
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
     }
     
-    lseek(newImage, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA, SEEK_SET);
+    rc = wcSeekSet(volInfo, NBYTES_LOGICAL_BLOCK * NLS_SYSTEM_AREA);
+    if(rc <= 0)
+    {
+        freeDirToWriteContents(&newTree);
+        close(volInfo->imageForWriting);
+        return rc;
+    }
     
     if(progressFunction != NULL)
         progressFunction();
     
-    printf("writing pvd at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
-    rc = writeVolDescriptor(newImage, volInfo, pRealRootDrOffset, 
+    printf("writing pvd at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
+    rc = writeVolDescriptor(volInfo, pRealRootDrOffset, 
                             pRootDirSize, lPathTable9660Loc, mPathTable9660Loc, 
                             pathTable9660Size, creationTime, true);
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(newImage);
+        close(volInfo->imageForWriting);
         return rc;
     }
     
@@ -369,23 +423,31 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(progressFunction != NULL)
             progressFunction();
         
-        lseek(newImage, svdOffset, SEEK_SET);
+        rc = wcSeekSet(volInfo, svdOffset);
+        if(rc <= 0)
+        {
+            freeDirToWriteContents(&newTree);
+            close(volInfo->imageForWriting);
+            return rc;
+        }
         
-        printf("writing svd at %X\n", (int)lseek(newImage, 0, SEEK_CUR));fflush(NULL);
-        rc = writeVolDescriptor(newImage, volInfo, sRealRootDrOffset, 
+        printf("writing svd at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
+        rc = writeVolDescriptor(volInfo, sRealRootDrOffset, 
                                 sRootDirSize, lPathTableJolietLoc, mPathTableJolietLoc, 
                                 pathTableJolietSize, creationTime, false);
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(newImage);
+            close(volInfo->imageForWriting);
             return rc;
         }
     }
     
+    wcFlush(volInfo);
+    
     printf("freeing memory\n");fflush(NULL);
     freeDirToWriteContents(&newTree);
-    close(newImage);
+    close(volInfo->imageForWriting);
     
     return 1;
 }
@@ -457,44 +519,6 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     }
     
     free(contents);
-    
-    return 1;
-}
-
-/*******************************************************************************
-* copyByteBlock()
-* copies numBytes from src into dest in blocks of 100K
-* */
-int copyByteBlock(int src, int dest, unsigned numBytes)
-{
-    int rc;
-    int count;
-    char block[102400]; /* 100K */
-    int numBlocks;
-    int sizeLastBlock;
-    
-    numBlocks = numBytes / 102400;
-    sizeLastBlock = numBytes % 102400;
-    
-    for(count = 0; count < numBlocks; count++)
-    {
-        rc = read(src, block, 102400);
-        if(rc != 102400)
-            return BKERROR_READ_GENERIC;
-        rc = writeWrapper(dest, block, 102400);
-        if(rc <= 0)
-            return rc;
-    }
-    
-    if(sizeLastBlock > 0)
-    {
-        rc = read(src, block, sizeLastBlock);
-        if(rc != sizeLastBlock)
-                return BKERROR_READ_GENERIC;
-        rc = writeWrapper(dest, block, sizeLastBlock);
-        if(rc <= 0)
-                return rc;
-    }
     
     return 1;
 }
@@ -585,11 +609,11 @@ unsigned short elToritoChecksum(const unsigned char* record)
 * Writes 1024 bytes at a time, this should be enough as this functions is only
 * called to complete an extent and such.
 * */
-int writeByteBlock(int image, unsigned char byteToWrite, int numBytes)
+int writeByteBlock(VolInfo* volInfo, unsigned char byteToWrite, int numBytes)
 {
     int rc;
     int count;
-    unsigned char block[1024];
+    char block[1024];
     int numBlocks;
     int sizeLastBlock;
     
@@ -600,16 +624,54 @@ int writeByteBlock(int image, unsigned char byteToWrite, int numBytes)
     
     for(count = 0; count < numBlocks; count++)
     {
-        rc = writeWrapper(image, block, 1024);
+        rc = wcWrite(volInfo, block, 1024);
         if(rc <= 0)
             return rc;
     }
     
     if(sizeLastBlock > 0)
     {
-        rc = writeWrapper(image, block, sizeLastBlock);
+        rc = wcWrite(volInfo, block, sizeLastBlock);
         if(rc <= 0)
             return rc;
+    }
+    
+    return 1;
+}
+
+/*******************************************************************************
+* writeByteBlockFromFile()
+* copies numBytes from src into the image to write in blocks of 10K
+* */
+int writeByteBlockFromFile(int src, VolInfo* volInfo, unsigned numBytes)
+{
+    int rc;
+    int count;
+    char block[10240]; /* 10K */
+    int numBlocks;
+    int sizeLastBlock;
+    
+    numBlocks = numBytes / 10240;
+    sizeLastBlock = numBytes % 10240;
+    
+    for(count = 0; count < numBlocks; count++)
+    {
+        rc = read(src, block, 10240);
+        if(rc != 10240)
+            return BKERROR_READ_GENERIC;
+        rc = wcWrite(volInfo, block, 10240);
+        if(rc <= 0)
+            return rc;
+    }
+    
+    if(sizeLastBlock > 0)
+    {
+        rc = read(src, block, sizeLastBlock);
+        if(rc != sizeLastBlock)
+                return BKERROR_READ_GENERIC;
+        rc = wcWrite(volInfo, block, sizeLastBlock);
+        if(rc <= 0)
+                return rc;
     }
     
     return 1;
@@ -621,7 +683,7 @@ int writeByteBlock(int image, unsigned char byteToWrite, int numBytes)
 * directory records for directories but not for files.
 * Returns data length of the dir written.
 * */
-int writeDir(int image, DirToWrite* dir, int parentLbNum, 
+int writeDir(VolInfo* volInfo, DirToWrite* dir, int parentLbNum, 
              int parentNumBytes, int parentPosix, time_t recordingTime, 
              int filenameTypes, bool isRoot)
 {
@@ -635,8 +697,8 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     DirToWrite parentDir;
     
     BaseToWrite* child;
-    
-    if(lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+    printf("writedir\n");
+    if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
         return BKERROR_SANITY;
     
     /* names other then 9660 are not used for self and parent */
@@ -650,7 +712,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     else
         parentDir.base.posixFileMode = parentPosix;
     
-    startPos = lseek(image, 0, SEEK_CUR);
+    startPos = wcSeekTell(volInfo);
     
     if( startPos % NBYTES_LOGICAL_BLOCK != 0 )
     /* this should never happen */
@@ -664,7 +726,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     /* write self */
     if(isRoot)
     {
-        rc = writeDr(image, BASETW_PTR(&selfDir), recordingTime, true, true, true, filenameTypes);
+        rc = writeDr(volInfo, BASETW_PTR(&selfDir), recordingTime, true, true, true, filenameTypes);
         if(rc < 0)
             return rc;
         
@@ -675,7 +737,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     }
     else
     {
-        rc = writeDr(image, BASETW_PTR(&selfDir), recordingTime, true, true, false, filenameTypes);
+        rc = writeDr(volInfo, BASETW_PTR(&selfDir), recordingTime, true, true, false, filenameTypes);
         if(rc < 0)
             return rc;
     }
@@ -683,7 +745,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         return rc;
     
     /* write parent */
-    rc = writeDr(image, BASETW_PTR(&parentDir), recordingTime, true, true, false, filenameTypes);
+    rc = writeDr(volInfo, BASETW_PTR(&parentDir), recordingTime, true, true, false, filenameTypes);
     if(rc < 0)
         return rc;
     
@@ -694,12 +756,12 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     {
         if(IS_DIR(child->posixFileMode))
         {
-            rc = writeDr(image, child, recordingTime, 
+            rc = writeDr(volInfo, child, recordingTime, 
                          true,  false, false, filenameTypes);
         }
         else
         {
-            rc = writeDr(image, child, recordingTime, 
+            rc = writeDr(volInfo, child, recordingTime, 
                          false,  false, false, filenameTypes);
         }
         if(rc < 0)
@@ -711,15 +773,15 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     
     /* write blank to conclude extent */
     numUnusedBytes = NBYTES_LOGICAL_BLOCK - 
-                     lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK;
-    rc = writeByteBlock(image, 0x00, numUnusedBytes);
+                     wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK;
+    rc = writeByteBlock(volInfo, 0x00, numUnusedBytes);
     if(rc < 0)
         return rc;
     
     if(filenameTypes & FNTYPE_JOLIET)
-        dir->dataLength2 = lseek(image, 0, SEEK_CUR) - startPos;
+        dir->dataLength2 = wcSeekTell(volInfo) - startPos;
     else
-        dir->base.dataLength = lseek(image, 0, SEEK_CUR) - startPos;
+        dir->base.dataLength = wcSeekTell(volInfo) - startPos;
     
     /* write subdirectories */
     child = dir->children;
@@ -729,13 +791,13 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         {
             if(filenameTypes & FNTYPE_JOLIET)
             {
-                rc = writeDir(image, DIRTW_PTR(child), dir->extentNumber2, 
+                rc = writeDir(volInfo, DIRTW_PTR(child), dir->extentNumber2, 
                               dir->dataLength2, dir->base.posixFileMode, recordingTime,
                               filenameTypes, false);
             }
             else
             {
-                rc = writeDir(image, DIRTW_PTR(child), dir->base.extentNumber, 
+                rc = writeDir(volInfo, DIRTW_PTR(child), dir->base.extentNumber, 
                               dir->base.dataLength, dir->base.posixFileMode, recordingTime,
                               filenameTypes, false);
             }
@@ -746,31 +808,33 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         child = child->next;
     }
     
-    endPos = lseek(image, 0, SEEK_CUR);
+    endPos = wcSeekTell(volInfo);
     
     /* SELF extent location and size */
     if(filenameTypes & FNTYPE_JOLIET)
-        lseek(image, selfDir.base.extentLocationOffset2, SEEK_SET);
+        rc = wcSeekSet(volInfo, selfDir.base.extentLocationOffset2);
     else
-        lseek(image, selfDir.base.extentLocationOffset, SEEK_SET);
+        rc = wcSeekSet(volInfo, selfDir.base.extentLocationOffset);
+    if(rc <= 0)
+        return rc;
     
     if(filenameTypes & FNTYPE_JOLIET)
     {
-        rc = write733(image, dir->extentNumber2);
+        rc = write733(volInfo, dir->extentNumber2);
         if(rc <= 0)
             return rc;
         
-        rc = write733(image, dir->dataLength2);
+        rc = write733(volInfo, dir->dataLength2);
         if(rc <= 0)
             return rc;
     }
     else
     {
-        rc = write733(image, dir->base.extentNumber);
+        rc = write733(volInfo, dir->base.extentNumber);
         if(rc <= 0)
             return rc;
         
-        rc = write733(image, dir->base.dataLength);
+        rc = write733(volInfo, dir->base.dataLength);
         if(rc <= 0)
             return rc;
     }
@@ -778,30 +842,32 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     
     /* PARENT extent location and size */
     if(filenameTypes & FNTYPE_JOLIET)
-        lseek(image, parentDir.base.extentLocationOffset2, SEEK_SET);
+        rc = wcSeekSet(volInfo, parentDir.base.extentLocationOffset2);
     else
-        lseek(image, parentDir.base.extentLocationOffset, SEEK_SET);
+        rc = wcSeekSet(volInfo, parentDir.base.extentLocationOffset);
+    if(rc <= 0)
+        return rc;
     
     if(parentLbNum == 0)
     /* root, parent is same as self */
     {
         if(filenameTypes & FNTYPE_JOLIET)
         {
-            rc = write733(image, dir->extentNumber2);
+            rc = write733(volInfo, dir->extentNumber2);
             if(rc <= 0)
                 return rc;
             
-            rc = write733(image, dir->dataLength2);
+            rc = write733(volInfo, dir->dataLength2);
             if(rc <= 0)
                 return rc;
         }
         else
         {
-            rc = write733(image, dir->base.extentNumber);
+            rc = write733(volInfo, dir->base.extentNumber);
             if(rc <= 0)
                 return rc;
             
-            rc = write733(image, dir->base.dataLength);
+            rc = write733(volInfo, dir->base.dataLength);
             if(rc <= 0)
                 return rc;
         }
@@ -809,11 +875,11 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     else
     /* normal parent */
     {
-        rc = write733(image, parentLbNum);
+        rc = write733(volInfo, parentLbNum);
         if(rc <= 0)
             return rc;
         
-        rc = write733(image, parentNumBytes);
+        rc = write733(volInfo, parentNumBytes);
         if(rc <= 0)
             return rc;
     }
@@ -827,25 +893,29 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
         {
             if(filenameTypes & FNTYPE_JOLIET)
             {
-                lseek(image, child->extentLocationOffset2, SEEK_SET);
-                
-                rc = write733(image, DIRTW_PTR(child)->extentNumber2);
+                wcSeekSet(volInfo, child->extentLocationOffset2);
                 if(rc <= 0)
                     return rc;
                 
-                rc = write733(image, DIRTW_PTR(child)->dataLength2);
+                rc = write733(volInfo, DIRTW_PTR(child)->extentNumber2);
+                if(rc <= 0)
+                    return rc;
+                
+                rc = write733(volInfo, DIRTW_PTR(child)->dataLength2);
                 if(rc <= 0)
                     return rc;
             }
             else
             {
-                lseek(image, child->extentLocationOffset, SEEK_SET);
-                
-                rc = write733(image, child->extentNumber);
+                wcSeekSet(volInfo, child->extentLocationOffset);
                 if(rc <= 0)
                     return rc;
                 
-                rc = write733(image, child->dataLength);
+                rc = write733(volInfo, child->extentNumber);
+                if(rc <= 0)
+                    return rc;
+                
+                rc = write733(volInfo, child->dataLength);
                 if(rc <= 0)
                     return rc;
             }
@@ -855,7 +925,9 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
     }
     /* END ALL subdir extent locations and sizes */
     
-    lseek(image, endPos, SEEK_SET);
+    wcSeekSet(volInfo, endPos);
+    if(rc <= 0)
+        return rc;
     
     if(filenameTypes & FNTYPE_JOLIET)
         return dir->dataLength2;
@@ -869,7 +941,7 @@ int writeDir(int image, DirToWrite* dir, int parentLbNum,
 * Note that it uses only the members of DirToWrite and FileToWrite that are
 * the same.
 * */
-int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir, 
+int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADir, 
             bool isSelfOrParent, bool isFirstRecord, int filenameTypes)
 {
     int rc;
@@ -884,51 +956,56 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     /* look at the end of the function for an explanation */
     writeDrStartLabel:
     
-    startPos = lseek(image, 0, SEEK_CUR);
+    startPos = wcSeekTell(volInfo);
     
     /* record length is recorded in the end */
-    lseek(image, 1, SEEK_CUR);
+    rc = wcSeekForward(volInfo, 1);
+    if(rc <= 0)
+        return rc;
     
     /* extended attribute record length */
     byte = 0;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     if(filenameTypes & FNTYPE_JOLIET)
-        dir->extentLocationOffset2 = lseek(image, 0, SEEK_CUR);
+        dir->extentLocationOffset2 = wcSeekTell(volInfo);
     else
-        dir->extentLocationOffset = lseek(image, 0, SEEK_CUR);
+        dir->extentLocationOffset = wcSeekTell(volInfo);
     
     /* location of extent not recorded in this function */
-    lseek(image, 8, SEEK_CUR);
+    rc = wcSeekForward(volInfo, 8);
+    if(rc <= 0)
+        return rc;
     
     /* data length not recorded in this function */
-    lseek(image, 8, SEEK_CUR);
+    wcSeekForward(volInfo, 8);
+    if(rc <= 0)
+        return rc;
     
     /* RECORDING time and date */
     epochToShortString(recordingTime, aString);
     
-    //!! combine all these into one write
-    rc = write711(image, aString[0]);
+    rc = write711(volInfo, aString[0]);
     if(rc <= 0)
         return rc;
-    rc = write711(image, aString[1]);
+    rc = write711(volInfo, aString[1]);
     if(rc <= 0)
         return rc;
-    rc = write711(image, aString[2]);
+    rc = write711(volInfo, aString[2]);
     if(rc <= 0)
         return rc;
-    rc = write711(image, aString[3]);
+    rc = write711(volInfo, aString[3]);
     if(rc <= 0)
         return rc;
-    rc = write711(image, aString[4]);
+    rc = write711(volInfo, aString[4]);
     if(rc <= 0)
         return rc;
-    rc = write711(image, aString[5]);
+    rc = write711(volInfo, aString[5]);
     if(rc <= 0)
         return rc;
-    rc = write711(image, aString[6]);
+    rc = write711(volInfo, aString[6]);
     if(rc <= 0)
         return rc;
     /* END RECORDING time and date */
@@ -941,25 +1018,25 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     /* nothing on */
         byte = 0x00;
     
-    rc = writeWrapper(image, &byte, 1);
+    rc = wcWrite(volInfo, (char*)&byte, 1);
     if(rc <= 0)
         return rc;
     /* END FILE flags  */
     
     /* file unit size (always 0, non-interleaved mode) */
     byte = 0;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     /* interleave gap size (also always 0, non-interleaved mode) */
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     /* volume sequence number (always 1) */
     aShort = 1;
-    rc = write723(image, aShort);
+    rc = write723(volInfo, aShort);
     if(rc <= 0)
         return rc;
     
@@ -977,7 +1054,7 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
                 lenFileId = strlen(dir->name9660) + 2; */
     }
     
-    rc = write711(image, lenFileId);
+    rc = write711(volInfo, lenFileId);
     if(rc <= 0)
         return rc;
     /* END LENGTH of file identifier */
@@ -986,7 +1063,7 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     if(isSelfOrParent)
     {
         /* that byte has 0x00 or 0x01 */
-        rc = write711(image, dir->name9660[0]);
+        rc = write711(volInfo, dir->name9660[0]);
         if(rc <= 0)
             return rc;
     }
@@ -994,7 +1071,7 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     {
         if(filenameTypes & FNTYPE_JOLIET)
         {
-            rc = writeJolietStringField(image, dir->nameJoliet, 
+            rc = writeJolietStringField(volInfo, dir->nameJoliet, 
                                         2 * strlen(dir->nameJoliet));
             if(rc < 0)
                 return rc;
@@ -1009,7 +1086,7 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
             if(isADir)
             {*/
                 /* the name */
-                rc = writeWrapper(image, dir->name9660, lenFileId);
+                rc = wcWrite(volInfo, dir->name9660, lenFileId);
                 if(rc <= 0)
                     return rc;
             /*}
@@ -1031,7 +1108,7 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     if(lenFileId % 2 == 0)
     {
         byte = 0;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
     }
@@ -1040,31 +1117,33 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     {
         if(isFirstRecord)
         {
-            rc = writeRockSP(image);
+            rc = writeRockSP(volInfo);
             if(rc < 0)
                 return rc;
             
-            rc = writeRockER(image);
+            rc = writeRockER(volInfo);
             if(rc < 0)
                 return rc;
         }
         
-        rc = writeRockPX(image, dir->posixFileMode, isADir);
+        rc = writeRockPX(volInfo, dir->posixFileMode, isADir);
         if(rc < 0)
             return rc;
         
         if(!isSelfOrParent)
         {
-            if(lseek(image, 0, SEEK_CUR) - startPos < strlen(dir->nameRock) + 5)
+            if(wcSeekTell(volInfo) - startPos < strlen(dir->nameRock) + 5)
             /* have no room for the NM entry in this directory record */
             {
-                dir->offsetForCE = lseek(image, 0, SEEK_CUR);
+                dir->offsetForCE = wcSeekTell(volInfo);
                 /* leave room for CE entry */
-                lseek(image, 28, SEEK_CUR);
+                rc = wcSeekForward(volInfo, 28);
+                if(rc < 0)
+                    return rc;
             }
             else
             {
-                rc = writeRockNM(image, dir->nameRock, strlen(dir->nameRock), false);
+                rc = writeRockNM(volInfo, dir->nameRock, strlen(dir->nameRock), false);
                 if(rc < 0)
                     return rc;
             }
@@ -1072,16 +1151,20 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     }
     
     /* RECORD length */
-    endPos = lseek(image, 0, SEEK_CUR);
+    endPos = wcSeekTell(volInfo);
     
-    lseek(image, startPos, SEEK_SET);
-    
-    recordLen = endPos - startPos;
-    rc = write711(image, recordLen);
+    rc = wcSeekSet(volInfo, startPos);
     if(rc <= 0)
         return rc;
     
-    lseek(image, endPos, SEEK_SET);
+    recordLen = endPos - startPos;
+    rc = write711(volInfo, recordLen);
+    if(rc <= 0)
+        return rc;
+    
+    rc = wcSeekSet(volInfo, endPos);
+    if(rc <= 0)
+        return rc;
     /* END RECORD length */
     
     /* the goto is good! really!
@@ -1095,11 +1178,13 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
     if(endPos / NBYTES_LOGICAL_BLOCK > startPos / NBYTES_LOGICAL_BLOCK)
     /* crossed a logical sector boundary while writing the record */
     {
-        lseek(image, startPos, SEEK_SET);
+        rc = wcSeekSet(volInfo, startPos);
+        if(rc < 0)
+            return rc;
         
         /* overwrite a piece of the record written in this function
         * (the piece that's in the first sector) with zeroes */
-        rc = writeByteBlock(image, 0x00, recordLen - endPos % NBYTES_LOGICAL_BLOCK);
+        rc = writeByteBlock(volInfo, 0x00, recordLen - endPos % NBYTES_LOGICAL_BLOCK);
         if(rc < 0)
             return rc;
         
@@ -1115,7 +1200,7 @@ int writeDr(int image, BaseToWrite* dir, time_t recordingTime, bool isADir,
 * Returns the offset where the boot record sector number should
 * be written (7.3.1).
 * */
-int writeElToritoBootCatalog(int image, const VolInfo* volInfo)
+int writeElToritoBootCatalog(VolInfo* volInfo)
 {
     unsigned char buffer[NBYTES_LOGICAL_BLOCK];
     off_t bootRecordSectorNumberOffset;
@@ -1123,7 +1208,7 @@ int writeElToritoBootCatalog(int image, const VolInfo* volInfo)
     
     bzero(buffer, NBYTES_LOGICAL_BLOCK);
     
-    if(lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+    if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
     /* file pointer not at sector boundary */
         return BKERROR_SANITY;
     
@@ -1165,11 +1250,11 @@ int writeElToritoBootCatalog(int image, const VolInfo* volInfo)
     write721ToByteArray(&(buffer[38]), 4);
     /* logical block number of boot record file. this is not known until 
     * after that file is written */
-    bootRecordSectorNumberOffset = lseek(image, 0, SEEK_CUR) + 40;
+    bootRecordSectorNumberOffset = wcSeekTell(volInfo) + 40;
     /* the rest is unused, leave it at 0 */
     /* END SETUP INITIAL entry (next 20 bytes of boot catalog) */
     
-    rc = writeWrapper(image, buffer, NBYTES_LOGICAL_BLOCK);
+    rc = wcWrite(volInfo, (char*)buffer, NBYTES_LOGICAL_BLOCK);
     if(rc <= 0)
         return rc;
     
@@ -1182,15 +1267,15 @@ int writeElToritoBootCatalog(int image, const VolInfo* volInfo)
 * Returns the offset where the boot catalog sector number should 
 * be written (7.3.1).
 * */
-int writeElToritoVd(int image, const VolInfo* volInfo)
+int writeElToritoVd(VolInfo* volInfo)
 {
-    unsigned char buffer[NBYTES_LOGICAL_BLOCK];
+    char buffer[NBYTES_LOGICAL_BLOCK];
     off_t bootCatalogSectorNumberOffset;
     int rc;
-    
+    printf("vd at %X\n", (int)wcSeekTell(volInfo));
     bzero(buffer, NBYTES_LOGICAL_BLOCK);
     
-    if(lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+    if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
     /* file pointer not at sector boundary */
         return BKERROR_SANITY;
     
@@ -1202,15 +1287,15 @@ int writeElToritoVd(int image, const VolInfo* volInfo)
     buffer[6] = 1;
     /* boot system identifier, must be 32 bytes "EL TORITO SPECIFICATION" 
     * padded with 0x00 (bzero at start took care of this) */
-    strncpy((char*)&(buffer[7]), "EL TORITO SPECIFICATION", 23);
+    strncpy(&(buffer[7]), "EL TORITO SPECIFICATION", 23);
     /* unused 32 bytes, must be 0 (bzero at start took care of this) */
     /* boot catalog location, 4 byte intel format. written later. */
-    bootCatalogSectorNumberOffset = lseek(image, 0, SEEK_CUR) + 71;
+    bootCatalogSectorNumberOffset = wcSeekTell(volInfo) + 71;
     //write731ToByteArray(&(buffer[71]), bootCatalogSectorNumber);
     /* the rest of this sector is unused, must be set to 0 */
     /* END SETUP BOOT record volume descriptor sector */
     
-    rc = writeWrapper(image, buffer, NBYTES_LOGICAL_BLOCK);
+    rc = wcWrite(volInfo, buffer, NBYTES_LOGICAL_BLOCK);
     if(rc <= 0)
         return rc;
     
@@ -1222,7 +1307,7 @@ int writeElToritoVd(int image, const VolInfo* volInfo)
 * Write file contents into an extent and also write the file's location and 
 * size into the directory records back in the tree.
 * */
-int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo, 
+int writeFileContents(VolInfo* volInfo, 
                       DirToWrite* dir, int filenameTypes, 
                       void(*progressFunction)(void))
 {
@@ -1239,11 +1324,10 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
     {
         if( IS_REG_FILE(child->posixFileMode) )
         {
-            if(lseek(newImage, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+            if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
                 return BKERROR_SANITY;
             
-            child->extentNumber = lseek(newImage, 0, SEEK_CUR) / 
-                                  NBYTES_LOGICAL_BLOCK;
+            child->extentNumber = wcSeekTell(volInfo) / NBYTES_LOGICAL_BLOCK;
             
             if(volInfo->bootMediaType != BOOT_MEDIA_NONE && 
                volInfo->bootRecordIsVisible &&
@@ -1253,14 +1337,18 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
             {
                 off_t currPos;
                 
-                currPos = lseek(newImage, 0, SEEK_CUR);
+                currPos = wcSeekTell(volInfo);
                 
-                lseek(newImage, volInfo->bootRecordSectorNumberOffset, SEEK_SET);
-                rc = write731(newImage, currPos / NBYTES_LOGICAL_BLOCK);
+                rc = wcSeekSet(volInfo, volInfo->bootRecordSectorNumberOffset);
+                if(rc <= 0)
+                    return rc;
+                rc = write731(volInfo, currPos / NBYTES_LOGICAL_BLOCK);
                 if(rc <= 0)
                     return rc;
                 
-                lseek(newImage, currPos, SEEK_SET);
+                rc = wcSeekSet(volInfo, currPos);
+                if(rc <= 0)
+                    return rc;
             }
             
             if(progressFunction != NULL)
@@ -1269,9 +1357,9 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
             if(FILETW_PTR(child)->onImage)
             /* copy file from original image to new one */
             {
-                lseek(oldImage, FILETW_PTR(child)->offset, SEEK_SET);
+                lseek(volInfo->imageForReading, FILETW_PTR(child)->offset, SEEK_SET);
                 
-                rc = copyByteBlock(oldImage, newImage, FILETW_PTR(child)->size);
+                rc = writeByteBlockFromFile(volInfo->imageForReading, volInfo, FILETW_PTR(child)->size);
                 if(rc < 0)
                     return rc;
             }
@@ -1282,7 +1370,7 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
                 if(srcFile == -1)
                     return BKERROR_OPEN_READ_FAILED;
                 
-                rc = copyByteBlock(srcFile, newImage, FILETW_PTR(child)->size);
+                rc = writeByteBlockFromFile(srcFile, volInfo, FILETW_PTR(child)->size);
                 if(rc < 0)
                 {
                     close(srcFile);
@@ -1294,20 +1382,20 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
                     return BKERROR_EXOTIC;
             }
             
-            child->dataLength = lseek(newImage, 0, SEEK_CUR) - 
+            child->dataLength = wcSeekTell(volInfo) - 
                                 child->extentNumber * 
                                 NBYTES_LOGICAL_BLOCK;
             
             /* FILL extent with zeroes */
             numUnusedBytes = NBYTES_LOGICAL_BLOCK - 
-                             lseek(newImage, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK;
+                             wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK;
             
-            rc = writeByteBlock(newImage, 0x00, numUnusedBytes);
+            rc = writeByteBlock(volInfo, 0x00, numUnusedBytes);
             if(rc < 0)
                 return rc;
             /* END FILL extent with zeroes */
             
-            endPos = lseek(newImage, 0, SEEK_CUR);
+            endPos = wcSeekTell(volInfo);
             
             if(volInfo->bootMediaType != BOOT_MEDIA_NONE && 
                volInfo->bootRecordIsVisible &&
@@ -1321,8 +1409,10 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
                 bzero(bootInfoTable, 56);
                 
                 /* go to the offset in the file where the boot info table is */
-                lseek(newImage, child->extentNumber * 
-                      NBYTES_LOGICAL_BLOCK + 8, SEEK_SET);
+                rc = wcSeekSet(volInfo, child->extentNumber * 
+                               NBYTES_LOGICAL_BLOCK + 8);
+                if(rc <= 0)
+                    return rc;
                 
                 /* sector number of pvd */
                 write731ToByteArray(bootInfoTable, 16);
@@ -1332,48 +1422,54 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
                 write731ToByteArray(bootInfoTable + 8, FILETW_PTR(child)->size);
                 /* 32 bit checksum (the sum of all the 32-bit words in the boot
                 * file starting at byte offset 64 */
-                rc = bootInfoTableChecksum(oldImage, FILETW_PTR(child), &checksum);
+                rc = bootInfoTableChecksum(volInfo->imageForReading, FILETW_PTR(child), &checksum);
                 if(rc <= 0)
                     return rc;
                 write731ToByteArray(bootInfoTable + 12, checksum);
                 /* the rest is reserved, leave at zero */
                 
-                rc = writeWrapper(newImage, bootInfoTable, 56);
+                rc = wcWrite(volInfo, (char*)bootInfoTable, 56);
                 if(rc <= 0)
                     return rc;
             }
             
             /* WRITE file location and size */
-            lseek(newImage, child->extentLocationOffset, SEEK_SET);
-            
-            rc = write733(newImage, child->extentNumber);
+            rc = wcSeekSet(volInfo, child->extentLocationOffset);
             if(rc <= 0)
                 return rc;
             
-            rc = write733(newImage, child->dataLength);
+            rc = write733(volInfo, child->extentNumber);
+            if(rc <= 0)
+                return rc;
+            
+            rc = write733(volInfo, child->dataLength);
             if(rc <= 0)
                 return rc;
             
             if(filenameTypes & FNTYPE_JOLIET)
             /* also update location and size on joliet tree */
             {
-                lseek(newImage, child->extentLocationOffset2, SEEK_SET);
-                
-                rc = write733(newImage, child->extentNumber);
+                rc = wcSeekSet(volInfo, child->extentLocationOffset2);
                 if(rc <= 0)
                     return rc;
                 
-                rc = write733(newImage, child->dataLength);
+                rc = write733(volInfo, child->extentNumber);
+                if(rc <= 0)
+                    return rc;
+                
+                rc = write733(volInfo, child->dataLength);
                 if(rc <= 0)
                     return rc;
             }
             
-            lseek(newImage, endPos, SEEK_SET);
+            rc = wcSeekSet(volInfo, endPos);
+            if(rc < 0)
+                return rc;
             /* END WRITE file location and size */
         }
         else if( IS_DIR(child->posixFileMode) )
         {
-            rc = writeFileContents(oldImage, newImage, volInfo, DIRTW_PTR(child), 
+            rc = writeFileContents(volInfo, DIRTW_PTR(child), 
                                    filenameTypes, progressFunction);
             if(rc < 0)
                 return rc;
@@ -1387,9 +1483,10 @@ int writeFileContents(int oldImage, int newImage, const VolInfo* volInfo,
 }
 
 /* field size must be even. <-- huh? why? */
-int writeJolietStringField(int image, const char* name, int fieldSize)
+int writeJolietStringField(VolInfo* volInfo, const char* name, int fieldSize)
 {
-    char jolietName[512]; /* don't see why would ever want to write a longer one */
+    char jolietName[512]; /* don't see why would ever want 
+                          * to write a longer one */
     int srcCount;
     int destCount;
     int rc;
@@ -1416,7 +1513,7 @@ int writeJolietStringField(int image, const char* name, int fieldSize)
         destCount += 2;
     }
     
-    rc = writeWrapper(image, jolietName, destCount);
+    rc = wcWrite(volInfo, jolietName, destCount);
     if(rc <= 0)
         return rc;
     
@@ -1424,7 +1521,7 @@ int writeJolietStringField(int image, const char* name, int fieldSize)
 }
 
 /* write NM that won't fit in a directory record */
-int writeLongNM(int image, BaseToWrite* dir)
+int writeLongNM(VolInfo* volInfo, BaseToWrite* dir)
 {
     off_t startPos;
     int fullNameLen;
@@ -1435,7 +1532,7 @@ int writeLongNM(int image, BaseToWrite* dir)
     int rc;
     int lenOfCE;
     
-    startPos = lseek(image, 0, SEEK_CUR);
+    startPos = wcSeekTell(volInfo);
     
     fullNameLen = strlen(dir->nameRock);
     
@@ -1457,32 +1554,34 @@ int writeLongNM(int image, BaseToWrite* dir)
     /* NM record(s) */
     if(fitsInOneNM)
     {
-        rc = writeRockNM(image, dir->nameRock, firstNMlen, false);
+        rc = writeRockNM(volInfo, dir->nameRock, firstNMlen, false);
         if(rc <= 0)
             return rc;
     }
     else
     {
-        rc = writeRockNM(image, dir->nameRock, firstNMlen, true);
+        rc = writeRockNM(volInfo, dir->nameRock, firstNMlen, true);
         if(rc <= 0)
             return rc;
-        rc = writeRockNM(image, dir->nameRock + firstNMlen, fullNameLen - firstNMlen, false);
+        rc = writeRockNM(volInfo, dir->nameRock + firstNMlen, fullNameLen - firstNMlen, false);
         if(rc <= 0)
             return rc;
     }
     
-    lenOfCE = lseek(image, 0, SEEK_CUR) - startPos;
+    lenOfCE = wcSeekTell(volInfo) - startPos;
     
     /* write blank to conclude extent */
-    rc = writeByteBlock(image, 0x00, NBYTES_LOGICAL_BLOCK - 
-                        lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK);
+    rc = writeByteBlock(volInfo, 0x00, NBYTES_LOGICAL_BLOCK - 
+                        wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK);
     if(rc < 0)
         return rc;
     
-    endPos = lseek(image, 0, SEEK_CUR);
+    endPos = wcSeekTell(volInfo);
     
     /* CE record back in the directory record */
-    lseek(image, dir->offsetForCE, SEEK_SET);
+    rc = wcSeekSet(volInfo, dir->offsetForCE);
+    if(rc < 0)
+        return rc;
     
     CErecord[0] = 'C';
     CErecord[1] = 'E';
@@ -1493,18 +1592,20 @@ int writeLongNM(int image, BaseToWrite* dir)
     write733ToByteArray(CErecord + 12, 0); /* offset to start */
     write733ToByteArray(CErecord + 20, lenOfCE); /* length */
     
-    rc = write(image, CErecord, CErecord[2]);
-    if(rc != CErecord[2])
-        return BKERROR_WRITE_GENERIC;
+    rc = wcWrite(volInfo, (char*)CErecord, CErecord[2]);
+    if(rc <= 0)
+        return rc;
     /* END CE record back in the directory record */
     
-    lseek(image, endPos, SEEK_SET);
+    rc = wcSeekSet(volInfo, endPos);
+    if(rc <= 0)
+        return rc;
     
     return 1;
 }
 
 /* write all NMs in the tree that won't fit in directory records */
-int writeLongNMsInDir(int image, DirToWrite* dir)
+int writeLongNMsInDir(VolInfo* volInfo, DirToWrite* dir)
 {
     BaseToWrite* child;
     int rc;
@@ -1514,14 +1615,14 @@ int writeLongNMsInDir(int image, DirToWrite* dir)
     {
         if(child->offsetForCE != 0)
         {
-            rc = writeLongNM(image, child);
+            rc = writeLongNM(volInfo, child);
             if(rc <= 0)
                 return rc;
         }
         
         if( IS_DIR(child->posixFileMode) )
         {
-            rc = writeLongNMsInDir(image, DIRTW_PTR(child));
+            rc = writeLongNMsInDir(volInfo, DIRTW_PTR(child));
             if(rc <= 0)
                 return rc;
         }
@@ -1533,7 +1634,8 @@ int writeLongNMsInDir(int image, DirToWrite* dir)
 }
 
 /* returns path table size (number of bytes not counting the blank) */
-int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filenameType)
+int writePathTable(VolInfo* volInfo, const DirToWrite* tree, bool isTypeL, 
+                   int filenameType)
 {
     int treeHeight;
     int count;
@@ -1544,9 +1646,9 @@ int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filename
     int numBytesWritten;
     int rc;
     
-    origPos = lseek(image, 0, SEEK_CUR);
+    origPos = wcSeekTell(volInfo);
     
-    if(lseek(image, 0, SEEK_CUR) % NBYTES_LOGICAL_BLOCK != 0)
+    if(origPos % NBYTES_LOGICAL_BLOCK != 0)
         return BKERROR_SANITY;
     
     treeHeight = countTreeHeight(tree, 1);
@@ -1577,7 +1679,7 @@ int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filename
             }
         }
         
-        rc = writePathTableRecordsOnLevel(image, tree, isTypeL, filenameType, 
+        rc = writePathTableRecordsOnLevel(volInfo, tree, isTypeL, filenameType, 
                                           level, 1, &numDirsSoFar);
         if(rc < 0)
         {
@@ -1586,11 +1688,11 @@ int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filename
         }
     }
     
-    numBytesWritten = lseek(image, 0, SEEK_CUR) - origPos;
+    numBytesWritten = wcSeekTell(volInfo) - origPos;
     
     /* blank to conclude extent */
-    rc = writeByteBlock(image, 0x00, NBYTES_LOGICAL_BLOCK - 
-                                     numBytesWritten % NBYTES_LOGICAL_BLOCK);
+    rc = writeByteBlock(volInfo, 0x00, NBYTES_LOGICAL_BLOCK - 
+                        numBytesWritten % NBYTES_LOGICAL_BLOCK);
     if(rc < 0)
     {
         free(dirsPerLevel);
@@ -1602,8 +1704,9 @@ int writePathTable(int image, const DirToWrite* tree, bool isTypeL, int filename
     return numBytesWritten;
 }
 
-int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL, 
-                                 int filenameType, int targetLevel, int thisLevel,
+int writePathTableRecordsOnLevel(VolInfo* volInfo, const DirToWrite* dir, 
+                                 bool isTypeL, int filenameType, 
+                                 int targetLevel, int thisLevel,
                                  int* parentDirNum)
 {
     int rc;
@@ -1634,14 +1737,14 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
             }
         }
         
-        rc = write711(image, fileIdLen);
+        rc = write711(volInfo, fileIdLen);
         if(rc <= 0)
             return rc;
         /* END LENGTH  of directory identifier */
         
         /* extended attribute record length */
         byte = 0;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
         
@@ -1652,9 +1755,9 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
             exentLocation = BASETW_PTR(dir)->extentNumber;
         
         if(isTypeL)
-            rc = write731(image, exentLocation);
+            rc = write731(volInfo, exentLocation);
         else
-            rc = write732(image, exentLocation);
+            rc = write732(volInfo, exentLocation);
         if(rc <= 0)
             return rc;
         /* END LOCATION of extent */
@@ -1663,9 +1766,9 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
         parentDirId = *parentDirNum;
         
         if(isTypeL)
-            rc = write721(image, parentDirId);
+            rc = write721(volInfo, parentDirId);
         else
-            rc = write722(image, parentDirId);
+            rc = write722(volInfo, parentDirId);
         
         if(rc <= 0)
             return rc;
@@ -1675,7 +1778,7 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
         if(targetLevel == 1)
         /* root */
         {
-            rc = writeWrapper(image, &rootId, 1);
+            rc = wcWrite(volInfo, &rootId, 1);
             if(rc <= 0)
                 return rc;
         }
@@ -1683,13 +1786,13 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
         {
             if(filenameType & FNTYPE_JOLIET)
             {
-                rc = writeJolietStringField(image, BASETW_PTR(dir)->nameJoliet, fileIdLen);
+                rc = writeJolietStringField(volInfo, BASETW_PTR(dir)->nameJoliet, fileIdLen);
                 if(rc < 0)
                     return rc;
             }
             else
             {
-                rc = writeWrapper(image, BASETW_PTR(dir)->name9660, fileIdLen);
+                rc = wcWrite(volInfo, BASETW_PTR(dir)->name9660, fileIdLen);
                 if(rc <= 0)
                     return rc;
             }
@@ -1700,7 +1803,7 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
         if(fileIdLen % 2 != 0)
         {
             byte = 0;
-            rc = write711(image, byte);
+            rc = write711(volInfo, byte);
             if(rc <= 0)
                 return rc;
         }
@@ -1723,7 +1826,7 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
                     }
                 }
                 
-                rc = writePathTableRecordsOnLevel(image, DIRTW_PTR(child), isTypeL,
+                rc = writePathTableRecordsOnLevel(volInfo, DIRTW_PTR(child), isTypeL,
                                                   filenameType, targetLevel, 
                                                   thisLevel + 1, parentDirNum);
                 if(rc < 0)
@@ -1739,10 +1842,10 @@ int writePathTableRecordsOnLevel(int image, const DirToWrite* dir, bool isTypeL,
 
 /* This doesn't need support for CE because it's only written in one place,
 * the root 'self' directory record. */
-int writeRockER(int image)
+int writeRockER(VolInfo* volInfo)
 {
     int rc;
-    unsigned char record[46];
+    char record[46];
     
     /* identification */
     record[0] = 'E';
@@ -1767,25 +1870,25 @@ int writeRockER(int image)
     record[7] = 1;
     
     /* extension identifier */
-    strncpy((char*)&(record[8]), "IEEE_P1282", 10);
+    strncpy(&(record[8]), "IEEE_P1282", 10);
     
     /* extension descriptor */
-    strncpy((char*)&(record[18]), "DRAFT_1_12", 10);
+    strncpy(&(record[18]), "DRAFT_1_12", 10);
     
     /* extension source */
-    strncpy((char*)&(record[28]), "ADOPTED_1994_07_08", 18);
+    strncpy(&(record[28]), "ADOPTED_1994_07_08", 18);
     
-    rc = writeWrapper(image, record, 46);
+    rc = wcWrite(volInfo, record, 46);
     if(rc <= 0)
         return rc;
     
     return 1;
 }
 
-int writeRockNM(int image, char* name, int nameLen, bool doesContinue)
+int writeRockNM(VolInfo* volInfo, char* name, int nameLen, bool doesContinue)
 {
     int rc;
-    unsigned char recordStart[5];
+    char recordStart[5];
     
     /* identification */
     recordStart[0] = 'N';
@@ -1803,11 +1906,11 @@ int writeRockNM(int image, char* name, int nameLen, bool doesContinue)
     else
         recordStart[4] = 0;
     
-    rc = writeWrapper(image, recordStart, 5);
+    rc = wcWrite(volInfo, recordStart, 5);
     if(rc <= 0)
         return rc;
     
-    rc = writeWrapper(image, name, nameLen);
+    rc = wcWrite(volInfo, name, nameLen);
     if(rc <= 0)
         return rc;
     
@@ -1816,7 +1919,7 @@ int writeRockNM(int image, char* name, int nameLen, bool doesContinue)
 
 /* the slackware cd has 36 byte PX entries, missing the file serial number
 * so i will do the same */
-int writeRockPX(int image, unsigned posixFileMode, bool isADir)
+int writeRockPX(VolInfo* volInfo, unsigned posixFileMode, bool isADir)
 {
     int rc;
     unsigned char record[36];
@@ -1853,7 +1956,7 @@ int writeRockPX(int image, unsigned posixFileMode, bool isADir)
     /* posix file user id, posix file group id */
     bzero(&(record[20]), 16);
     
-    rc = writeWrapper(image, record, 36);
+    rc = wcWrite(volInfo, (char*)record, 36);
     if(rc <= 0)
         return rc;
     
@@ -1862,7 +1965,7 @@ int writeRockPX(int image, unsigned posixFileMode, bool isADir)
 
 /* This doesn't need support for CE because it's only written in one place,
 * the root 'self' directory record. */
-int writeRockSP(int image)
+int writeRockSP(VolInfo* volInfo)
 {
     int rc;
     unsigned char record[7];
@@ -1884,38 +1987,38 @@ int writeRockSP(int image)
     /* bytes skipped */
     record[6] = 0;
     
-    rc = writeWrapper(image, record, 7);
+    rc = wcWrite(volInfo, (char*)record, 7);
     if(rc <= 0)
         return rc;
     
     return 1;
 }
 
-int writeVdsetTerminator(int image)
+int writeVdsetTerminator(VolInfo* volInfo)
 {
     int rc;
     unsigned char byte;
-    char aString[6];
+    unsigned char aString[6];
     
     /* volume descriptor type */
     byte = 255;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     /* standard identifier */
-    strcpy(aString, "CD001");
-    rc = writeWrapper(image, aString, 5);
+    strcpy((char*)aString, "CD001");
+    rc = wcWrite(volInfo, (char*)aString, 5);
     if(rc <= 0)
         return rc;
     
     /* volume descriptor version */
     byte = 1;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
-    rc = writeByteBlock(image, 0, 2041);
+    rc = writeByteBlock(volInfo, 0, 2041);
     if(rc < 0)
         return rc;
     
@@ -1928,7 +2031,7 @@ int writeVdsetTerminator(int image)
 * -rootdr location, size are in bytes
 * -note strings are not terminated on image
 */
-int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
+int writeVolDescriptor(VolInfo* volInfo, off_t rootDrLocation,
                        unsigned rootDrSize, off_t lPathTableLoc, 
                        off_t mPathTableLoc, unsigned pathTableSize, 
                        time_t creationTime, bool isPrimary)
@@ -1937,7 +2040,7 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
     int count;
     
     unsigned char byte;
-    char aString[129];
+    unsigned char aString[129];
     unsigned anUnsigned;
     unsigned short anUnsignedShort;
     size_t currPos;
@@ -1949,40 +2052,40 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
         byte = 2;
     /* END VOLUME descriptor type */
 
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     /* standard identifier */
-    strcpy(aString, "CD001");
-    rc = writeWrapper(image, aString, 5);
+    strcpy((char*)aString, "CD001");
+    rc = wcWrite(volInfo, (char*)aString, 5);
     if(rc <= 0)
         return rc;
     
     /* volume descriptor version (always 1) */
     byte = 1;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     /* primary: unused field
     *  supplementary: volume flags, 0x00 */
     byte = 0;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     /* system identifier (32 spaces) */
     if(isPrimary)
     {
-        strcpy(aString, "                                ");
-        rc = writeWrapper(image, aString, 32);
+        strcpy((char*)aString, "                                ");
+        rc = wcWrite(volInfo, (char*)aString, 32);
         if(rc <= 0)
             return rc;
     }
     else
     {
-        rc = writeJolietStringField(image, "", 32);
+        rc = writeJolietStringField(volInfo, "", 32);
         if(rc < 0)
             return rc;
     }
@@ -1990,37 +2093,39 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
     /* VOLUME identifier */
     if(isPrimary)
     {
-        strcpy(aString, volInfo->volId);
+        strcpy((char*)aString, volInfo->volId);
         
-        for(count = strlen(aString); count < 32; count++)
+        for(count = strlen((char*)aString); count < 32; count++)
             aString[count] = ' ';
         
-        rc = writeWrapper(image, aString, 32);
+        rc = wcWrite(volInfo, (char*)aString, 32);
         if(rc <= 0)
             return rc;
     }
     else
     {
-        rc = writeJolietStringField(image, volInfo->volId, 32);
+        rc = writeJolietStringField(volInfo, volInfo->volId, 32);
         if(rc < 0)
             return rc;
     }
     /* END VOLUME identifier */
     
     /* unused field */
-    rc = writeByteBlock(image, 0, 8);
+    rc = writeByteBlock(volInfo, 0, 8);
     if(rc < 0)
         return rc;
     
     /* VOLUME space size (number of logical blocks, absolutely everything) */
-    currPos = lseek(image, 0, SEEK_CUR);
+    /* it's safe to not use wcSeek() here since everything is left as it is */
+    currPos = lseek(volInfo->imageForWriting, 0, SEEK_CUR);
     
-    lseek(image, 0, SEEK_END);
-    anUnsigned = lseek(image, 0, SEEK_CUR) / NBYTES_LOGICAL_BLOCK;
+    lseek(volInfo->imageForWriting, 0, SEEK_END);
+    anUnsigned = lseek(volInfo->imageForWriting, 0, SEEK_CUR) / 
+                 NBYTES_LOGICAL_BLOCK;
     
-    lseek(image, currPos, SEEK_SET);
+    lseek(volInfo->imageForWriting, currPos, SEEK_SET);
     
-    rc = write733(image, anUnsigned);
+    rc = write733(volInfo, anUnsigned);
     if(rc <= 0)
         return rc;
     /* END VOLUME space size (number of logical blocks, absolutely everything) */
@@ -2029,7 +2134,7 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
     *  joliet: escape sequences */
     if(isPrimary)
     {
-        rc = writeByteBlock(image, 0, 32);
+        rc = writeByteBlock(volInfo, 0, 32);
         if(rc < 0)
             return rc;
     }
@@ -2040,124 +2145,124 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
         aString[1] = 0x2F;
         aString[2] = 0x45;
         
-        rc = writeWrapper(image, aString, 3);
+        rc = wcWrite(volInfo, (char*)aString, 3);
         if(rc <= 0)
             return rc;
         
-        rc = writeByteBlock(image, 0, 29);
+        rc = writeByteBlock(volInfo, 0, 29);
         if(rc < 0)
             return rc;
     }
     
     /* volume set size (always 1) */
     anUnsignedShort = 1;
-    rc = write723(image, anUnsignedShort);
+    rc = write723(volInfo, anUnsignedShort);
     if(rc <= 0)
         return rc;
     
     /* volume sequence number (also always 1) */
-    rc = write723(image, anUnsignedShort);
+    rc = write723(volInfo, anUnsignedShort);
     if(rc <= 0)
         return rc;
     
     /* logical block size (always 2048) */
     anUnsignedShort = NBYTES_LOGICAL_BLOCK;
-    rc = write723(image, anUnsignedShort);
+    rc = write723(volInfo, anUnsignedShort);
     if(rc <= 0)
         return rc;
     
     /* path table size */
     anUnsigned = pathTableSize;
-    rc = write733(image, anUnsigned);
+    rc = write733(volInfo, anUnsigned);
     if(rc <= 0)
         return rc;
     
     /* location of occurence of type l path table */
     anUnsigned = lPathTableLoc / NBYTES_LOGICAL_BLOCK;
-    rc = write731(image, anUnsigned);
+    rc = write731(volInfo, anUnsigned);
     if(rc <= 0)
         return rc;
     
     /* location of optional occurence of type l path table */
     anUnsigned = 0;
-    rc = write731(image, anUnsigned);
+    rc = write731(volInfo, anUnsigned);
     if(rc <= 0)
         return rc;
     
     /* location of occurence of type m path table */
     anUnsigned = mPathTableLoc / NBYTES_LOGICAL_BLOCK;
-    rc = write732(image, anUnsigned);
+    rc = write732(volInfo, anUnsigned);
     if(rc <= 0)
         return rc;
     
     /* location of optional occurence of type m path table */
     anUnsigned = 0;
-    rc = write732(image, anUnsigned);
+    rc = write732(volInfo, anUnsigned);
     if(rc <= 0)
         return rc;
     
     /* ROOT dr */
         /* record length (always 34 here) */
         byte = 34;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
         
         /* extended attribute record length (always none) */
         byte = 0;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
         
         /* location of extent */
         anUnsigned = rootDrLocation / NBYTES_LOGICAL_BLOCK;
-        rc = write733(image, anUnsigned);
+        rc = write733(volInfo, anUnsigned);
         if(rc <= 0)
             return rc;
         
         /* data length */
-        rc = write733(image, rootDrSize);
+        rc = write733(volInfo, rootDrSize);
         if(rc <= 0)
             return rc;
         
         /* recording time */
-        epochToShortString(creationTime, aString);
-        rc = writeWrapper(image, aString, 7);
+        epochToShortString(creationTime, (char*)aString);
+        rc = wcWrite(volInfo, (char*)aString, 7);
         if(rc <= 0)
             return rc;
         
         /* file flags (always binary 00000010 here) */
         byte = 0x02;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
         
         /* file unit size (not in interleaved mode -> 0) */
         byte = 0;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
         
         /* interleave gap size (not in interleaved mode -> 0) */
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
          
         /* volume sequence number */
         anUnsignedShort = 1;
-        rc = write723(image, anUnsignedShort);
+        rc = write723(volInfo, anUnsignedShort);
         if(rc <= 0)
             return rc;
         
         /* length of file identifier */
         byte = 1;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
         
         /* file identifier */
         byte = 0;
-        rc = write711(image, byte);
+        rc = write711(volInfo, byte);
         if(rc <= 0)
             return rc;
     /* END ROOT dr */
@@ -2165,32 +2270,32 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
     /* volume set identidier */
     if(isPrimary)
     {
-        rc = writeByteBlock(image, ' ', 128);
+        rc = writeByteBlock(volInfo, ' ', 128);
         if(rc < 0)
             return rc;
     }
     else
     {
-        rc = writeJolietStringField(image, "", 128);
+        rc = writeJolietStringField(volInfo, "", 128);
         if(rc < 0)
             return rc;
     }
     
     /* PUBLISHER identifier */
-    strcpy(aString, volInfo->publisher);
+    strcpy((char*)aString, volInfo->publisher);
     
     if(isPrimary)
     {
-        for(count = strlen(aString); count < 128; count++)
+        for(count = strlen((char*)aString); count < 128; count++)
             aString[count] = ' ';
         
-        rc = writeWrapper(image, aString, 128);
+        rc = wcWrite(volInfo, (char*)aString, 128);
         if(rc <= 0)
             return rc;
     }
     else
     {
-        rc = writeJolietStringField(image, aString, 128);
+        rc = writeJolietStringField(volInfo, (char*)aString, 128);
         if(rc < 0)
             return rc;
     }
@@ -2199,17 +2304,17 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
     /* DATA preparer identifier */
     if(isPrimary)
     {
-        rc = writeWrapper(image, "ISO Master", 10);
+        rc = wcWrite(volInfo, "ISO Master", 10);
         if(rc <= 0)
             return rc;
         
-        rc = writeByteBlock(image, ' ', 118);
+        rc = writeByteBlock(volInfo, ' ', 118);
         if(rc < 0)
             return rc;
     }
     else
     {
-        rc = writeJolietStringField(image, "ISO Master", 128);
+        rc = writeJolietStringField(volInfo, "ISO Master", 128);
         if(rc < 0)
             return rc;
     }
@@ -2219,68 +2324,68 @@ int writeVolDescriptor(int image, const VolInfo* volInfo, off_t rootDrLocation,
     * identifier, bibliographic file identifier (128 + 3*37) */
     if(isPrimary)
     {
-        rc = writeByteBlock(image, ' ', 239);
+        rc = writeByteBlock(volInfo, ' ', 239);
         if(rc < 0)
             return rc;
     }
     else
     {
         /* application id */
-        rc = writeJolietStringField(image, "", 128);
+        rc = writeJolietStringField(volInfo, "", 128);
         if(rc < 0)
             return rc;
         
         /* 18 ucs2 spaces + 0x00 */
         for(count = 0; count < 3; count++)
         {
-            rc = writeJolietStringField(image, "", 36);
+            rc = writeJolietStringField(volInfo, "", 36);
             if(rc < 0)
                 return rc;
             
             byte = 0x00;
-            rc = writeWrapper(image, &byte, 1);
+            rc = wcWrite(volInfo, (char*)&byte, 1);
             if(rc <= 0)
                 return rc;
         }
     }
     
     /* VOLUME creation date */
-    epochToLongString(creationTime, aString);
+    epochToLongString(creationTime, (char*)aString);
     
-    rc = writeWrapper(image, aString, 17);
+    rc = wcWrite(volInfo, (char*)aString, 17);
     if(rc <= 0)
         return rc;
     /* END VOLUME creation date */
     
     /* volume modification date (same as creation) */
-    rc = writeWrapper(image, aString, 17);
+    rc = wcWrite(volInfo, (char*)aString, 17);
     if(rc <= 0)
         return rc;
     
     /* VOLUME expiration date (none) */
-    rc = writeByteBlock(image, '0', 16);
+    rc = writeByteBlock(volInfo, '0', 16);
     if(rc < 0)
         return rc;
     
     byte = 0;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     /* END VOLUME expiration date (none) */
     
     /* volume effective date (same as creation) */
-    rc = writeWrapper(image, aString, 17);
+    rc = wcWrite(volInfo, (char*)aString, 17);
     if(rc <= 0)
         return rc;
     
     /* file structure version */
     byte = 1;
-    rc = write711(image, byte);
+    rc = write711(volInfo, byte);
     if(rc <= 0)
         return rc;
     
     /* reserved, applications use, reserved */
-    rc = writeByteBlock(image, 0, 1166);
+    rc = writeByteBlock(volInfo, 0, 1166);
     if(rc < 0)
         return rc;
     

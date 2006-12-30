@@ -1,6 +1,7 @@
 #ifndef bkExtract_h
 #define bkExtract_h
 
+int copyByteBlock(int src, int dest, unsigned numBytes);
 int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract, 
             const char* destDir, bool keepPermissions, 
             void(*progressFunction)(void));

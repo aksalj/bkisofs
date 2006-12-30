@@ -13,8 +13,10 @@
 ******************************************************************************/
 
 #include <string.h>
+#include <stdio.h>
 
 #include "bkInternal.h"
+#include "bkCache.h"
 
 #define CACHED_STATUS_UNSET 0 /* don't write */
 #define CACHED_STATUS_SET   1 /* do write */
@@ -26,41 +28,50 @@ int wcFlush(VolInfo* volInfo)
     off_t numBytesToSkip;
     off_t numBytesToWrite;
     int rc;
+    printf("want to wcFlush (offset is 0x%X+%d)\n", (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)volInfo->wcOffset);fflush(NULL);
+    //~ for(count = 0, count2 = 0; count < WRITE_CACHE_SIZE; count++)
+        //~ printf("%d", volInfo->writeCacheStatus[count]);
+    //~ for(count = 0, count2 = 0; count < WRITE_CACHE_SIZE; count++)
+        //~ if(volInfo->writeCacheStatus[count] == CACHED_STATUS_SET)count2++;
+    //~ printf("\n%d bytes set\n", (int)count2);
+    //~ for(count = 0, count2 = 0; count < WRITE_CACHE_SIZE; count++)
+        //~ if(volInfo->writeCacheStatus[count] == CACHED_STATUS_UNSET)count2++;
+    //~ printf("%d bytes unset\n", (int)count2);
+    
+    if(volInfo->wcNumBytesUsed > WRITE_CACHE_SIZE)
+        return BKERROR_SANITY;
     
     numBytesToSkip = 0;
-    for(count = 0; count < WRITE_CACHE_SIZE; count++)
+    for(count = 0; count < volInfo->wcNumBytesUsed; count++)
     {
         if(volInfo->writeCacheStatus[count] == CACHED_STATUS_SET)
         {
             lseek(volInfo->imageForWriting, numBytesToSkip, SEEK_CUR);
+            numBytesToSkip = 0;
             
             /* count number of consecutive bytes to write */
             for(count2 = count; 
-                count2 < WRITE_CACHE_SIZE && 
+                count2 < volInfo->wcNumBytesUsed && 
                 volInfo->writeCacheStatus[count2] == CACHED_STATUS_SET;
-                count2++) ;
-            
-            if(volInfo->writeCacheStatus[count2] == CACHED_STATUS_UNSET)
-                numBytesToSkip = 1;
-            else
-                numBytesToSkip = 0;
-            
+                count2++) 
+                ;
             numBytesToWrite = count2 - count;
             
             rc = write(volInfo->imageForWriting, 
-                       &(volInfo->writeCacheStatus[count]), 
+                       &(volInfo->writeCache[count]), 
                        numBytesToWrite);
             if(rc != numBytesToWrite)
                 return BKERROR_WRITE_GENERIC;
             
-            count = count2;
+            /* count will be incremented byt outer for loop */
+            count = count2 - 1;
         }
         else if(volInfo->writeCacheStatus[count] == CACHED_STATUS_UNSET)
             numBytesToSkip++;
         else
             return BKERROR_SANITY;
     }
-    
+    printf("before seek (offset is 0x%X, skipping 0x%X)\n\n", (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)numBytesToSkip);fflush(NULL);
     lseek(volInfo->imageForWriting, numBytesToSkip, SEEK_CUR);
     
     wcInit(volInfo);
@@ -76,14 +87,15 @@ void wcInit(VolInfo* volInfo)
     /* no bytes ready to be written */
     memset(volInfo->writeCacheStatus, CACHED_STATUS_UNSET, WRITE_CACHE_SIZE);
     
-    volInfo->writeCacheOffset = 0;
+    volInfo->wcOffset = 0;
+    volInfo->wcNumBytesUsed = 0;
 }
 
 int wcSeekForward(VolInfo* volInfo, off_t numBytes)
 {
     int rc;
-    
-    if(volInfo->writeCacheOffset + numBytes >= WRITE_CACHE_SIZE)
+    printf("want to wcSeekForward %d bytes\n", (unsigned)numBytes);fflush(NULL);
+    if(volInfo->wcOffset + numBytes >= WRITE_CACHE_SIZE)
     {
         rc = wcFlush(volInfo);
         if(rc <= 0)
@@ -93,7 +105,11 @@ int wcSeekForward(VolInfo* volInfo, off_t numBytes)
         lseek(volInfo->imageForWriting, origPos + numBytes, SEEK_SET);
     }
     else
-        volInfo->writeCacheOffset += numBytes;
+    {
+        volInfo->wcOffset += numBytes;
+        if(volInfo->wcOffset > volInfo->wcNumBytesUsed)
+            volInfo->wcNumBytesUsed = volInfo->wcOffset;
+    }
     
     return 1;
 }
@@ -102,7 +118,7 @@ int wcSeekSet(VolInfo* volInfo, off_t position)
 {
     int rc;
     off_t origPos;
-    
+    printf("want to wcSeekSet to 0x%X\n", (unsigned)position);fflush(NULL);
     origPos = lseek(volInfo->imageForWriting, 0, SEEK_CUR);
     
     if(position < origPos || position >= origPos + WRITE_CACHE_SIZE)
@@ -114,7 +130,11 @@ int wcSeekSet(VolInfo* volInfo, off_t position)
         lseek(volInfo->imageForWriting, position, SEEK_SET);
     }
     else
-        volInfo->writeCacheOffset = position - origPos;
+    {
+        volInfo->wcOffset = position - origPos;
+        if(volInfo->wcOffset > volInfo->wcNumBytesUsed)
+            volInfo->wcNumBytesUsed = volInfo->wcOffset;
+    }
     
     return 1;
 }
@@ -122,17 +142,17 @@ int wcSeekSet(VolInfo* volInfo, off_t position)
 off_t wcSeekTell(VolInfo* volInfo)
 {
     return lseek(volInfo->imageForWriting, 0, SEEK_CUR) + 
-           volInfo->writeCacheOffset;
+           volInfo->wcOffset;
 }
 
-int wcWrite(VolInfo* volInfo, unsigned char* block, off_t numBytes)
+int wcWrite(VolInfo* volInfo, const char* block, off_t numBytes)
 {
     off_t numBytesAvailable;
     off_t numBytesNow;
     off_t numBytesLeft;
     int rc;
-    
-    numBytesAvailable = WRITE_CACHE_SIZE - volInfo->writeCacheOffset;
+    printf("want to wcwrite %d bytes (offset is 0x%X+%d)\n", (unsigned)numBytes, (unsigned)lseek(volInfo->imageForWriting, 0, SEEK_CUR), (unsigned)volInfo->wcOffset);fflush(NULL);
+    numBytesAvailable = WRITE_CACHE_SIZE - volInfo->wcOffset;
     
     if(numBytes < numBytesAvailable)
     {
@@ -145,11 +165,13 @@ int wcWrite(VolInfo* volInfo, unsigned char* block, off_t numBytes)
         numBytesLeft = numBytes - numBytesAvailable;
     }
     
-    memcpy(volInfo->writeCache + volInfo->writeCacheOffset, 
+    memcpy(volInfo->writeCache + volInfo->wcOffset, 
            block, numBytesNow);
-    memset(volInfo->writeCacheStatus + volInfo->writeCacheOffset, 
+    memset(volInfo->writeCacheStatus + volInfo->wcOffset, 
            CACHED_STATUS_SET, numBytesNow);
-    volInfo->writeCacheOffset += numBytesNow;
+    volInfo->wcOffset += numBytesNow;
+    if(volInfo->wcOffset > volInfo->wcNumBytesUsed)
+        volInfo->wcNumBytesUsed = volInfo->wcOffset;
     
     if(numBytesLeft > 0)
     {
