@@ -7,6 +7,7 @@ ui:
 
 bk:
 -dos doesn't like names to start with underscores
+-split bk_write_image()
 
 
 c99 compatibility issues:

@@ -100,6 +100,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     
@@ -109,6 +110,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return bootCatalogSectorNumberOffset;
     }
     
@@ -120,6 +122,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return bootCatalogSectorNumberOffset;
         }
     }
@@ -133,6 +136,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return bootCatalogSectorNumberOffset;
         }
     }
@@ -144,6 +148,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     
@@ -156,6 +161,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         rc = write731(volInfo, currPos / NBYTES_LOGICAL_BLOCK);
@@ -163,6 +169,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         wcSeekSet(volInfo, currPos);
@@ -170,6 +177,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         
@@ -180,6 +188,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return volInfo->bootRecordSectorNumberOffset;
         }
     }
@@ -207,6 +216,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             {
                 freeDirToWriteContents(&newTree);
                 close(volInfo->imageForWriting);
+                unlink(newImagePathAndName);
                 return BKERROR_OPEN_READ_FAILED;
             }
             srcFileOpened = true;
@@ -219,6 +229,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return BKERROR_OPEN_READ_FAILED;
         }
         
@@ -229,6 +240,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             if(srcFileOpened)
                 close(srcFile);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         wcSeekSet(volInfo, currPos);
@@ -238,6 +250,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             if(srcFileOpened)
                 close(srcFile);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         
@@ -249,6 +262,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             if(srcFileOpened)
                 close(srcFile);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         
@@ -263,6 +277,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             if(srcFileOpened)
                 close(srcFile);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         
@@ -285,6 +300,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     
@@ -305,6 +321,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         
@@ -319,6 +336,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     pathTable9660Size = rc;
@@ -329,6 +347,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     
@@ -341,6 +360,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         pathTableJolietSize = rc;
@@ -351,6 +371,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
     }
@@ -362,6 +383,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     
@@ -373,6 +395,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
     }
@@ -382,6 +405,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     
@@ -393,6 +417,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     {
         freeDirToWriteContents(&newTree);
         close(volInfo->imageForWriting);
+        unlink(newImagePathAndName);
         return rc;
     }
     
@@ -403,6 +428,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
         
@@ -414,6 +440,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
+            unlink(newImagePathAndName);
             return rc;
         }
     }
