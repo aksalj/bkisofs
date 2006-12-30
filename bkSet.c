@@ -15,33 +15,17 @@
 #include <string.h>
 #include <unistd.h>
 #include <strings.h>
+#include <stdio.h>
 
 #include "bk.h"
 #include "bkDelete.h"
 #include "bkPath.h"
 #include "bkError.h"
 
-/*******************************************************************************
-* bk_init_vol_info()
-*
-* */
-int bk_init_vol_info(VolInfo* volInfo)
+void bk_cancel_operation(VolInfo* volInfo)
 {
-    bzero(volInfo, sizeof(VolInfo));
-    
-    volInfo->writeCache = malloc(WRITE_CACHE_SIZE);
-    if(volInfo->writeCache == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    volInfo->writeCacheStatus = malloc(WRITE_CACHE_SIZE);
-    if(volInfo->writeCacheStatus == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    volInfo->dirTree.base.posixFileMode = 040755;
-    volInfo->posixFileDefaults = 0100644;
-    volInfo->posixDirDefaults = 040755;
-    
-    return 1;
+    printf("stop operation\n");fflush(NULL);
+    volInfo->stopOperation = true;
 }
 
 /*******************************************************************************
@@ -65,6 +49,29 @@ void bk_destroy_vol_info(VolInfo* volInfo)
     
     if(volInfo->imageForReading > 0)
         close(volInfo->imageForReading);
+}
+
+/*******************************************************************************
+* bk_init_vol_info()
+*
+* */
+int bk_init_vol_info(VolInfo* volInfo)
+{
+    bzero(volInfo, sizeof(VolInfo));
+    
+    volInfo->writeCache = malloc(WRITE_CACHE_SIZE);
+    if(volInfo->writeCache == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    volInfo->writeCacheStatus = malloc(WRITE_CACHE_SIZE);
+    if(volInfo->writeCacheStatus == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    volInfo->dirTree.base.posixFileMode = 040755;
+    volInfo->posixFileDefaults = 0100644;
+    volInfo->posixDirDefaults = 040755;
+    
+    return 1;
 }
 
 /*******************************************************************************
@@ -148,9 +155,4 @@ void bk_set_publisher(VolInfo* volInfo, const char* publisher)
 void bk_set_vol_name(VolInfo* volInfo, const char* volName)
 {
     strncpy(volInfo->volId, volName, 32);
-}
-
-void bk_cancel_operation(VolInfo* volInfo)
-{
-    volInfo->stopOperation = true;
 }

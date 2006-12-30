@@ -7,7 +7,6 @@ ui:
 
 bk:
 -dos doesn't like names to start with underscores
--cancel writing
 
 
 c99 compatibility issues:

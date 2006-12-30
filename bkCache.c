@@ -38,6 +38,9 @@ int wcFlush(VolInfo* volInfo)
         //~ if(volInfo->writeCacheStatus[count] == CACHED_STATUS_UNSET)count2++;
     //~ printf("%d bytes unset\n", (int)count2);
     
+    if(volInfo->stopOperation)
+        return BKERROR_OPER_CANCELED_BY_USER;
+    
     if(volInfo->writeProgressFunction != NULL)
         volInfo->writeProgressFunction();
     

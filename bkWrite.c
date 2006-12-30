@@ -63,6 +63,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     off_t currPos;
     
     volInfo->writeProgressFunction = progressFunction;
+    volInfo->stopOperation = false;
     
     rc = stat(newImagePathAndName, &statStruct);
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
