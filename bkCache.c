@@ -216,6 +216,12 @@ int wcWrite(VolInfo* volInfo, const char* block, off_t numBytes)
             percentComplete = (double)statStruct.st_size * 100 / 
                               volInfo->estimatedIsoSize + 1;
             
+            /* estimate isn't perfect */
+            if(percentComplete > 100)
+                percentComplete = 100;
+            else if (percentComplete < 0)
+                percentComplete = 0;
+            
             volInfo->writeProgressFunction(percentComplete);
             volInfo->lastTimeCalledProgress = timeNow;
         }
