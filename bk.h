@@ -108,11 +108,13 @@ typedef struct
     bool rootRead; /* did i read the root record inside volume descriptor? */
     bool stopOperation; /* cancel current opertion */
     int imageForWriting;
-    unsigned char* writeCache;
-    unsigned char* writeCacheStatus;
-    off_t wcOffset;
-    off_t wcNumBytesUsed;
-    void(*writeProgressFunction)(void);
+    //~ unsigned char* writeCache;
+    //~ unsigned char* writeCacheStatus;
+    //~ off_t wcOffset;
+    //~ off_t wcNumBytesUsed;
+    void(*writeProgressFunction)(double);
+    time_t lastTimeCalledProgress;
+    off_t estimatedIsoSize;
     
     /* public use, read only */
     time_t creationTime;
@@ -157,7 +159,7 @@ int bk_extract(VolInfo* volInfo, const char* srcPathAndName,
                void(*progressFunction)(void));
 
 /* getters */
-unsigned bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
+off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
 time_t bk_get_creation_time(const VolInfo* volInfo);
 int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr, 
                            BkDir** dirFoundPtr);
@@ -181,6 +183,6 @@ int bk_read_vol_info(VolInfo* volInfo);
 /* writing */
 int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
-                   void(*progressFunction)(void));
+                   void(*progressFunction)(double));
 
 #endif

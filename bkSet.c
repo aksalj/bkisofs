@@ -24,7 +24,6 @@
 
 void bk_cancel_operation(VolInfo* volInfo)
 {
-    printf("stop operation\n");fflush(NULL);
     volInfo->stopOperation = true;
 }
 
@@ -38,11 +37,11 @@ void bk_destroy_vol_info(VolInfo* volInfo)
 {
     deleteDirContents(volInfo, &(volInfo->dirTree));
     
-    if(volInfo->writeCache != NULL)
-        free(volInfo->writeCache);
+    //~ if(volInfo->writeCache != NULL)
+        //~ free(volInfo->writeCache);
     
-    if(volInfo->writeCacheStatus != NULL)
-        free(volInfo->writeCacheStatus);
+    //~ if(volInfo->writeCacheStatus != NULL)
+        //~ free(volInfo->writeCacheStatus);
     
     if(volInfo->bootRecordPathAndName != NULL)
         free(volInfo->bootRecordPathAndName);
@@ -59,13 +58,13 @@ int bk_init_vol_info(VolInfo* volInfo)
 {
     bzero(volInfo, sizeof(VolInfo));
     
-    volInfo->writeCache = malloc(WRITE_CACHE_SIZE);
-    if(volInfo->writeCache == NULL)
-        return BKERROR_OUT_OF_MEMORY;
+    //~ volInfo->writeCache = malloc(WRITE_CACHE_SIZE);
+    //~ if(volInfo->writeCache == NULL)
+        //~ return BKERROR_OUT_OF_MEMORY;
     
-    volInfo->writeCacheStatus = malloc(WRITE_CACHE_SIZE);
-    if(volInfo->writeCacheStatus == NULL)
-        return BKERROR_OUT_OF_MEMORY;
+    //~ volInfo->writeCacheStatus = malloc(WRITE_CACHE_SIZE);
+    //~ if(volInfo->writeCacheStatus == NULL)
+        //~ return BKERROR_OUT_OF_MEMORY;
     
     volInfo->dirTree.base.posixFileMode = 040755;
     volInfo->posixFileDefaults = 0100644;

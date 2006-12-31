@@ -25,7 +25,7 @@
 * Public function
 * Estimates the size of the directory trees + file contents on the iso
 * */
-unsigned bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
+off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
 {
     //!! add path tables, boot record
     return estimateIsoSize(&(volInfo->dirTree), filenameTypes);
@@ -76,10 +76,10 @@ const char* bk_get_volume_name(const VolInfo* volInfo)
 * Recursive
 * Estimate the size of the directory trees + file contents on the iso
 * */
-unsigned estimateIsoSize(const BkDir* tree, int filenameTypes)
+off_t estimateIsoSize(const BkDir* tree, int filenameTypes)
 {
-    unsigned estimateDrSize;
-    unsigned thisDirSize;
+    off_t estimateDrSize;
+    off_t thisDirSize;
     int numItems; /* files and directories */
     BkFileBase* child;
     
