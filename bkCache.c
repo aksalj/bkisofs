@@ -21,6 +21,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "bkInternal.h"
 #include "bkCache.h"
@@ -207,9 +210,11 @@ int wcWrite(VolInfo* volInfo, const char* block, off_t numBytes)
         
         if(timeNow - volInfo->lastTimeCalledProgress >= 1)
         {
+            struct stat statStruct;
             double percentComplete;
-            percentComplete = (double)wcSeekTell(volInfo) * 100 / 
-                               volInfo->estimatedIsoSize;
+            fstat(volInfo->imageForWriting, &statStruct);
+            percentComplete = (double)statStruct.st_size * 100 / 
+                              volInfo->estimatedIsoSize + 1;
             
             volInfo->writeProgressFunction(percentComplete);
             volInfo->lastTimeCalledProgress = timeNow;
