@@ -52,27 +52,6 @@ typedef struct
     
 } NewPath;
 
-/*******************************************************************************
-* Path
-* full path of a directory on the image
-* to add to root, set numDirs to 0 */
-typedef struct
-{
-    unsigned numDirs;
-    char** dirs;
-    
-} Path;
-
-/*******************************************************************************
-* FilePath
-* full path of a file on the image */
-typedef struct
-{
-    Path path;
-    char filename[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
-    
-} FilePath;
-
 typedef struct BaseToWrite
 {
     char name9660[13]; /* 8.3 max */

@@ -37,12 +37,6 @@ void bk_destroy_vol_info(VolInfo* volInfo)
 {
     deleteDirContents(volInfo, &(volInfo->dirTree));
     
-    //~ if(volInfo->writeCache != NULL)
-        //~ free(volInfo->writeCache);
-    
-    //~ if(volInfo->writeCacheStatus != NULL)
-        //~ free(volInfo->writeCacheStatus);
-    
     if(volInfo->bootRecordPathAndName != NULL)
         free(volInfo->bootRecordPathAndName);
     
@@ -58,14 +52,6 @@ int bk_init_vol_info(VolInfo* volInfo)
 {
     bzero(volInfo, sizeof(VolInfo));
     
-    //~ volInfo->writeCache = malloc(WRITE_CACHE_SIZE);
-    //~ if(volInfo->writeCache == NULL)
-        //~ return BKERROR_OUT_OF_MEMORY;
-    
-    //~ volInfo->writeCacheStatus = malloc(WRITE_CACHE_SIZE);
-    //~ if(volInfo->writeCacheStatus == NULL)
-        //~ return BKERROR_OUT_OF_MEMORY;
-    
     volInfo->dirTree.base.posixFileMode = 040755;
     volInfo->posixFileDefaults = 0100644;
     volInfo->posixDirDefaults = 040755;
@@ -80,32 +66,34 @@ int bk_init_vol_info(VolInfo* volInfo)
 int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
 {
     int rc;
-    FilePath filePath;
+    NewPath path;
     BkDir* srcDirInTree;
     BkFileBase* child;
     bool found;
     
-    rc = makeFilePathFromString(srcPathAndName, &filePath);
+    rc = makeNewPathFromString(srcPathAndName, &path);
     if(rc <= 0)
     {
-        freePathDirs(&(filePath.path));
+        freePathContents(&path);
         return rc;
     }
     
-    found = findDirByPath(&(filePath.path), &(volInfo->dirTree), &srcDirInTree);
+    path.numChildren--;
+    found = findDirByNewPath(&path, &(volInfo->dirTree), &srcDirInTree);
     if(!found)
         return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
+    path.numChildren++;
     
     /* FIND the file */
     found = false;
     child = srcDirInTree->children;
     while(child != NULL && !found)
     {
-        if(strcmp(child->name, filePath.filename) == 0)
+        if(strcmp(child->name, path.children[path.numChildren - 1]) == 0)
         {
             if( !IS_REG_FILE(child->posixFileMode) )
             {
-                freePathDirs(&(filePath.path));
+                freePathContents(&path);
                 return BKERROR_NOT_REG_FILE_FOR_BR;
             }
             
@@ -116,8 +104,10 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
             volInfo->bootRecordSize = BK_FILE_PTR(child)->size;
             
             if(volInfo->bootRecordPathAndName != NULL)
+            {
                 free(volInfo->bootRecordPathAndName);
-            volInfo->bootRecordPathAndName = NULL;
+                volInfo->bootRecordPathAndName = NULL;
+            }
             
             volInfo->bootRecordIsVisible = true;
             
@@ -128,12 +118,12 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
     }
     if(!found)
     {
-        freePathDirs(&(filePath.path));
+        freePathContents(&path);
         return BKERROR_FILE_NOT_FOUND_ON_IMAGE;
     }
     /* END FIND the file */
     
-    freePathDirs(&(filePath.path));
+    freePathContents(&path);
     
     return 1;
 }

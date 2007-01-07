@@ -153,6 +153,7 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
         {
             closedir(srcDir);
             free(newSrcPathAndName);
+            printf("%d\n", strlen(dirEnt->d_name));fflush(NULL);
             return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
         }
         

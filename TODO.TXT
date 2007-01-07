@@ -8,6 +8,7 @@ bk:
 -dos doesn't like names to start with underscores
 -split bk_write_image()
 -windows xp won't boot, probably because filenames are remangled
+-delete the debugging printfs before the 0.7
 
 
 c99 compatibility issues:
