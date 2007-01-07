@@ -42,7 +42,7 @@ bool charIsValid9660(char theChar)
     if( (theChar >= '0' && theChar <= '9') ||
         (theChar >= 'a' && theChar <= 'z') ||
         (theChar >= 'A' && theChar <= 'Z') ||
-        strchr("_-$~", theChar) )
+        strchr("._-$~", theChar) )
     {
         return true;
     }
@@ -266,7 +266,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
 /******************************************************************************
 * mangleNameFor9660()
 * Convert a long filename into an ISO9660 acceptable form: 
-* all uppercase + digits + '_' + "~", 8 chars max for directories and 8.3 chars
+* see charIsValid9660(), 8 chars max for directories and 8.3 chars
 * for files. Extension is kept if it's shorter then 4 chars.
 * 3 chars from the original name are kept, the rest is filled with ~XXXX where
 * the XXXX is a random string (but still with valid characters).
@@ -347,7 +347,7 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     
     /* GET extension */
     /* the extension of the mangled name is taken from the first 3
-       ascii chars after the dot */
+    *  ascii chars after the dot */
     extensionLen = 0;
     if(dot_p)
     {

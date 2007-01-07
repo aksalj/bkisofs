@@ -1,7 +1,6 @@
 ui:
 -alt shortcut keys need attention (all languages)
 -write man page
--if write error happens the progress window is still there
 
 
 bk:
