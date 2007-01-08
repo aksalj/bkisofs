@@ -1842,7 +1842,7 @@ int writeRockPX(VolInfo* volInfo, unsigned posixFileMode, bool isADir)
     write733ToByteArray(&(record[4]), posixFileMode);
     
     /* POSIX file links */
-    //!! this i think is number of subdirectories + 2 (self and parent)
+    // this i think is number of subdirectories + 2 (self and parent)
     // and 1 for a file
     // it's probably not used on read-only filesystems
     // to add it, i would need to pass the number of links in a parent dir
