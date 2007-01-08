@@ -38,7 +38,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
     rc = getLastNameFromPath(srcPathAndName, lastName);
     if(rc <= 0)
         return rc;
-    printf("add '%s' (%s) to '%s'\n", lastName, srcPathAndName, BK_BASE_PTR(destDir)->name);fflush(NULL);
+    
     if( !nameIsValid(lastName) )
         return BKERROR_NAME_INVALID_CHAR;
     
@@ -153,13 +153,13 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
         {
             closedir(srcDir);
             free(newSrcPathAndName);
-            printf("%d\n", strlen(dirEnt->d_name));fflush(NULL);
+            
             return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
         }
         
         /* append file/dir name */
         strcpy(newSrcPathAndName + srcPathLen, dirEnt->d_name);
-        printf("addDirContents() '%s' to '%s'\n", newSrcPathAndName, BK_BASE_PTR(destDir)->name);fflush(NULL);
+        
         rc = add(volInfo, newSrcPathAndName, destDir);
         if(rc <= 0 && rc != BKWARNING_OPER_PARTLY_FAILED)
         {
@@ -224,7 +224,6 @@ int bk_add(VolInfo* volInfo, const char* srcPathAndName,
         freePathContents(&destPath);
         return rc;
     }
-    printf("bk_add() '%s' (%s)\n", lastName, srcPathAndName);fflush(NULL);
     
     dirFound = findDirByNewPath(&destPath, &(volInfo->dirTree), &destDirInTree);
     if(!dirFound)

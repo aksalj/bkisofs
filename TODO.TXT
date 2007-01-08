@@ -5,7 +5,6 @@ ui:
 bk:
 -dos doesn't like names to start with underscores
 -split bk_write_image()
--delete the debugging printfs before the 0.7
 
 
 c99 compatibility issues:
@@ -17,11 +16,13 @@ tests to run before a release:
 - update the version number in the about box
 - remove -g and -DDEBUG from Makefile and bk/Makefile
 - update changelog.txt
+- update credits.txt
 - open iso from command-line
 - create blank, see if it mounts (try norock, nojoliet)
 - make a bootable windows (also add, delete some files)
  - see if it mounts (try norock, nojoliet)
  - see if it boots
+
 - edit a linux disk and save without rock, without joliet, without any
 - make a dos bootable cd, see if it boots
  - from scratch

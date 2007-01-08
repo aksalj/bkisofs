@@ -81,7 +81,7 @@ void deleteNode(VolInfo* volInfo, BkDir* parentDir, char* nodeToDeleteName)
 {
     BkFileBase** childPtr;
     BkFileBase* nodeToFree;
-    printf("deleteNode() '%s' from '%s'\n", nodeToDeleteName, BK_BASE_PTR(parentDir)->name);fflush(NULL);
+    
     childPtr = &(parentDir->children);
     while(*childPtr != NULL)
     {

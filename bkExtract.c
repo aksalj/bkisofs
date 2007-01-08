@@ -120,7 +120,7 @@ int bk_extract(VolInfo* volInfo, const char* srcPathAndName,
     NewPath srcPath;
     BkDir* parentDir;
     bool dirFound;
-    printf("want to extract '%s' to '%s'\n", srcPathAndName, destDir);fflush(NULL);
+    
     rc = makeNewPathFromString(srcPathAndName, &srcPath);
     if(rc <= 0)
     {
@@ -199,7 +199,7 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
 {
     BkFileBase* child;
     int rc;
-    printf("extract(%s) from '%s' to '%s'\n", nameToExtract, BK_BASE_PTR(parentDir)->name, destDir);fflush(NULL);
+    
     child = parentDir->children;
     while(child != NULL)
     {
@@ -265,7 +265,7 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
     /* vars to create destination dir */
     char* newDestDir;
     unsigned destDirPerms;
-    printf("extractDir(%s) to '%s'\n", BK_BASE_PTR(srcDir)->name, destDir);fflush(NULL);
+    
     /* CREATE destination dir on filesystem */
     /* 1 for '\0' */
     newDestDir = malloc(strlen(destDir) + strlen(BK_BASE_PTR(srcDir)->name) + 2);
@@ -356,7 +356,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     if(destDir[strlen(destDir) - 1] != '/')
         strcat(destPathAndName, "/");
     strcat(destPathAndName, BK_BASE_PTR(srcFileInTree)->name);
-    printf("extractFile(%s) to '%s' ->'%s'\n", BK_BASE_PTR(srcFileInTree)->name, destDir, destPathAndName);fflush(NULL);
+    
     if(access(destPathAndName, F_OK) == 0)
     {
         if(srcFileWasOpened)

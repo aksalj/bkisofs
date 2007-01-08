@@ -29,7 +29,7 @@ bool findDirByNewPath(const NewPath* path, BkDir* tree, BkDir** dir)
     bool dirFound;
     int count;
     BkFileBase* child;
-    printf("findDirByNewPath(numchildren %d): ", path->numChildren);fflush(NULL);
+    
     *dir = tree;
     for(count = 0; count < path->numChildren; count++)
     /* each directory in the path */
@@ -54,7 +54,7 @@ bool findDirByNewPath(const NewPath* path, BkDir* tree, BkDir** dir)
             return false;
     }
     /* END FIND dir to add to */
-    printf("'%s'\n", BK_BASE_PTR(*dir)->name);fflush(NULL);
+    
     return true;
 }
 
@@ -155,8 +155,6 @@ int getLastNameFromPath(const char* srcPathAndName, char* lastName)
     }
     lastName[count2] = '\0';
     
-    printf("getLastNameFromPath(): '%s' -> '%s'\n", srcPathAndName, lastName);fflush(NULL);
-    
     return 1;
 }
 
@@ -166,7 +164,7 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
     int pathStrLen;
     
     pathStrLen = strlen(strPath);
-    printf("makeNewPathFromString(%s):\n", strPath);fflush(NULL);
+    
     if(strPath[0] != '/')
         return BKERROR_MISFORMED_PATH;
     
@@ -177,7 +175,7 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
         if(strPath[count] != '/' && strPath[count - 1] == '/')
             pathPath->numChildren++;
     }
-    printf(" %d children\n", pathPath->numChildren);fflush(NULL);
+    
     if(pathPath->numChildren == 0)
     {
         pathPath->children = NULL;
@@ -192,7 +190,7 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
     int nextChildLen = 0;
     const char* nextChild = &(strPath[1]);
     for(count = 1; count <= pathStrLen; count++)
-    {printf("strPath[count] is '%c' (0x%X)\n", strPath[count], strPath[count]);fflush(NULL);
+    {
         if(strPath[count] == '/' || (strPath[count] == '\0' && strPath[count - 1] != '/'))
         {
             if(strPath[count] == '/' && strPath[count - 1] == '/')
@@ -210,7 +208,7 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
                 
                 strncpy(pathPath->children[numChildrenDone], nextChild, nextChildLen);
                 pathPath->children[numChildrenDone][nextChildLen] = '\0';
-                printf(" '%s' (%d of %d)\n", pathPath->children[numChildrenDone], numChildrenDone+1, pathPath->numChildren);
+                
                 numChildrenDone++;
                 nextChildLen = 0;
                 
