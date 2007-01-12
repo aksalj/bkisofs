@@ -1,5 +1,7 @@
 ui:
--alt shortcut keys need attention (all languages)
+-alt shortcut keys need attention (bulgarian)
+-sometimes the help window won't come up in the middle of the main window
+-delete key should work
 
 
 bk:
@@ -22,10 +24,8 @@ tests to run before a release:
 - make a bootable windows (also add, delete some files)
  - see if it mounts (try norock, nojoliet)
  - see if it boots
-
 - edit a linux disk and save without rock, without joliet, without any
 - make a dos bootable cd, see if it boots
  - from scratch
  - starting with an existing no emulation bootable disk
 - delete config file, make sure it still works
-- ls -R orig.iso | wc -l and ls -R new.iso | wc -l
