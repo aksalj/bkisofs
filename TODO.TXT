@@ -15,10 +15,6 @@ c99 compatibility issues:
 
 
 tests to run before a release:
-- update the version number in the about box
-- remove -g and -DDEBUG from Makefile and bk/Makefile
-- update changelog.txt
-- update credits.txt
 - open iso from command-line
 - create blank, see if it mounts (try norock, nojoliet)
 - make a bootable windows (also add, delete some files)
@@ -29,3 +25,12 @@ tests to run before a release:
  - from scratch
  - starting with an existing no emulation bootable disk
 - delete config file, make sure it still works
+
+to package a release:
+- update the version number in the about box
+- remove -g and -DDEBUG from Makefile and bk/Makefile
+- update changelog.txt
+- update credits and credits.txt
+- cd isomaster; svn export src releases/isomaster-version
+- delete icons/originals
+- tar cvjf isomaster-version.tar.bz2 isomaster-version/
