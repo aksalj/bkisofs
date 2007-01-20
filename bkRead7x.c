@@ -14,6 +14,19 @@
 
 #include <unistd.h>
 
+void flipBytes(unsigned char* value, int numBytes)
+{
+    int count;
+    unsigned char tempByte;
+    
+    for(count = 0; count < numBytes / 2; count++)
+    {
+        tempByte = value[count];
+        value[count] = value[numBytes - count - 1];
+        value[numBytes - count - 1] = tempByte;
+    }
+}
+
 int read711(int image, unsigned char* value)
 {
     return read(image, value, 1);
