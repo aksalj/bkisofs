@@ -468,7 +468,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum,
         
         if(!littleEndian)
             flipBytes((char*)&toAdd, 4);
-        
+        printf("adding 0x%X\n", toAdd);fflush(NULL);
         *checksum += toAdd;
     }
     
