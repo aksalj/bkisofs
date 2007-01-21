@@ -540,9 +540,7 @@ unsigned short elToritoChecksum(const unsigned char* record)
     sum = 0;
     for(i = 0; i < 32; i += 2)
     {
-        /* take the address of the start of every 16-bit word in the 32 byte 
-        * record, cast it to an unsigned short and add it to sum */
-        sum += *((unsigned short*)(record + i)) % 0xFFFF;
+        sum += *(record + i) | (*(record + i + 1) << 8);
     }
     
     return 0xFFFF - sum + 1;
