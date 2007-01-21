@@ -121,16 +121,13 @@ int read733(int image, unsigned* value, bool littleEndian)
     if(rc != 8)
         return rc;
     
-    *value = both[0];
-    *value <<= 8;
-    *value |= both[1];
+    *value = both[3];
     *value <<= 8;
     *value |= both[2];
     *value <<= 8;
-    *value |= both[3];
-    
-    if(!littleEndian)
-        flipBytes((char*)value, 4);
+    *value |= both[1];
+    *value <<= 8;
+    *value |= both[0];
     
     return rc;
 }
@@ -146,14 +143,11 @@ void read733FromCharArray(unsigned char* array, unsigned* value,
     else
         *value = *((unsigned*)(array + 4));*/
     
-    *value = array[0];
-    *value <<= 8;
-    *value |= array[1];
+    *value = array[3];
     *value <<= 8;
     *value |= array[2];
     *value <<= 8;
-    *value |= array[3];
-    
-    if(!littleEndian)
-        flipBytes((char*)value, 4);
+    *value |= array[1];
+    *value <<= 8;
+    *value |= array[0];
 }
