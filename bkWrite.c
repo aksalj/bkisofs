@@ -466,10 +466,10 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum,
         toAdd = *(contents + count) | (*(contents + count + 1) << 8) | 
                 (*(contents + count + 2) << 16) | (*(contents + count + 3) << 24);
         
-        if(!littleEndian)
-            flipBytes((char*)&toAdd, 4);
-        printf("adding 0x%X\n", toAdd);fflush(NULL);
-        *checksum += toAdd;
+        //~ if(!littleEndian)
+            //~ flipBytes((char*)&toAdd, 4);
+        
+        *checksum += toAdd;printf("adding 0x%X: 0x%X\n", toAdd, *checksum);fflush(NULL);
     }
     
     free(contents);
