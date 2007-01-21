@@ -459,8 +459,8 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     * reading wrong memory */
     for(count = 64; count < file->size; count += 4)
     {
-        /* keep adding the next 4 bytes */
-        *checksum += *( (int*)(contents + count) );
+        *checksum += *(contents + count) | (*(contents + count + 1) << 8) | 
+                     (*(contents + count + 2) << 16) | (*(contents + count + 3) << 24);
     }
     
     free(contents);
