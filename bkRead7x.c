@@ -16,6 +16,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "bkRead7x.h"
+
 void flipBytes(char* value, int numBytes)
 {
     int count;
@@ -121,13 +123,7 @@ int read733(int image, unsigned* value, bool littleEndian)
     if(rc != 8)
         return rc;
     
-    *value = both[3];
-    *value <<= 8;
-    *value |= both[2];
-    *value <<= 8;
-    *value |= both[1];
-    *value <<= 8;
-    *value |= both[0];
+    read733FromCharArray(both, value, littleEndian);
     
     return rc;
 }

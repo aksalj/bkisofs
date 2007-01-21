@@ -29,14 +29,18 @@ int write711(VolInfo* volInfo, unsigned char value)
     return wcWrite(volInfo, (char*)&value, 1);
 }
 
-int write712(VolInfo* volInfo, signed char value)
-{
-    return wcWrite(volInfo, (char*)&value, 1);
-}
+//~ int write712(VolInfo* volInfo, signed char value)
+//~ {
+    //~ return wcWrite(volInfo, (char*)&value, 1);
+//~ }
 
 int write721(VolInfo* volInfo, unsigned short value)
 {
-    return wcWrite(volInfo, (char*)&value, 2);
+    unsigned char preparedValue[2];
+    
+    write721ToByteArray(preparedValue, value);
+    
+    return wcWrite(volInfo, (char*)preparedValue, 2);
 }
 
 void write721ToByteArray(unsigned char* dest, unsigned short value)
@@ -47,38 +51,33 @@ void write721ToByteArray(unsigned char* dest, unsigned short value)
 
 int write722(VolInfo* volInfo, unsigned short value)
 {
-    unsigned short preparedValue;
+    unsigned char preparedValue[2];
     
-    preparedValue = value;
-    preparedValue <<= 8;
-    preparedValue |= value >> 8;
+    preparedValue[0] = (value >> 8) & 0xFF;
+    preparedValue[1] = value & 0xFF;
     
-    return wcWrite(volInfo, (char*)&preparedValue, 2);
+    return wcWrite(volInfo, (char*)preparedValue, 2);
 }
 
 int write723(VolInfo* volInfo, unsigned short value)
 {
-    int rc;
-    short preparedValue;
+    unsigned char preparedValue[4];
     
-    rc = wcWrite(volInfo, (char*)&value, 2);
-    if(rc <= 0)
-        return rc;
+    preparedValue[0] = value & 0xFF;
+    preparedValue[1] = (value >> 8) & 0xFF;
+    preparedValue[2] = preparedValue[1];
+    preparedValue[3] = preparedValue[0];
     
-    preparedValue = value;
-    preparedValue <<= 8;
-    preparedValue |= value >> 8;
-    
-    rc = wcWrite(volInfo, (char*)&preparedValue, 2);
-    if(rc <= 0)
-        return rc;
-    
-    return rc;
+    return wcWrite(volInfo, (char*)preparedValue, 4);
 }
 
 int write731(VolInfo* volInfo, unsigned value)
 {
-    return wcWrite(volInfo, (char*)&value, 4);
+    unsigned char preparedValue[4];
+    
+    write731ToByteArray(preparedValue, value);
+    
+    return wcWrite(volInfo, (char*)preparedValue, 4);
 }
 
 void write731ToByteArray(unsigned char* dest, unsigned value)
@@ -91,67 +90,34 @@ void write731ToByteArray(unsigned char* dest, unsigned value)
 
 int write732(VolInfo* volInfo, unsigned value)
 {
-    unsigned preparedValue;
+    unsigned char preparedValue[4];
     
-    preparedValue = value & 0xFF;
-    preparedValue <<= 8;
+    preparedValue[0] = (value >> 24);
+    preparedValue[1] = (value >> 16) & 0xFF;
+    preparedValue[2] = (value >> 8) & 0xFF;
+    preparedValue[3] = value & 0xFF;
     
-    preparedValue |= (value >> 8) & 0xFF;
-    preparedValue <<= 8;
-    
-    preparedValue |= (value >> 16) & 0xFF;
-    preparedValue <<= 8;
-    
-    preparedValue |= (value >> 24);
-    
-    return wcWrite(volInfo, (char*)&preparedValue, 4);
+    return wcWrite(volInfo, (char*)preparedValue, 4);
 }
 
 int write733(VolInfo* volInfo, unsigned value)
 {
-    int rc;
-    unsigned preparedValue;
+    unsigned char preparedValue[8];
     
-    rc = wcWrite(volInfo, (char*)&value, 4);
-    if(rc <= 0)
-        return rc;
+    write733ToByteArray(preparedValue, value);
     
-    preparedValue = value & 0xFF;
-    preparedValue <<= 8;
-    
-    preparedValue |= (value >> 8) & 0xFF;
-    preparedValue <<= 8;
-    
-    preparedValue |= (value >> 16) & 0xFF;
-    preparedValue <<= 8;
-    
-    preparedValue |= (value >> 24);
-    
-    rc = wcWrite(volInfo, (char*)&preparedValue, 4);
-    if(rc <= 0)
-        return rc;
-    
-    return 1;
+    return wcWrite(volInfo, (char*)preparedValue, 8);
 }
 
 void write733ToByteArray(unsigned char* dest, unsigned value)
 {
-    //~ dest[0] = value >> 24;
-    //~ dest[1] = (value >> 16) & 0xFF;
-    //~ dest[2] = (value >> 8) & 0xFF;
-    //~ dest[3] = value & 0xFF;
-    //~ dest[4] = value & 0xFF;
-    //~ dest[5] = (value >> 8) & 0xFF;
-    //~ dest[6] = (value >> 16) & 0xFF;
-    //~ dest[7] = value >> 24;
-    
     dest[0] = value & 0xFF;
     dest[1] = (value >> 8) & 0xFF;
     dest[2] = (value >> 16) & 0xFF;
     dest[3] = value >> 24;
 
-    dest[4] = value >> 24;
-    dest[5] = (value >> 16) & 0xFF;
-    dest[6] = (value >> 8) & 0xFF;
-    dest[7] = value & 0xFF;
+    dest[4] = dest[3];
+    dest[5] = dest[2];
+    dest[6] = dest[1];
+    dest[7] = dest[0];
 }
