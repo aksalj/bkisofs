@@ -35,6 +35,7 @@
 #include "bkSort.h"
 #include "bkPath.h"
 #include "bkCache.h"
+#include "bkRead7x.h"
 
 /******************************************************************************
 * bk_write_image()
@@ -401,7 +402,8 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
 * bootInfoTableChecksum()
 * Calculate the checksum to be written into the boot info table.
 * */
-int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
+int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum,
+                          bool littleEndian)
 {
     int rc;
     int srcFile;
@@ -459,8 +461,15 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     * reading wrong memory */
     for(count = 64; count < file->size; count += 4)
     {
-        *checksum += *(contents + count) | (*(contents + count + 1) << 8) | 
-                     (*(contents + count + 2) << 16) | (*(contents + count + 3) << 24);
+        unsigned toAdd;
+        
+        toAdd = *(contents + count) | (*(contents + count + 1) << 8) | 
+                (*(contents + count + 2) << 16) | (*(contents + count + 3) << 24);
+        
+        if(!littleEndian)
+            flipBytes((char*)&toAdd, 4);
+        
+        *checksum += toAdd;
     }
     
     free(contents);
@@ -1333,7 +1342,8 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                 write731ToByteArray(bootInfoTable + 8, FILETW_PTR(child)->size);
                 /* 32 bit checksum (the sum of all the 32-bit words in the boot
                 * file starting at byte offset 64 */
-                rc = bootInfoTableChecksum(volInfo->imageForReading, FILETW_PTR(child), &checksum);
+                rc = bootInfoTableChecksum(volInfo->imageForReading, FILETW_PTR(child), 
+                                           &checksum, volInfo->littleEndian);
                 if(rc <= 0)
                     return rc;
                 write731ToByteArray(bootInfoTable + 12, checksum);
