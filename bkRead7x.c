@@ -13,8 +13,9 @@
 ******************************************************************************/
 
 #include <unistd.h>
+#include <stdbool.h>
 
-void flipBytes(unsigned char* value, int numBytes)
+void flipBytes(char* value, int numBytes)
 {
     int count;
     unsigned char tempByte;
@@ -32,108 +33,106 @@ int read711(int image, unsigned char* value)
     return read(image, value, 1);
 }
 
-int read712(int image, signed char* value)
-{
-    return read(image, value, 1);
-}
+//~ int read712(int image, signed char* value)
+//~ {
+    //~ return read(image, value, 1);
+//~ }
 
-int read721(int image, unsigned short* value)
-{
-    return read(image, value, 2);
-}
+//~ int read721(int image, unsigned short* value, bool littleEndian)
+//~ {
+    //~ int rc;
+    
+    //~ rc = read(image, value, 2);
+    //~ if(rc != 2)
+        //~ return rc;
+    
+    //~ if(!littleEndian)
+        //~ flipBytes((char*)value, 2);
+    
+    //~ return rc;
+//~ }
 
-int read722(int image, unsigned short* value)
+//~ int read722(int image, unsigned short* value, bool littleEndian)
+//~ {
+    //~ int rc;
+    
+    //~ rc = read(image, value, 2);
+    //~ if(rc != 2)
+        //~ return rc;
+    
+    //~ if(littleEndian)
+        //~ flipBytes((char*)value, 2);
+    
+    //~ return rc;
+//~ }
+
+//~ int read723(int image, unsigned short* value, bool littleEndian)
+//~ {
+    //~ int rc;
+    //~ unsigned char both[4];
+    
+    //~ rc = read(image, both, 4);
+    //~ if(rc != 4)
+        //~ return rc;
+    
+    //~ if(littleEndian)
+        //~ *value = *((unsigned short*)(both));
+    //~ else
+        //~ *value = *((unsigned short*)(both + 2));
+    
+    //~ return rc;
+//~ }
+
+int read731(int image, unsigned* value, bool littleEndian)
 {
     int rc;
-    char byte;
-    
-    rc = read(image, value, 2);
-    if(rc != 2)
-        return rc;
-    
-    byte = *value >> 8;
-    *value <<= 8;
-    *value |= byte;
-    
-    return rc;
-}
-
-int read723(int image, unsigned short* value)
-{
-    int rc;
-    short trash;
-    
-    rc = read(image, value, 2);
-    if(rc != 2)
-        return rc;
-    
-    rc = read(image, &trash, 2);
-    if(rc != 2)
-        return rc;
-    
-    return 4;
-}
-
-int read731(int image, unsigned* value)
-{
-    return read(image, value, 4);
-}
-
-int read732(int image, unsigned* value)
-{
-    int rc;
-    char byte2;
-    char byte3;
-    char byte4;
     
     rc = read(image, value, 4);
     if(rc != 4)
         return rc;
     
-    byte2 = *value >> 8;
-    byte3 = *value >> 16;
-    byte4 = *value >> 24;
-    
-    *value <<= 8;
-    *value |= byte2;
-    *value <<= 8;
-    *value |= byte3;
-    *value <<= 8;
-    *value |= byte4;
+    if(!littleEndian)
+        flipBytes((char*)value, 4);
     
     return rc;
 }
 
-int read733(int image, unsigned* value)
+//~ int read732(int image, unsigned* value, bool littleEndian)
+//~ {
+    //~ int rc;
+    
+    //~ rc = read(image, value, 4);
+    //~ if(rc != 4)
+        //~ return rc;
+    
+    //~ if(littleEndian)
+        //~ flipBytes((char*)value, 4);
+    
+    //~ return rc;
+//~ }
+
+int read733(int image, unsigned* value, bool littleEndian)
 {
     int rc;
-    int trash;
+    unsigned char both[8];
     
-    rc = read(image, value, 4);
-    if(rc != 4)
+    rc = read(image, &both, 8);
+    if(rc != 8)
         return rc;
     
-    rc = read(image, &trash, 4);
-    if(rc != 4)
-        return rc;
+    if(littleEndian)
+        *value = *((unsigned*)(both));
+    else
+        *value = *((unsigned*)(both + 4));
     
-    return 8;
+    return rc;
 }
 
-void read733FromCharArray(unsigned char* array, unsigned* value)
+void read733FromCharArray(unsigned char* array, unsigned* value, 
+                          bool littleEndian)
 {
-    //~ *value = array[0];
-    //~ *value <<= 8;
-    //~ *value |= array[1];
-    //~ *value <<= 8;
-    //~ *value |= array[2];
-    //~ *value <<= 8;
-    //~ *value |= array[3];
-    *value = array[4];
-    *value <<= 8;
-    *value |= array[5];
-    *value <<= 8;
-    *value |= array[6];
-    *value <<= 8;
-    *value |= array[7];
+    if(littleEndian)
+        *value = *((unsigned*)array);
+    else
+        *value = *((unsigned*)(array + 4));
 }

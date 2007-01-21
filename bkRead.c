@@ -141,7 +141,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     /* SEE if rockridge exists */
     lseek(volInfo->imageForReading, 2, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &realRootLoc);
+    rc = read733(volInfo->imageForReading, &realRootLoc, volInfo->littleEndian);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     realRootLoc *= NBYTES_LOGICAL_BLOCK;
@@ -250,7 +250,7 @@ int bk_read_vol_info(VolInfo* volInfo)
         {
             lseek(volInfo->imageForReading, 40, SEEK_CUR);
             
-            rc = read731(volInfo->imageForReading, &bootCatalogLocation);
+            rc = read731(volInfo->imageForReading, &bootCatalogLocation, volInfo->littleEndian);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
             
@@ -438,11 +438,11 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     
     lseek(volInfo->imageForReading, 1, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &locExtent);
+    rc = read733(volInfo->imageForReading, &locExtent, volInfo->littleEndian);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    rc = read733(volInfo->imageForReading, &lenExtent);
+    rc = read733(volInfo->imageForReading, &lenExtent, volInfo->littleEndian);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
@@ -519,7 +519,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
             if(lenFileId9660 % 2 == 0)
                 lseek(volInfo->imageForReading, 1, SEEK_CUR);
             
-            rc = readRockridgeFilename(volInfo->imageForReading, BK_BASE_PTR(dir)->name, lenSU, 0);
+            rc = readRockridgeFilename(volInfo, BK_BASE_PTR(dir)->name, lenSU, 0);
             if(rc < 0)
                 return rc;
         }
@@ -547,7 +547,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
             /* go to sys use fields */
             lseek(volInfo->imageForReading, 33, SEEK_CUR);
             
-            rc = readPosixInfo(volInfo->imageForReading, &(BK_BASE_PTR(dir)->posixFileMode), realRootRecordLen - 34);
+            rc = readPosixInfo(volInfo, &(BK_BASE_PTR(dir)->posixFileMode), realRootRecordLen - 34);
             if(rc <= 0)
                 return rc;
             
@@ -556,7 +556,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
         }
         else
         {
-            rc = readPosixInfo(volInfo->imageForReading, &(BK_BASE_PTR(dir)->posixFileMode), lenSU);
+            rc = readPosixInfo(volInfo, &(BK_BASE_PTR(dir)->posixFileMode), lenSU);
             if(rc <= 0)
                 return rc;
         }
@@ -702,11 +702,11 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     lseek(volInfo->imageForReading, 1, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &locExtent);
+    rc = read733(volInfo->imageForReading, &locExtent, volInfo->littleEndian);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    rc = read733(volInfo->imageForReading, &lenExtent);
+    rc = read733(volInfo->imageForReading, &lenExtent, volInfo->littleEndian);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
@@ -793,7 +793,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
         if(lenFileId9660 % 2 == 0)
             lseek(volInfo->imageForReading, 1, SEEK_CUR);
         
-        rc = readRockridgeFilename(volInfo->imageForReading, BK_BASE_PTR(file)->name, lenSU, 0);
+        rc = readRockridgeFilename(volInfo, BK_BASE_PTR(file)->name, lenSU, 0);
         if(rc < 0)
             return rc;
     }
@@ -802,7 +802,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     if(readPosix)
     {
-        readPosixInfo(volInfo->imageForReading, &(BK_BASE_PTR(file)->posixFileMode), lenSU);
+        readPosixInfo(volInfo, &(BK_BASE_PTR(file)->posixFileMode), lenSU);
     }
     else
     {
@@ -822,7 +822,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
 * readPosixInfo()
 * looks for the PX system use field and gets the permissions field out of it
 * */
-int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
+int readPosixInfo(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
 {
     off_t origPos;
     unsigned char* suFields;
@@ -838,9 +838,9 @@ int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
     if(suFields == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
-    origPos = lseek(image, 0, SEEK_CUR);
+    origPos = lseek(volInfo->imageForReading, 0, SEEK_CUR);
     
-    rc = read(image, suFields, lenSU);
+    rc = read(volInfo->imageForReading, suFields, lenSU);
     if(rc != lenSU)
         return BKERROR_READ_GENERIC;
     
@@ -851,7 +851,7 @@ int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
     {
         if(suFields[count] == 'P' && suFields[count + 1] == 'X')
         {
-            read733FromCharArray(suFields + count + 4, posixFileMode);
+            read733FromCharArray(suFields + count + 4, posixFileMode, volInfo->littleEndian);
             
             /* not interested in anything else from this field */
             
@@ -860,9 +860,9 @@ int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
         else if(suFields[count] == 'C' && suFields[count + 1] == 'E')
         {
             foundCE = true;
-            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE);
-            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE);
-            read733FromCharArray(suFields + count + 20, &lengthOfCE);
+            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE, volInfo->littleEndian);
+            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE, volInfo->littleEndian);
+            read733FromCharArray(suFields + count + 20, &lengthOfCE, volInfo->littleEndian);
         }
         
         /* skip su record */
@@ -870,7 +870,7 @@ int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
     }
     
     free(suFields);
-    lseek(image, origPos, SEEK_SET);
+    lseek(volInfo->imageForReading, origPos, SEEK_SET);
     
     if(!foundPosix)
     {
@@ -878,10 +878,10 @@ int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
             return BKERROR_NO_POSIX_PRESENT;
         else
         {
-            lseek(image, logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + offsetInLogicalBlockOfCE, SEEK_SET);
-            rc = readPosixInfo(image, posixFileMode, lengthOfCE);
+            lseek(volInfo->imageForReading, logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + offsetInLogicalBlockOfCE, SEEK_SET);
+            rc = readPosixInfo(volInfo, posixFileMode, lengthOfCE);
             
-            lseek(image, origPos, SEEK_SET);
+            lseek(volInfo->imageForReading, origPos, SEEK_SET);
             
             return rc;
         }
@@ -898,7 +898,7 @@ int readPosixInfo(int image, unsigned* posixFileMode, unsigned lenSU)
 * this directory record, the function returns a failure.
 * Leaves the file pointer where it was.
 */
-int readRockridgeFilename(int image, char* dest, unsigned lenSU, 
+int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU, 
                           unsigned numCharsReadAlready)
 {
     off_t origPos;
@@ -918,9 +918,9 @@ int readRockridgeFilename(int image, char* dest, unsigned lenSU,
     if(suFields == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
-    origPos = lseek(image, 0, SEEK_CUR);
+    origPos = lseek(volInfo->imageForReading, 0, SEEK_CUR);
     
-    rc = read(image, suFields, lenSU);
+    rc = read(volInfo->imageForReading, suFields, lenSU);
     if(rc != lenSU)
     {
         free(suFields);
@@ -956,9 +956,9 @@ int readRockridgeFilename(int image, char* dest, unsigned lenSU,
         else if(suFields[count] == 'C' && suFields[count + 1] == 'E')
         {
             foundCE = true;
-            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE);
-            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE);
-            read733FromCharArray(suFields + count + 20, &lengthOfCE);
+            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE, volInfo->littleEndian);
+            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE, volInfo->littleEndian);
+            read733FromCharArray(suFields + count + 20, &lengthOfCE, volInfo->littleEndian);
         }
         
         /* skip su record */
@@ -973,7 +973,7 @@ int readRockridgeFilename(int image, char* dest, unsigned lenSU,
     }
     
     free(suFields);
-    lseek(image, origPos, SEEK_SET);
+    lseek(volInfo->imageForReading, origPos, SEEK_SET);
     
     if( !foundName || (foundName && nameContinues) )
     {
@@ -981,10 +981,12 @@ int readRockridgeFilename(int image, char* dest, unsigned lenSU,
             return BKERROR_RR_FILENAME_MISSING;
         else
         {
-            lseek(image, logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + offsetInLogicalBlockOfCE, SEEK_SET);
-            rc = readRockridgeFilename(image, dest, lengthOfCE, numCharsReadAlready);
+            lseek(volInfo->imageForReading, 
+                  logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + offsetInLogicalBlockOfCE, 
+                  SEEK_SET);
+            rc = readRockridgeFilename(volInfo, dest, lengthOfCE, numCharsReadAlready);
             
-            lseek(image, origPos, SEEK_SET);
+            lseek(volInfo->imageForReading, origPos, SEEK_SET);
             
             return rc;
         }

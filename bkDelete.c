@@ -143,7 +143,7 @@ void deleteRegFileContents(VolInfo* volInfo, BkFile* file)
     {
         if(volInfo->bootRecordIsVisible && 
            volInfo->bootRecordOnImage == file)
-        {printf(" deleted boot record file\n");fflush(NULL);
+        {
             /* and stop using it. perhaps insert a hook here one day to
             * let the user know the boot record has been/will be deleted */
             bk_delete_boot_record(volInfo);

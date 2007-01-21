@@ -10,15 +10,16 @@
 * if they are stored in both byte orders, the appropriate one is read into
 * the parameter but the return is 2x the size of that variable
 *
-* !! these functions are not platform independent
 * */
 
+void flipBytes(char* value, int numBytes);
 int read711(int image, unsigned char* value);
-int read712(int image, signed char* value);
-int read721(int image, unsigned short* value);
-int read722(int image, unsigned short* value);
-int read723(int image, unsigned short* value);
-int read731(int image, unsigned* value);
-int read732(int image, unsigned* value);
-int read733(int image, unsigned* value);
-void read733FromCharArray(unsigned char* array, unsigned* value);
+//~ int read712(int image, signed char* value);
+//~ int read721(int image, unsigned short* value, bool littleEndian);
+//~ int read722(int image, unsigned short* value, bool littleEndian);
+//~ int read723(int image, unsigned short* value, bool littleEndian);
+int read731(int image, unsigned* value, bool littleEndian);
+//~ int read732(int image, unsigned* value, bool littleEndian);
+int read733(int image, unsigned* value, bool littleEndian);
+void read733FromCharArray(unsigned char* array, unsigned* value, 
+                          bool littleEndian);

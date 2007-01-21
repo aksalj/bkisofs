@@ -108,13 +108,10 @@ typedef struct
     bool rootRead; /* did i read the root record inside volume descriptor? */
     bool stopOperation; /* cancel current opertion */
     int imageForWriting;
-    //~ unsigned char* writeCache;
-    //~ unsigned char* writeCacheStatus;
-    //~ off_t wcOffset;
-    //~ off_t wcNumBytesUsed;
     void(*writeProgressFunction)(double);
     time_t lastTimeCalledProgress;
     off_t estimatedIsoSize;
+    bool littleEndian;
     
     /* public use, read only */
     time_t creationTime;
