@@ -289,9 +289,11 @@ int bk_read_vol_info(VolInfo* volInfo)
             /* skip load segment, system type and unused byte */
             lseek(volInfo->imageForReading, 4, SEEK_CUR);
             
-            rc = read(volInfo->imageForReading, &(volInfo->bootRecordSize), 2);
+            unsigned short bootRecordSize;
+            rc = read721(volInfo->imageForReading, &bootRecordSize, volInfo->littleEndian);
             if(rc != 2)
                 return BKERROR_READ_GENERIC;
+            volInfo->bootRecordSize = bootRecordSize;
             
             if(volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION)
                 volInfo->bootRecordSize *= NBYTES_VIRTUAL_SECTOR;
@@ -304,7 +306,7 @@ int bk_read_vol_info(VolInfo* volInfo)
             
             volInfo->bootRecordIsOnImage = true;
             
-            rc = read(volInfo->imageForReading, &(volInfo->bootRecordOffset), 4);
+            rc = read731(volInfo->imageForReading, &(volInfo->bootRecordOffset), volInfo->littleEndian);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
             volInfo->bootRecordOffset *= NBYTES_LOGICAL_BLOCK;

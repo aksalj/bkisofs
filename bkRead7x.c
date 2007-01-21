@@ -14,6 +14,7 @@
 
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 void flipBytes(char* value, int numBytes)
 {
@@ -38,19 +39,19 @@ int read711(int image, unsigned char* value)
     //~ return read(image, value, 1);
 //~ }
 
-//~ int read721(int image, unsigned short* value, bool littleEndian)
-//~ {
-    //~ int rc;
+int read721(int image, unsigned short* value, bool littleEndian)
+{
+    int rc;
     
-    //~ rc = read(image, value, 2);
-    //~ if(rc != 2)
-        //~ return rc;
+    rc = read(image, value, 2);
+    if(rc != 2)
+        return rc;
     
-    //~ if(!littleEndian)
-        //~ flipBytes((char*)value, 2);
+    if(!littleEndian)
+        flipBytes((char*)value, 2);
     
-    //~ return rc;
-//~ }
+    return rc;
+}
 
 //~ int read722(int image, unsigned short* value, bool littleEndian)
 //~ {
@@ -120,10 +121,16 @@ int read733(int image, unsigned* value, bool littleEndian)
     if(rc != 8)
         return rc;
     
-    if(littleEndian)
-        *value = *((unsigned*)(both));
-    else
-        *value = *((unsigned*)(both + 4));
+    *value = both[0];
+    *value <<= 8;
+    *value |= both[1];
+    *value <<= 8;
+    *value |= both[2];
+    *value <<= 8;
+    *value |= both[3];
+    
+    if(!littleEndian)
+        flipBytes((char*)value, 4);
     
     return rc;
 }
@@ -131,8 +138,22 @@ int read733(int image, unsigned* value, bool littleEndian)
 void read733FromCharArray(unsigned char* array, unsigned* value, 
                           bool littleEndian)
 {
+    /* this causes a bus error on an a SuperSparc II, probably because
+    * 'You have no guarantee that a char* points to an address that is properly
+    * aligned for an unsigned long. 
     if(littleEndian)
         *value = *((unsigned*)array);
     else
-        *value = *((unsigned*)(array + 4));
+        *value = *((unsigned*)(array + 4));*/
+    
+    *value = array[0];
+    *value <<= 8;
+    *value |= array[1];
+    *value <<= 8;
+    *value |= array[2];
+    *value <<= 8;
+    *value |= array[3];
+    
+    if(!littleEndian)
+        flipBytes((char*)value, 4);
 }

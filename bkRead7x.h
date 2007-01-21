@@ -15,7 +15,7 @@
 void flipBytes(char* value, int numBytes);
 int read711(int image, unsigned char* value);
 //~ int read712(int image, signed char* value);
-//~ int read721(int image, unsigned short* value, bool littleEndian);
+int read721(int image, unsigned short* value, bool littleEndian);
 //~ int read722(int image, unsigned short* value, bool littleEndian);
 //~ int read723(int image, unsigned short* value, bool littleEndian);
 int read731(int image, unsigned* value, bool littleEndian);
