@@ -7,6 +7,8 @@ ui:
 bk:
 -dos doesn't like names to start with underscores
 -split bk_write_image()
+-writeElToritoBootCatalog(), writeElToritoVd() cast return to int, no good
+-bootRecordSize, bootRecordOffset should be off_t
 
 
 c99 compatibility issues:

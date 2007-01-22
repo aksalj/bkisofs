@@ -141,7 +141,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     /* SEE if rockridge exists */
     lseek(volInfo->imageForReading, 2, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &realRootLoc, volInfo->littleEndian);
+    rc = read733(volInfo->imageForReading, &realRootLoc);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     realRootLoc *= NBYTES_LOGICAL_BLOCK;
@@ -250,7 +250,7 @@ int bk_read_vol_info(VolInfo* volInfo)
         {
             lseek(volInfo->imageForReading, 40, SEEK_CUR);
             
-            rc = read731(volInfo->imageForReading, &bootCatalogLocation, volInfo->littleEndian);
+            rc = read731(volInfo->imageForReading, &bootCatalogLocation);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
             
@@ -290,7 +290,7 @@ int bk_read_vol_info(VolInfo* volInfo)
             lseek(volInfo->imageForReading, 4, SEEK_CUR);
             
             unsigned short bootRecordSize;
-            rc = read721(volInfo->imageForReading, &bootRecordSize, volInfo->littleEndian);
+            rc = read721(volInfo->imageForReading, &bootRecordSize);
             if(rc != 2)
                 return BKERROR_READ_GENERIC;
             volInfo->bootRecordSize = bootRecordSize;
@@ -306,7 +306,7 @@ int bk_read_vol_info(VolInfo* volInfo)
             
             volInfo->bootRecordIsOnImage = true;
             
-            rc = read731(volInfo->imageForReading, &(volInfo->bootRecordOffset), volInfo->littleEndian);
+            rc = read731(volInfo->imageForReading, &(volInfo->bootRecordOffset));
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
             volInfo->bootRecordOffset *= NBYTES_LOGICAL_BLOCK;
@@ -440,11 +440,11 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     
     lseek(volInfo->imageForReading, 1, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &locExtent, volInfo->littleEndian);
+    rc = read733(volInfo->imageForReading, &locExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    rc = read733(volInfo->imageForReading, &lenExtent, volInfo->littleEndian);
+    rc = read733(volInfo->imageForReading, &lenExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
@@ -704,11 +704,11 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     lseek(volInfo->imageForReading, 1, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &locExtent, volInfo->littleEndian);
+    rc = read733(volInfo->imageForReading, &locExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    rc = read733(volInfo->imageForReading, &lenExtent, volInfo->littleEndian);
+    rc = read733(volInfo->imageForReading, &lenExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
@@ -853,7 +853,7 @@ int readPosixInfo(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
     {
         if(suFields[count] == 'P' && suFields[count + 1] == 'X')
         {
-            read733FromCharArray(suFields + count + 4, posixFileMode, volInfo->littleEndian);
+            read733FromCharArray(suFields + count + 4, posixFileMode);
             
             /* not interested in anything else from this field */
             
@@ -862,9 +862,9 @@ int readPosixInfo(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
         else if(suFields[count] == 'C' && suFields[count + 1] == 'E')
         {
             foundCE = true;
-            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE, volInfo->littleEndian);
-            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE, volInfo->littleEndian);
-            read733FromCharArray(suFields + count + 20, &lengthOfCE, volInfo->littleEndian);
+            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE);
+            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE);
+            read733FromCharArray(suFields + count + 20, &lengthOfCE);
         }
         
         /* skip su record */
@@ -958,9 +958,9 @@ int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU,
         else if(suFields[count] == 'C' && suFields[count + 1] == 'E')
         {
             foundCE = true;
-            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE, volInfo->littleEndian);
-            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE, volInfo->littleEndian);
-            read733FromCharArray(suFields + count + 20, &lengthOfCE, volInfo->littleEndian);
+            read733FromCharArray(suFields + count + 4, &logicalBlockOfCE);
+            read733FromCharArray(suFields + count + 12, &offsetInLogicalBlockOfCE);
+            read733FromCharArray(suFields + count + 20, &lengthOfCE);
         }
         
         /* skip su record */

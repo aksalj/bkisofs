@@ -18,103 +18,48 @@
 
 #include "bkRead7x.h"
 
-void flipBytes(char* value, int numBytes)
-{
-    int count;
-    unsigned char tempByte;
-    
-    for(count = 0; count < numBytes / 2; count++)
-    {
-        tempByte = value[count];
-        value[count] = value[numBytes - count - 1];
-        value[numBytes - count - 1] = tempByte;
-    }
-}
-
 int read711(int image, unsigned char* value)
 {
     return read(image, value, 1);
 }
 
-//~ int read712(int image, signed char* value)
-//~ {
-    //~ return read(image, value, 1);
-//~ }
-
-int read721(int image, unsigned short* value, bool littleEndian)
+int read721(int image, unsigned short* value)
 {
     int rc;
+    unsigned char array[2];
     
-    rc = read(image, value, 2);
+    rc = read(image, array, 2);
     if(rc != 2)
         return rc;
     
-    if(!littleEndian)
-        flipBytes((char*)value, 2);
+    *value = array[1];
+    *value <<= 8;
+    *value |= array[0];
     
     return rc;
 }
 
-//~ int read722(int image, unsigned short* value, bool littleEndian)
-//~ {
-    //~ int rc;
-    
-    //~ rc = read(image, value, 2);
-    //~ if(rc != 2)
-        //~ return rc;
-    
-    //~ if(littleEndian)
-        //~ flipBytes((char*)value, 2);
-    
-    //~ return rc;
-//~ }
-
-//~ int read723(int image, unsigned short* value, bool littleEndian)
-//~ {
-    //~ int rc;
-    //~ unsigned char both[4];
-    
-    //~ rc = read(image, both, 4);
-    //~ if(rc != 4)
-        //~ return rc;
-    
-    //~ if(littleEndian)
-        //~ *value = *((unsigned short*)(both));
-    //~ else
-        //~ *value = *((unsigned short*)(both + 2));
-    
-    //~ return rc;
-//~ }
-
-int read731(int image, unsigned* value, bool littleEndian)
+int read731(int image, unsigned* value)
 {
     int rc;
+    unsigned char array[4];
     
-    rc = read(image, value, 4);
+    rc = read(image, array, 4);
     if(rc != 4)
         return rc;
     
-    if(!littleEndian)
-        flipBytes((char*)value, 4);
+    *value = array[3];
+    *value <<= 8;
+    *value |= array[2];
+    *value <<= 8;
+    *value |= array[1];
+    *value <<= 8;
+    *value |= array[0];
     
     return rc;
 }
 
-//~ int read732(int image, unsigned* value, bool littleEndian)
-//~ {
-    //~ int rc;
-    
-    //~ rc = read(image, value, 4);
-    //~ if(rc != 4)
-        //~ return rc;
-    
-    //~ if(littleEndian)
-        //~ flipBytes((char*)value, 4);
-    
-    //~ return rc;
-//~ }
-
-int read733(int image, unsigned* value, bool littleEndian)
+int read733(int image, unsigned* value)
 {
     int rc;
     unsigned char both[8];
@@ -123,22 +68,13 @@ int read733(int image, unsigned* value, bool littleEndian)
     if(rc != 8)
         return rc;
     
-    read733FromCharArray(both, value, littleEndian);
+    read733FromCharArray(both, value);
     
     return rc;
 }
 
-void read733FromCharArray(unsigned char* array, unsigned* value, 
-                          bool littleEndian)
+void read733FromCharArray(unsigned char* array, unsigned* value)
 {
-    /* this causes a bus error on an a SuperSparc II, probably because
-    * 'You have no guarantee that a char* points to an address that is properly
-    * aligned for an unsigned long. 
-    if(littleEndian)
-        *value = *((unsigned*)array);
-    else
-        *value = *((unsigned*)(array + 4));*/
-    
     *value = array[3];
     *value <<= 8;
     *value |= array[2];

@@ -402,8 +402,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
 * bootInfoTableChecksum()
 * Calculate the checksum to be written into the boot info table.
 * */
-int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum,
-                          bool littleEndian)
+int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
 {
     int rc;
     int srcFile;
@@ -1339,8 +1338,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                 write731ToByteArray(bootInfoTable + 8, FILETW_PTR(child)->size);
                 /* 32 bit checksum (the sum of all the 32-bit words in the boot
                 * file starting at byte offset 64 */
-                rc = bootInfoTableChecksum(volInfo->imageForReading, FILETW_PTR(child), 
-                                           &checksum, volInfo->littleEndian);
+                rc = bootInfoTableChecksum(volInfo->imageForReading, FILETW_PTR(child), &checksum);
                 if(rc <= 0)
                     return rc;
                 write731ToByteArray(bootInfoTable + 12, checksum);

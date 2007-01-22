@@ -56,13 +56,6 @@ int bk_init_vol_info(VolInfo* volInfo)
     volInfo->posixFileDefaults = 0100644;
     volInfo->posixDirDefaults = 040755;
     
-    /* detect endianness */
-    unsigned char test[2] = {1, 0};
-    if( *((short*)test) == 1 )
-        volInfo->littleEndian = true;
-    else
-        volInfo->littleEndian = false;
-    printf("little: %d\n", volInfo->littleEndian);
     return 1;
 }
 

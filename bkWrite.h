@@ -1,8 +1,7 @@
 #ifndef bkwrite_h
 #define bkwrite_h
 
-int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum,
-                          bool littleEndian);
+int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum);
 int countDirsOnLevel(const DirToWrite* dir, int targetLevel, int thisLevel);
 int countTreeHeight(const DirToWrite* dir, int heightSoFar);
 unsigned short elToritoChecksum(const unsigned char* record);

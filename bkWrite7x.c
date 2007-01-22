@@ -29,11 +29,6 @@ int write711(VolInfo* volInfo, unsigned char value)
     return wcWrite(volInfo, (char*)&value, 1);
 }
 
-//~ int write712(VolInfo* volInfo, signed char value)
-//~ {
-    //~ return wcWrite(volInfo, (char*)&value, 1);
-//~ }
-
 int write721(VolInfo* volInfo, unsigned short value)
 {
     unsigned char preparedValue[2];
@@ -51,24 +46,24 @@ void write721ToByteArray(unsigned char* dest, unsigned short value)
 
 int write722(VolInfo* volInfo, unsigned short value)
 {
-    unsigned char preparedValue[2];
+    char preparedValue[2];
     
     preparedValue[0] = (value >> 8) & 0xFF;
     preparedValue[1] = value & 0xFF;
     
-    return wcWrite(volInfo, (char*)preparedValue, 2);
+    return wcWrite(volInfo, preparedValue, 2);
 }
 
 int write723(VolInfo* volInfo, unsigned short value)
 {
-    unsigned char preparedValue[4];
+    char preparedValue[4];
     
     preparedValue[0] = value & 0xFF;
     preparedValue[1] = (value >> 8) & 0xFF;
     preparedValue[2] = preparedValue[1];
     preparedValue[3] = preparedValue[0];
     
-    return wcWrite(volInfo, (char*)preparedValue, 4);
+    return wcWrite(volInfo, preparedValue, 4);
 }
 
 int write731(VolInfo* volInfo, unsigned value)
@@ -90,23 +85,23 @@ void write731ToByteArray(unsigned char* dest, unsigned value)
 
 int write732(VolInfo* volInfo, unsigned value)
 {
-    unsigned char preparedValue[4];
+    char preparedValue[4];
     
     preparedValue[0] = (value >> 24);
     preparedValue[1] = (value >> 16) & 0xFF;
     preparedValue[2] = (value >> 8) & 0xFF;
     preparedValue[3] = value & 0xFF;
     
-    return wcWrite(volInfo, (char*)preparedValue, 4);
+    return wcWrite(volInfo, preparedValue, 4);
 }
 
 int write733(VolInfo* volInfo, unsigned value)
 {
-    unsigned char preparedValue[8];
+    char preparedValue[8];
     
-    write733ToByteArray(preparedValue, value);
+    write733ToByteArray((unsigned char*)preparedValue, value);
     
-    return wcWrite(volInfo, (char*)preparedValue, 8);
+    return wcWrite(volInfo, preparedValue, 8);
 }
 
 void write733ToByteArray(unsigned char* dest, unsigned value)

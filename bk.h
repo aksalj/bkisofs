@@ -111,7 +111,6 @@ typedef struct
     void(*writeProgressFunction)(double);
     time_t lastTimeCalledProgress;
     off_t estimatedIsoSize;
-    bool littleEndian;
     
     /* public use, read only */
     time_t creationTime;
