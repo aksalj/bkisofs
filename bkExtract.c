@@ -220,9 +220,13 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
                 rc = extractFile(volInfo, BK_FILE_PTR(child), destDir, 
                                  keepPermissions, progressFunction);
             }
+            else if ( IS_SYMLINK(child->posixFileMode) )
+            {
+                rc = extractSymlink(volInfo, BK_SYMLINK_PTR(child), destDir);
+            }
             else
             {
-                printf("trying to extract something that's not a file or directory, ignored\n");fflush(NULL);
+                printf("trying to extract something that's not a file, symlink or directory, ignored\n");fflush(NULL);
             }
             
             if(rc <= 0)
@@ -402,6 +406,39 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     
     if(srcFileWasOpened)
         close(srcFile);
+    
+    return 1;
+}
+
+int extractSymlink(VolInfo* volInfo, BkSymLink* srcLink, const char* destDir)
+{
+    char* destPathAndName;
+    int rc;
+    
+    destPathAndName = malloc(strlen(destDir) + 
+                             strlen(BK_BASE_PTR(srcLink)->name) + 2);
+    if(destPathAndName == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    strcpy(destPathAndName, destDir);
+    if(destDir[strlen(destDir) - 1] != '/')
+        strcat(destPathAndName, "/");
+    strcat(destPathAndName, BK_BASE_PTR(srcLink)->name);
+    
+    if(access(destPathAndName, F_OK) == 0)
+    {
+        free(destPathAndName);
+        return BKERROR_DUPLICATE_EXTRACT;
+    }
+    
+    rc = symlink(srcLink->target, destPathAndName);
+    if(rc == -1)
+    {
+        free(destPathAndName);
+        return BKERROR_CREATE_SYMLINK_FAILED;
+    }
+    
+    free(destPathAndName);
     
     return 1;
 }

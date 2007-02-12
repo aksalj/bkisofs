@@ -38,6 +38,28 @@
 /* for el torito boot images */
 #define NBYTES_VIRTUAL_SECTOR 512
 
+/* this function is really just for use in readRockridgeSymlink()
+* returns number of chars appended
+* destMaxLen doesn't include '\0'
+* if maxSrcLen is -1 tries to copy all of it */
+int appendStringIfHaveRoom(char* dest, char* src, int destMaxLen, 
+                           int destCharsAlreadyUsed, int maxSrcLen)
+{
+    int srcLen;
+    
+    if(maxSrcLen == -1)
+        srcLen = strlen(src);
+    else
+        srcLen = maxSrcLen;
+    
+    if(destCharsAlreadyUsed + srcLen > destMaxLen)
+        return 0;
+    
+    strncat(dest, src, srcLen);
+    
+    return srcLen;
+}
+
 /*******************************************************************************
 * bk_open_image()
 * 
@@ -77,7 +99,7 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 * bk_read_dir_tree()
 * filenameType can be only one (do not | more then one)
 * */
-int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool readPosix)
+int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool keepPosixPermissions)
 {
     if(filenameType == FNTYPE_ROCKRIDGE || filenameType == FNTYPE_9660)
         lseek(volInfo->imageForReading, volInfo->pRootDrOffset, SEEK_SET);
@@ -85,7 +107,7 @@ int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool readPosix)
         lseek(volInfo->imageForReading, volInfo->sRootDrOffset, SEEK_SET);
     
     return readDir(volInfo, &(volInfo->dirTree), 
-                   filenameType, readPosix);
+                   filenameType, keepPosixPermissions);
 }
 
 /*******************************************************************************
@@ -419,7 +441,7 @@ bool haveNextRecordInSector(int image)
 *
 * */
 int readDir(VolInfo* volInfo, BkDir* dir, int filenameType, 
-            bool readPosix)
+            bool keepPosixPermissions)
 {
     int rc;
     unsigned char recordLength;
@@ -530,7 +552,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
         return BKERROR_UNKNOWN_FILENAME_TYPE;
     /* END READ directory name */
     
-    if(readPosix)
+    if(keepPosixPermissions)
     {
         if( !(volInfo->rootRead) )
         {
@@ -549,7 +571,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
             /* go to sys use fields */
             lseek(volInfo->imageForReading, 33, SEEK_CUR);
             
-            rc = readPosixInfo(volInfo, &(BK_BASE_PTR(dir)->posixFileMode), realRootRecordLen - 34);
+            rc = readPosixFileMode(volInfo, &(BK_BASE_PTR(dir)->posixFileMode), realRootRecordLen - 34);
             if(rc <= 0)
                 return rc;
             
@@ -558,7 +580,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
         }
         else
         {
-            rc = readPosixInfo(volInfo, &(BK_BASE_PTR(dir)->posixFileMode), lenSU);
+            rc = readPosixFileMode(volInfo, &(BK_BASE_PTR(dir)->posixFileMode), lenSU);
             if(rc <= 0)
                 return rc;
         }
@@ -577,7 +599,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     
     volInfo->rootRead = true;
     
-    rc = readDirContents(volInfo, dir, lenExtent, filenameType, readPosix);
+    rc = readDirContents(volInfo, dir, lenExtent, filenameType, keepPosixPermissions);
     if(rc < 0)
         return rc;
     
@@ -592,7 +614,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
 * size is number of bytes
 * */
 int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size, 
-                    int filenameType, bool readPosix)
+                    int filenameType, bool keepPosixPermissions)
 {
     int rc;
     int bytesRead = 0;
@@ -625,28 +647,36 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
                 if(*nextChild == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
-                recordLength = readDir(volInfo, BK_DIR_PTR(*nextChild), filenameType,
-                                       readPosix);
+                recordLength = readDir(volInfo, BK_DIR_PTR(*nextChild), 
+                                       filenameType, keepPosixPermissions);
                 if(recordLength < 0)
                     return recordLength;
-                
-                childrenBytesRead += recordLength;
             }
             else
             /* file descriptor record */
             {
+                BkFileBase* specialFile;
+                
+                /* assume it's a file for now */
                 *nextChild = malloc(sizeof(BkFile));
                 if(*nextChild == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
-                recordLength = readFileInfo(volInfo, 
-                                            BK_FILE_PTR(*nextChild), filenameType,
-                                            readPosix);
+                recordLength = readFileInfo(volInfo, BK_FILE_PTR(*nextChild), 
+                                            filenameType, keepPosixPermissions, 
+                                            &specialFile);
                 if(recordLength < 0)
                     return recordLength;
                 
-                childrenBytesRead += recordLength;
+                if(specialFile != NULL)
+                /* it's a special file, replace the allocated BkFile */
+                {
+                    free(*nextChild);
+                    *nextChild = specialFile;
+                }
             }
+            
+            childrenBytesRead += recordLength;
             
             nextChild = &((*nextChild)->next);
             *nextChild = NULL;
@@ -686,7 +716,7 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
 * Reads the directory record for a file
 * */
 int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType, 
-                 bool readPosix)
+                 bool keepPosixPermissions, BkFileBase** specialFile)
 {
     int rc;
     unsigned char recordLength;
@@ -697,6 +727,8 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     /* so if anything failes it's still safe to delete file */
     file->pathAndName = NULL;
+    
+    *specialFile = NULL;
     
     rc = read(volInfo->imageForReading, &recordLength, 1);
     if(rc != 1)
@@ -802,13 +834,27 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     else
         return BKERROR_UNKNOWN_FILENAME_TYPE;
     
-    if(readPosix)
+    if(keepPosixPermissions)
     {
-        readPosixInfo(volInfo, &(BK_BASE_PTR(file)->posixFileMode), lenSU);
+        rc = readPosixFileMode(volInfo, &(BK_BASE_PTR(file)->posixFileMode), lenSU);
+        if(rc < 0)
+            return rc;
     }
     else
     {
         BK_BASE_PTR(file)->posixFileMode = volInfo->posixFileDefaults;
+    }
+    
+    rc = readRockridgeSymlink(volInfo, (BkSymLink**)specialFile, lenSU);
+    if(rc < 0)
+        return rc;
+    
+    if(*specialFile != NULL)
+    /* the file is actually a symbolic link */
+    {
+        strcpy((*specialFile)->name, BK_BASE_PTR(file)->name);
+        /* apparently permissions for symbolic links are never used */
+        (*specialFile)->posixFileMode = 0120777;
     }
     
     lseek(volInfo->imageForReading, lenSU, SEEK_CUR);
@@ -821,10 +867,10 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
 }
 
 /*******************************************************************************
-* readPosixInfo()
+* readPosixFileMode()
 * looks for the PX system use field and gets the permissions field out of it
 * */
-int readPosixInfo(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
+int readPosixFileMode(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
 {
     off_t origPos;
     unsigned char* suFields;
@@ -851,6 +897,11 @@ int readPosixInfo(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
     foundCE = false;
     while(count < lenSU && !foundPosix)
     {
+        if(suFields[count] == 0)
+        /* not an SU field, mkisofs sometimes has a trailing 0 in the directory
+        * record and this is the easiest way to ignore it */
+            break;
+        
         if(suFields[count] == 'P' && suFields[count + 1] == 'X')
         {
             read733FromCharArray(suFields + count + 4, posixFileMode);
@@ -880,8 +931,9 @@ int readPosixInfo(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
             return BKERROR_NO_POSIX_PRESENT;
         else
         {
-            lseek(volInfo->imageForReading, logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + offsetInLogicalBlockOfCE, SEEK_SET);
-            rc = readPosixInfo(volInfo, posixFileMode, lengthOfCE);
+            lseek(volInfo->imageForReading, logicalBlockOfCE * NBYTES_LOGICAL_BLOCK + 
+                  offsetInLogicalBlockOfCE, SEEK_SET);
+            rc = readPosixFileMode(volInfo, posixFileMode, lengthOfCE);
             
             lseek(volInfo->imageForReading, origPos, SEEK_SET);
             
@@ -935,6 +987,11 @@ int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU,
     foundCE = false;
     while(count < lenSU)
     {
+        if(suFields[count] == 0)
+        /* not an SU field, mkisofs sometimes has a trailing 0 in the directory
+        * record and this is the easiest way to ignore it */
+            break;
+        
         if(suFields[count] == 'N' && suFields[count + 1] == 'M')
         {
             lengthThisNM = suFields[count + 2] - 5;
@@ -965,13 +1022,6 @@ int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU,
         
         /* skip su record */
         count += suFields[count + 2];
-
-        /* mkisofs made an image for me where the length of the directory record
-        * was 1 more than needed, so to prevent an infinite loop in such cases the
-        * following is necessary: */
-        if(foundName)
-            if(!nameContinues || (nameContinues && foundCE))
-                break;
     }
     
     free(suFields);
@@ -995,6 +1045,104 @@ int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU,
     }
     else
         return 1;
+}
+
+/* if no SL record is found does not return failure */
+int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, unsigned lenSU)
+{
+    off_t origPos;
+    unsigned char* suFields;
+    int rc;
+    int count;
+    int count2;
+    
+    suFields = malloc(lenSU);
+    if(suFields == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    origPos = lseek(volInfo->imageForReading, 0, SEEK_CUR);
+    
+    rc = read(volInfo->imageForReading, suFields, lenSU);
+    if(rc != lenSU)
+    {
+        free(suFields);
+        return BKERROR_READ_GENERIC;
+    }
+    
+    count = 0;
+    while(count < lenSU)
+    {
+        if(suFields[count] == 0)
+        /* not an SU field, mkisofs sometimes has a trailing 0 in the directory
+        * record and this is the easiest way to ignore it */
+            break;
+        
+        if(suFields[count] == 'S' && suFields[count + 1] == 'L')
+        {
+            int numCharsUsed; /* in dest->target, not including '\0' */
+            
+            *dest = malloc(sizeof(BkSymLink));
+            if(*dest == NULL)
+                return BKERROR_OUT_OF_MEMORY;
+            
+            numCharsUsed = 0;
+            (*dest)->target[0] = '\0';
+            /* read sym link component records and assemble (*dest)->target
+            * right now component records cannot spawn multiple SL entries */
+            count2 = count + 5;
+            while(count2 < count + suFields[count + 2])
+            {
+                if(suFields[count2] & 0x02)
+                {
+                    numCharsUsed += appendStringIfHaveRoom((*dest)->target, 
+                                            ".", NCHARS_SYMLINK_TARGET_MAX - 1, 
+                                            numCharsUsed, -1);
+                }
+                else if(suFields[count2] & 0x04)
+                {
+                    numCharsUsed += appendStringIfHaveRoom((*dest)->target, 
+                                            "..", NCHARS_SYMLINK_TARGET_MAX - 1, 
+                                            numCharsUsed, -1);
+                }
+                else if(suFields[count2] & 0x08)
+                {
+                    strcpy((*dest)->target, "/");
+                    numCharsUsed = 1;
+                }
+                
+                /* if bits 1-5 are set there is no component content */
+                if( !(suFields[count2] & 0x3E) )
+                {
+                    numCharsUsed += appendStringIfHaveRoom((*dest)->target, 
+                                            (char*)(suFields + count2 + 2), 
+                                            NCHARS_SYMLINK_TARGET_MAX - 1, 
+                                            numCharsUsed, suFields[count2 + 1]);
+                }
+                
+                /* next component record */
+                count2 += suFields[count2 + 1] + 2;
+                
+                if(count2 < count + suFields[count + 2])
+                /* another component record follows, insert separator */
+                {
+                    numCharsUsed += appendStringIfHaveRoom((*dest)->target, 
+                                            "/", NCHARS_SYMLINK_TARGET_MAX - 1, 
+                                            numCharsUsed, -1);
+                }
+            }
+            
+            /* ignore any other SU fields */
+            break;
+        }
+        
+        /* skip su field */
+        count += suFields[count + 2];
+    }
+    
+    free(suFields);
+    lseek(volInfo->imageForReading, origPos, SEEK_SET);
+    
+    return 1;
 }
 
 /*******************************************************************************

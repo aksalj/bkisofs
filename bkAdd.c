@@ -44,7 +44,10 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
     
     oldHead = destDir->children;
     
-    rc = stat(srcPathAndName, &statStruct);
+    if(volInfo->followLinks)
+        rc = stat(srcPathAndName, &statStruct);
+    else
+        rc = lstat(srcPathAndName, &statStruct);
     if(rc == -1)
         return BKERROR_STAT_FAILED;
     
@@ -103,6 +106,32 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
         strcpy(newFile->pathAndName, srcPathAndName);
         
         destDir->children = BK_BASE_PTR(newFile);
+    }
+    else if( IS_SYMLINK(statStruct.st_mode) )
+    {
+        BkSymLink* newSymLink;
+        ssize_t numChars;
+        
+        newSymLink = malloc(sizeof(BkSymLink));
+        if(newSymLink == NULL)
+            return BKERROR_OUT_OF_MEMORY;
+        
+        strcpy(BK_BASE_PTR(newSymLink)->name, lastName);
+        
+        BK_BASE_PTR(newSymLink)->posixFileMode = statStruct.st_mode;
+        
+        BK_BASE_PTR(newSymLink)->next = oldHead;
+        
+        numChars = readlink(srcPathAndName, newSymLink->target, 
+                            NCHARS_SYMLINK_TARGET_MAX - 1);
+        if(numChars == -1)
+        {
+            free(newSymLink);
+            return BKERROR_OPEN_READ_FAILED;
+        }
+        newSymLink->target[numChars] = '\0';
+        
+        destDir->children = BK_BASE_PTR(newSymLink);
     }
     else
         return BKERROR_NO_SPECIAL_FILES;

@@ -132,7 +132,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             shortenNameFor9660(currentOrigChild->name, 
                               (*currentNewChild)->name9660, true);
         }
-        else
+        else if( IS_REG_FILE(currentOrigChild->posixFileMode) )
         {
             *currentNewChild = malloc(sizeof(FileToWrite));
             if(*currentNewChild == NULL)
@@ -143,6 +143,19 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             shortenNameFor9660(currentOrigChild->name, 
                               (*currentNewChild)->name9660, false);
         }
+        else if( IS_SYMLINK(currentOrigChild->posixFileMode) )
+        {
+            *currentNewChild = malloc(sizeof(SymLinkToWrite));
+            if(*currentNewChild == NULL)
+                return BKERROR_OUT_OF_MEMORY;
+            
+            bzero(*currentNewChild, sizeof(SymLinkToWrite));
+            
+            shortenNameFor9660(currentOrigChild->name, 
+                              (*currentNewChild)->name9660, false);
+        }
+        else
+            return BKERROR_NO_SPECIAL_FILES;
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
             strcpy((*currentNewChild)->nameRock, currentOrigChild->name);
@@ -167,7 +180,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
                 return rc;
             }
         }
-        else
+        else if( IS_REG_FILE(currentOrigChild->posixFileMode) )
         {
             BkFile* origFile = BK_FILE_PTR(currentOrigChild);
             FileToWrite* newFile = FILETW_PTR(*currentNewChild);
@@ -192,6 +205,11 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             }
             
             newFile->origFile = origFile;
+        }
+        else /* if( IS_SYMLINK(currentOrigChild->posixFileMode) ) */
+        {
+            strncpy(SYMLINKTW_PTR(*currentNewChild)->target, 
+                    BK_SYMLINK_PTR(currentOrigChild)->target, PATH_MAX + 1);
         }
         
         currentOrigChild = currentOrigChild->next;

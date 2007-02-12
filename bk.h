@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "bkError.h"
 
@@ -46,9 +47,14 @@
 /* warning message string lengths in VolInfo */
 #define BK_WARNING_MAX_LEN 512
 
+#define IS_DIR(posix)      ((posix & 0770000) == 0040000)
+#define IS_REG_FILE(posix) ((posix & 0770000) == 0100000)
+#define IS_SYMLINK(posix)  ((posix & 0770000) == 0120000)
+
 #define BK_BASE_PTR(item) ((BkFileBase*)(item))
 #define BK_DIR_PTR(item) ((BkDir*)(item))
 #define BK_FILE_PTR(item) ((BkFile*)(item))
+#define BK_SYMLINK_PTR(item) ((BkSymLink*)(item))
 
 typedef struct BkFileBase
 {
@@ -87,6 +93,18 @@ typedef struct BkFile
                        * is to be freed by whenever the File is freed */
     
 } BkFile;
+
+/*******************************************************************************
+* BkSymLink
+* linked list node
+* information about a symbolic link */
+typedef struct BkSymLink
+{
+    BkFileBase base; /* intended to be accessed using a cast */
+    
+    char target[PATH_MAX + 1];
+    
+} BkSymLink;
 
 /*******************************************************************************
 * VolInfo
@@ -130,6 +148,8 @@ typedef struct
     unsigned posixFileDefaults;    /* for extracting */
     unsigned posixDirDefaults;     /* for extracting or creating on iso */
     bool(*warningCbk)(const char*);
+    bool followLinks;              /* whether to stat the link itself rather 
+                                   *  than the file it's pointing to */
     
 } VolInfo;
 
@@ -173,7 +193,7 @@ void bk_set_vol_name(VolInfo* volInfo, const char* volName);
 
 /* reading */
 int bk_open_image(VolInfo* volInfo, const char* filename);
-int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool readPosix);
+int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool keepPosixPermissions);
 int bk_read_vol_info(VolInfo* volInfo);
 
 /* writing */

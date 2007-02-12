@@ -89,14 +89,14 @@ off_t estimateIsoSize(const BkDir* tree, int filenameTypes)
     child = tree->children;
     while(child != NULL)
     {
-        if(IS_REG_FILE(child->posixFileMode))
+        if(IS_DIR(child->posixFileMode))
+        {
+            thisDirSize += estimateIsoSize(BK_DIR_PTR(child), filenameTypes);
+        }
+        else if(IS_REG_FILE(child->posixFileMode))
         {
             thisDirSize += BK_FILE_PTR(child)->size;
             thisDirSize += BK_FILE_PTR(child)->size % NBYTES_LOGICAL_BLOCK;
-        }
-        else
-        {
-            thisDirSize += estimateIsoSize(BK_DIR_PTR(child), filenameTypes);
         }
         
         numItems++;

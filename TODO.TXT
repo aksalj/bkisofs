@@ -2,6 +2,9 @@ ui:
 -alt shortcut keys need attention (bulgarian)
 -sometimes the help window won't come up in the middle of the main window
 -delete key should work
+-change file/dir properties (especialy creation date)
+-add save/overwrite #undef-ed by default
+-allow editing address on iso bar
 
 
 bk:
@@ -9,11 +12,13 @@ bk:
 -split bk_write_image()
 -writeElToritoBootCatalog(), writeElToritoVd() cast return to int, no good
 -bootRecordSize, bootRecordOffset should be off_t
+-make it work on david's sparc
 
 
 c99 compatibility issues:
 -localtime_r() - implicit declaration
 -strdup() - implicit declaration
+-lstat() - implicit declaration and some mess with st_size
 
 
 tests to run before a release:

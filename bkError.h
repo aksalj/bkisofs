@@ -67,7 +67,7 @@
 #define BKERROR_DUPLICATE_EXTRACT                -1026
 #define BKERROR_DUPLICATE_EXTRACT_TEXT           "Cannot extract item because another item with the same name already exists in this directory"
 #define BKERROR_NO_SPECIAL_FILES                 -1027
-#define BKERROR_NO_SPECIAL_FILES_TEXT            "Special files (symbolic links and such) are not yet supported"
+#define BKERROR_NO_SPECIAL_FILES_TEXT            "Special files (device files and such) are not supported"
 #define BKERROR_NO_POSIX_PRESENT                 -1028
 #define BKERROR_NO_POSIX_PRESENT_TEXT            "No posix extentions found"
 #define BKERROR_EXTRACT_ABSENT_BOOT_RECORD       -1029
@@ -100,6 +100,10 @@
 #define BKERROR_NOT_REG_FILE_FOR_BR_TEXT         "Can only use a regular file as a boot record"
 #define BKERROR_WRITE_CACHE_OVERFLOWED           -1042
 #define BKERROR_WRITE_CACHE_OVERFLOWED_TEXT      "Write cache overflowed, please report bug"
+#define BKERROR_CREATE_SYMLINK_FAILED            -1042
+#define BKERROR_CREATE_SYMLINK_FAILED_TEXT       "Failed to create symbolic link"
+#define BKERROR_SYMLINK_TARGET_TOO_LONG          -1042
+#define BKERROR_SYMLINK_TARGET_TOO_LONG_TEXT     "Too many characters in target of a symbolic link"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

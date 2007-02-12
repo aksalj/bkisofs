@@ -36,12 +36,14 @@
 * Only a max of 64 characters of this will be stored. (plus '\0') */
 #define NCHARS_FILE_ID_MAX_JOLIET 65
 
-#define IS_DIR(posix)      (posix & 0040000)
-#define IS_REG_FILE(posix) (posix & 0100000)
+/******************************************************************************
+* maximum length of the target of a symbolic link */
+#define NCHARS_SYMLINK_TARGET_MAX 251
 
 #define BASETW_PTR(item) ((BaseToWrite*)(item))
 #define DIRTW_PTR(item) ((DirToWrite*)(item))
 #define FILETW_PTR(item) ((FileToWrite*)(item))
+#define SYMLINKTW_PTR(item) ((SymLinkToWrite*)(item))
 
 #define WRITE_CACHE_SIZE 1048576
 
@@ -93,5 +95,13 @@ typedef struct FileToWrite
                       * be dereferenced, just compared to. */
     
 } FileToWrite;
+
+typedef struct SymLinkToWrite
+{
+    BaseToWrite base;
+    
+    char target[NCHARS_SYMLINK_TARGET_MAX];
+    
+} SymLinkToWrite;
 
 #endif

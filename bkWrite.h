@@ -27,6 +27,7 @@ int writePathTableRecordsOnLevel(VolInfo* volInfo, const DirToWrite* dir,
 int writeRockER(VolInfo* volInfo);
 int writeRockNM(VolInfo* volInfo, char* name, int nameLen, bool doesContinue);
 int writeRockPX(VolInfo* volInfo, unsigned posixFileMode, bool isADir);
+int writeRockSL(VolInfo* volInfo, SymLinkToWrite* symlink, bool doWrite);
 int writeRockSP(VolInfo* volInfo);
 int writeVdsetTerminator(VolInfo* volInfo);
 int writeVolDescriptor(VolInfo* volInfo, off_t rootDrLocation,

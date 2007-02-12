@@ -879,7 +879,7 @@ int writeDir(VolInfo* volInfo, DirToWrite* dir, int parentLbNum,
 * Note that it uses only the members of DirToWrite and FileToWrite that are
 * the same.
 * */
-int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADir, 
+int writeDr(VolInfo* volInfo, BaseToWrite* node, time_t recordingTime, bool isADir, 
             bool isSelfOrParent, bool isFirstRecord, int filenameTypes)
 {
     int rc;
@@ -906,9 +906,9 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
         return rc;
     
     if(filenameTypes & FNTYPE_JOLIET)
-        dir->extentLocationOffset2 = wcSeekTell(volInfo);
+        node->extentLocationOffset2 = wcSeekTell(volInfo);
     else
-        dir->extentLocationOffset = wcSeekTell(volInfo);
+        node->extentLocationOffset = wcSeekTell(volInfo);
     
     /* location of extent not recorded in this function */
     wcSeekForward(volInfo, 8);
@@ -978,12 +978,12 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
     else
     {
         if(filenameTypes & FNTYPE_JOLIET)
-            lenFileId = 2 * strlen(dir->nameJoliet);
+            lenFileId = 2 * strlen(node->nameJoliet);
         else
             /*if(isADir) see microsoft comment below */
-                lenFileId = strlen(dir->name9660);
+                lenFileId = strlen(node->name9660);
             /*else
-                lenFileId = strlen(dir->name9660) + 2; */
+                lenFileId = strlen(node->name9660) + 2; */
     }
     
     rc = write711(volInfo, lenFileId);
@@ -995,7 +995,7 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
     if(isSelfOrParent)
     {
         /* that byte has 0x00 or 0x01 */
-        rc = write711(volInfo, dir->name9660[0]);
+        rc = write711(volInfo, node->name9660[0]);
         if(rc <= 0)
             return rc;
     }
@@ -1003,8 +1003,8 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
     {
         if(filenameTypes & FNTYPE_JOLIET)
         {
-            rc = writeJolietStringField(volInfo, dir->nameJoliet, 
-                                        2 * strlen(dir->nameJoliet));
+            rc = writeJolietStringField(volInfo, node->nameJoliet, 
+                                        2 * strlen(node->nameJoliet));
             if(rc < 0)
                 return rc;
         }
@@ -1018,13 +1018,13 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
             if(isADir)
             {*/
                 /* the name */
-                rc = wcWrite(volInfo, dir->name9660, lenFileId);
+                rc = wcWrite(volInfo, node->name9660, lenFileId);
                 if(rc <= 0)
                     return rc;
             /*}
             else
             {
-                rc = writeWrapper(image, dir->name9660, lenFileId - 2);
+                rc = writeWrapper(image, node->name9660, lenFileId - 2);
                 if(rc <= 0)
                     return rc;
                 
@@ -1058,22 +1058,29 @@ int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADi
                 return rc;
         }
         
-        rc = writeRockPX(volInfo, dir->posixFileMode, isADir);
+        rc = writeRockPX(volInfo, node->posixFileMode, isADir);
         if(rc < 0)
             return rc;
         
         if(!isSelfOrParent)
         {
-            if(wcSeekTell(volInfo) - startPos < strlen(dir->nameRock) + 5)
+            if(wcSeekTell(volInfo) - startPos < strlen(node->nameRock) + 5)
             /* have no room for the NM entry in this directory record */
             {
-                dir->offsetForCE = wcSeekTell(volInfo);
+                node->offsetForCE = wcSeekTell(volInfo);
                 /* leave room for CE entry */
                 wcSeekForward(volInfo, 28);
             }
             else
             {
-                rc = writeRockNM(volInfo, dir->nameRock, strlen(dir->nameRock), false);
+                rc = writeRockNM(volInfo, node->nameRock, strlen(node->nameRock), false);
+                if(rc < 0)
+                    return rc;
+            }
+            
+            if(IS_SYMLINK(node->posixFileMode))
+            {
+                rc = writeRockSL(volInfo, SYMLINKTW_PTR(node), true);
                 if(rc < 0)
                     return rc;
             }
@@ -1391,7 +1398,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
     return 1;
 }
 
-/* field size must be even. <-- huh? why? */
+/* field size must be even. !!check all calls to make sure */
 int writeJolietStringField(VolInfo* volInfo, const char* name, int fieldSize)
 {
     char jolietName[512]; /* don't see why would ever want 
@@ -1430,7 +1437,7 @@ int writeJolietStringField(VolInfo* volInfo, const char* name, int fieldSize)
 }
 
 /* write NM that won't fit in a directory record */
-int writeLongNM(VolInfo* volInfo, BaseToWrite* dir)
+int writeLongNM(VolInfo* volInfo, BaseToWrite* node)
 {
     off_t startPos;
     int fullNameLen;
@@ -1443,7 +1450,7 @@ int writeLongNM(VolInfo* volInfo, BaseToWrite* dir)
     
     startPos = wcSeekTell(volInfo);
     
-    fullNameLen = strlen(dir->nameRock);
+    fullNameLen = strlen(node->nameRock);
     
     /* should have checked for this before getting into this function */
     if(fullNameLen > 255)
@@ -1463,16 +1470,16 @@ int writeLongNM(VolInfo* volInfo, BaseToWrite* dir)
     /* NM record(s) */
     if(fitsInOneNM)
     {
-        rc = writeRockNM(volInfo, dir->nameRock, firstNMlen, false);
+        rc = writeRockNM(volInfo, node->nameRock, firstNMlen, false);
         if(rc <= 0)
             return rc;
     }
     else
     {
-        rc = writeRockNM(volInfo, dir->nameRock, firstNMlen, true);
+        rc = writeRockNM(volInfo, node->nameRock, firstNMlen, true);
         if(rc <= 0)
             return rc;
-        rc = writeRockNM(volInfo, dir->nameRock + firstNMlen, fullNameLen - firstNMlen, false);
+        rc = writeRockNM(volInfo, node->nameRock + firstNMlen, fullNameLen - firstNMlen, false);
         if(rc <= 0)
             return rc;
     }
@@ -1488,7 +1495,7 @@ int writeLongNM(VolInfo* volInfo, BaseToWrite* dir)
     endPos = wcSeekTell(volInfo);
     
     /* CE record back in the directory record */
-    wcSeekSet(volInfo, dir->offsetForCE);
+    wcSeekSet(volInfo, node->offsetForCE);
     
     CErecord[0] = 'C';
     CErecord[1] = 'E';
@@ -1866,6 +1873,154 @@ int writeRockPX(VolInfo* volInfo, unsigned posixFileMode, bool isADir)
         return rc;
     
     return 1;
+}
+
+int writeRockSL(VolInfo* volInfo, SymLinkToWrite* symlink, bool doWrite)
+{
+    int stringCount;
+    int targetLen;
+    int numBytesNeeded;
+    int numBytesToSkip;
+    unsigned char* record;
+    int recordCount;
+    int rc;
+    
+    targetLen = strlen(symlink->target);
+    
+    /* figure out how much room i need */
+    numBytesNeeded = 0;
+    numBytesToSkip = 0;
+    stringCount = 0;
+    while(stringCount < targetLen)
+    {
+        int numBytesToSkip;
+        char* nextSlash;
+        
+        if(symlink->target[stringCount] == '/')
+        /* root (/) */
+        {
+            numBytesNeeded += 2;
+            numBytesToSkip = 1;
+        }
+        else if( symlink->target[stringCount] == '.' && 
+                 (stringCount + 1 == targetLen || symlink->target[stringCount + 1] == '/') )
+        /* current (.) */
+        {
+            numBytesNeeded += 2;
+            numBytesToSkip = 2;
+        }
+        else if( symlink->target[stringCount] == '.' && 
+                 stringCount + 1 < targetLen && symlink->target[stringCount + 1] == '.' )
+        /* parent (..) */
+        {
+            numBytesNeeded += 2;
+            numBytesToSkip = 3;
+        }
+        else
+        /* regular filename */
+        {
+            nextSlash = strchr(symlink->target + stringCount, '/');
+            if(nextSlash != NULL)
+                numBytesToSkip = nextSlash - (symlink->target + stringCount);
+            else
+                numBytesToSkip = targetLen - stringCount;
+            
+            numBytesNeeded += 2 + numBytesToSkip;
+            
+            numBytesToSkip += 1;
+        }
+        
+        stringCount += numBytesToSkip;
+    }
+    
+    if(!doWrite)
+        return 5 + numBytesNeeded;
+    
+    if(numBytesNeeded > NCHARS_SYMLINK_TARGET_MAX - 1)
+        return BKERROR_SYMLINK_TARGET_TOO_LONG;
+    
+    record = malloc(5 + numBytesNeeded);
+    if(record == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    record[0] = 'S';
+    record[1] = 'L';
+    record[2] = 5 + numBytesNeeded; /* length */
+    record[3] = 1; /* version */
+    record[4] = 0x00; /* flags */
+    
+    /* write SL */
+    numBytesToSkip = 0;
+    stringCount = 0;
+    recordCount = 5;
+    while(stringCount < targetLen)
+    {
+        int numBytesToSkip;
+        char* nextSlash;
+        
+        if(symlink->target[stringCount] == '/')
+        /* root (/) */
+        {
+            numBytesToSkip = 1;
+            record[recordCount] = 0x08;
+            record[recordCount + 1] = 0;
+            recordCount += 2;
+        }
+        else if( symlink->target[stringCount] == '.' && 
+                 (stringCount + 1 == targetLen || symlink->target[stringCount + 1] == '/') )
+        /* current (.) */
+        {
+            numBytesToSkip = 2;
+            record[recordCount] = 0x02;
+            record[recordCount + 1] = 0;
+            recordCount += 2;
+        }
+        else if( symlink->target[stringCount] == '.' && 
+                 stringCount + 1 < targetLen && symlink->target[stringCount + 1] == '.' )
+        /* parent (..) */
+        {
+            numBytesToSkip = 3;
+            record[recordCount] = 0x04;
+            record[recordCount + 1] = 0;
+            recordCount += 2;
+        }
+        else
+        /* regular filename */
+        {
+            nextSlash = strchr(symlink->target + stringCount, '/');
+            if(nextSlash != NULL)
+                numBytesToSkip = nextSlash - (symlink->target + stringCount);
+            else
+                numBytesToSkip = targetLen - stringCount;
+            
+            record[recordCount] = 0x00;
+            record[recordCount + 1] = numBytesToSkip;
+            strncpy((char*)record + recordCount + 2, symlink->target + stringCount, numBytesToSkip);
+            recordCount += 2 + numBytesToSkip;
+            
+            numBytesToSkip += 1;
+        }
+        
+        /* + separator */
+        stringCount += numBytesToSkip;
+    }
+    
+    if(recordCount != numBytesNeeded + 5)
+    {
+        free(record);
+        return BKERROR_SANITY;
+    }
+    
+    rc = wcWrite(volInfo, (char*)record, recordCount);
+    if(rc <= 0)
+    {
+        free(record);
+        return rc;
+    }
+    
+    free(record);
+
+    return 5 + numBytesNeeded;
 }
 
 /* This doesn't need support for CE because it's only written in one place,
