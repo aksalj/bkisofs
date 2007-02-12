@@ -71,7 +71,7 @@ void freeDirToWriteContents(DirToWrite* dir)
     while(currentChild != NULL)
     {
         nextChild = currentChild->next;
-        printf("freeing '%s'\n", currentChild->nameRock);fflush(NULL);
+        
         if( IS_DIR(currentChild->posixFileMode) )
         {
             freeDirToWriteContents(DIRTW_PTR(currentChild));

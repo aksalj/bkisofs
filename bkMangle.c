@@ -209,7 +209,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
         else /* if( IS_SYMLINK(currentOrigChild->posixFileMode) ) */
         {
             strncpy(SYMLINKTW_PTR(*currentNewChild)->target, 
-                    BK_SYMLINK_PTR(currentOrigChild)->target, PATH_MAX + 1);
+                    BK_SYMLINK_PTR(currentOrigChild)->target, NCHARS_SYMLINK_TARGET_MAX);
         }
         
         currentOrigChild = currentOrigChild->next;

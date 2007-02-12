@@ -36,6 +36,9 @@
 /* many library functions rely on this being at least 256 */
 #define NCHARS_FILE_ID_MAX_STORE 256
 
+/* maximum length of the target of a symbolic link */
+#define NCHARS_SYMLINK_TARGET_MAX 251
+
 /* options for VolInfo.bootMediaType */
 #define BOOT_MEDIA_NONE 0
 #define BOOT_MEDIA_NO_EMULATION 1
@@ -102,7 +105,7 @@ typedef struct BkSymLink
 {
     BkFileBase base; /* intended to be accessed using a cast */
     
-    char target[PATH_MAX + 1];
+    char target[NCHARS_SYMLINK_TARGET_MAX];
     
 } BkSymLink;
 

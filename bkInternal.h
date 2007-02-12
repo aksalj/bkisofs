@@ -36,10 +36,6 @@
 * Only a max of 64 characters of this will be stored. (plus '\0') */
 #define NCHARS_FILE_ID_MAX_JOLIET 65
 
-/******************************************************************************
-* maximum length of the target of a symbolic link */
-#define NCHARS_SYMLINK_TARGET_MAX 251
-
 #define BASETW_PTR(item) ((BaseToWrite*)(item))
 #define DIRTW_PTR(item) ((DirToWrite*)(item))
 #define FILETW_PTR(item) ((FileToWrite*)(item))
