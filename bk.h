@@ -36,7 +36,9 @@
 /* many library functions rely on this being at least 256 */
 #define NCHARS_FILE_ID_MAX_STORE 256
 
-/* maximum length of the target of a symbolic link */
+/* maximum length of the target of a symbolic link
+* !! this is used for both the number of characters in the path and the number
+* of bytes in the SL record, that should probably be fixed */
 #define NCHARS_SYMLINK_TARGET_MAX 251
 
 /* options for VolInfo.bootMediaType */
