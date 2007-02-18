@@ -35,6 +35,7 @@ tests to run before a release:
 
 to package a release:
 - update the version number in the about box
+- update the version number in the makefile
 - remove -g and -DDEBUG from Makefile and bk/Makefile
 - update changelog.txt
 - update credits and credits.txt
