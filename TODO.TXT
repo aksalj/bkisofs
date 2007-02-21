@@ -9,10 +9,11 @@ ui:
 
 bk:
 -dos doesn't like names to start with underscores
+-add path tables, boot record to size estimate
 -split bk_write_image()
 -writeElToritoBootCatalog(), writeElToritoVd() cast return to int, no good
--bootRecordSize, bootRecordOffset should be off_t
--make it work on david's sparc
+-bootRecordSize?, bootRecordOffset should be off_t
+-change 8.3 filenames to 32 (to support some more bootable cds)
 
 
 c99 compatibility issues:

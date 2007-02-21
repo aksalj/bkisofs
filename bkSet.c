@@ -56,8 +56,6 @@ int bk_init_vol_info(VolInfo* volInfo)
     volInfo->posixFileDefaults = 0100644;
     volInfo->posixDirDefaults = 040755;
     
-    //~ volInfo->followLinks = false;
-    
     return 1;
 }
 

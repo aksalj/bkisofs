@@ -27,6 +27,7 @@
 #include "bkRead7x.h"
 #include "bkTime.h"
 #include "bkError.h"
+#include "bkLink.h"
 
 /* numbers as recorded on image */
 #define VDTYPE_BOOT 0
@@ -743,6 +744,10 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     rc = read733(volInfo->imageForReading, &lenExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
+    
+    //!! this has to be optional and turned off by default
+    if( !isInHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0) )
+        addToHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0);
     
     /* The length of isolinux.bin given in the initial/default entry of
     * the el torito boot catalog does not match the actual length of the file

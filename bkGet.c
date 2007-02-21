@@ -27,7 +27,6 @@
 * */
 off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
 {
-    //!! add path tables, boot record to estimate
     return estimateIsoSize(&(volInfo->dirTree), filenameTypes);
 }
 

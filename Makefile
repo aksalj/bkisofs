@@ -1,6 +1,6 @@
 # CC, AR, RM defined in parent makefile
 
-OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o bkGet.o bkSet.o bkCache.o
+OBJECTS = bkRead7x.o bkAdd.o bkDelete.o bkExtract.o bkRead.o bkPath.o bkMangle.o bkWrite.o bkWrite7x.o bkTime.o bkSort.o bkError.o bkGet.o bkSet.o bkCache.o bkLink.o
 
 # -DDEBUG and -g only used during development
 CFLAGS   = -Wall -pedantic -std=gnu99 -g -DDEBUG

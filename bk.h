@@ -61,6 +61,10 @@
 #define BK_FILE_PTR(item) ((BkFile*)(item))
 #define BK_SYMLINK_PTR(item) ((BkSymLink*)(item))
 
+/*******************************************************************************
+* BkFileBase
+* Linked list node.
+* All files, directories, links need this. */
 typedef struct BkFileBase
 {
     char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
@@ -72,8 +76,8 @@ typedef struct BkFileBase
 
 /*******************************************************************************
 * BkDir
-* linked list node
-* information about a directory and it's contents */
+* Linked list node.
+* Information about a directory and it's contents. */
 typedef struct BkDir
 {
     BkFileBase base; /* intended to be accessed using a cast */
@@ -83,15 +87,34 @@ typedef struct BkDir
 } BkDir;
 
 /*******************************************************************************
+* BkHardLink
+* Linked list node.
+* Information about a hard link (where to find a certain file).
+* This is for internal use but is here because BkFile references it. */
+typedef struct BkHardLink
+{
+    bool onImage;
+    off_t position; /* if on image */
+    ino_t inode; /* if on filesystem */
+    //~ bool haveHead;
+    //~ unsigned char head[32];
+    unsigned extentNumberWrittenTo; /* only set once one file is written */
+    
+    struct BkHardLink* next;
+    
+} BkHardLink;
+
+/*******************************************************************************
 * BkFile
-* linked list node
-* information about a file, whether on the image or on the filesystem */
+* Linked list node.
+* Information about a file, whether on the image or on the filesystem. */
 typedef struct BkFile
 {
     BkFileBase base; /* intended to be accessed using a cast */
     
     unsigned size; /* in bytes, don't need off_t because it's stored 
                    * in a 32bit unsigned int on the iso */
+    BkHardLink* location; /* basically a copy of the following variables */
     bool onImage;
     off_t position; /* if on image, in bytes */
     char* pathAndName; /* if on filesystem, full path + filename
@@ -101,8 +124,8 @@ typedef struct BkFile
 
 /*******************************************************************************
 * BkSymLink
-* linked list node
-* information about a symbolic link */
+* Linked list node.
+* Information about a symbolic link. */
 typedef struct BkSymLink
 {
     BkFileBase base; /* intended to be accessed using a cast */
@@ -113,8 +136,8 @@ typedef struct BkSymLink
 
 /*******************************************************************************
 * VolInfo
-* information about a volume (one image)
-* strings are '\0' terminated */
+* Information about a volume (one image).
+* Strings are '\0' terminated. */
 typedef struct
 {
     /* private bk use  */
@@ -134,6 +157,7 @@ typedef struct
     void(*writeProgressFunction)(double);
     time_t lastTimeCalledProgress;
     off_t estimatedIsoSize;
+    BkHardLink* fileLocations; /* list of where to find regular files */
     
     /* public use, read only */
     time_t creationTime;
