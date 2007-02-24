@@ -5,6 +5,7 @@ ui:
 -change file/dir properties (especialy creation date)
 -add save/overwrite #undef-ed by default
 -allow editing address on iso bar
+-progress bars for reading and adding
 
 
 bk:
@@ -14,6 +15,8 @@ bk:
 -writeElToritoBootCatalog(), writeElToritoVd() cast return to int, no good
 -bootRecordSize?, bootRecordOffset should be off_t
 -change 8.3 filenames to 32 (to support some more bootable cds)
+-when have hard links iso size is messed up
+-written contents /W2KS.DAT from 2k multiboot cd are 0x00
 
 
 c99 compatibility issues:

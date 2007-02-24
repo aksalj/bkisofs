@@ -25,7 +25,7 @@
 int addToHardLinkTable(VolInfo* volInfo, off_t position, ino_t inode)
 {
     BkHardLink* newLink;
-    printf("adding to hard link table\n");fflush(NULL);
+    
     newLink = malloc(sizeof(BkHardLink));
     if(newLink == NULL)
         return BKERROR_OUT_OF_MEMORY;
@@ -37,9 +37,11 @@ int addToHardLinkTable(VolInfo* volInfo, off_t position, ino_t inode)
     newLink->inode = inode;
     newLink->next = volInfo->fileLocations;
     volInfo->fileLocations = newLink;
+    
+    return 1;
 }
 
-bool isInHardLinkTable(VolInfo* volInfo, off_t position, ino_t inode)
+BkHardLink* findInHardLinkTable(VolInfo* volInfo, off_t position, ino_t inode)
 {
     BkHardLink* currentLink;
     
@@ -49,16 +51,16 @@ bool isInHardLinkTable(VolInfo* volInfo, off_t position, ino_t inode)
         if(position != 0)
         {
             if(position == currentLink->position)
-                return true;
+                return currentLink;
         }
         else
         {
             if(inode == currentLink->inode)
-                return true;
+                return currentLink;
         }
         
         currentLink = currentLink->next;
     }
     
-    return false;
+    return NULL;
 }

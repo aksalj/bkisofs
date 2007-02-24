@@ -27,6 +27,7 @@
 #include "bkError.h"
 #include "bkGet.h"
 #include "bkMangle.h"
+#include "bkLink.h"
 
 int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
 {
@@ -44,7 +45,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
     
     oldHead = destDir->children;
     
-    if(volInfo->followLinks)
+    if(volInfo->followSymLinks)
         rc = stat(srcPathAndName, &statStruct);
     else
         rc = lstat(srcPathAndName, &statStruct);
@@ -104,6 +105,17 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
         
         newFile->pathAndName = malloc(strlen(srcPathAndName) + 1);
         strcpy(newFile->pathAndName, srcPathAndName);
+        
+        if( volInfo->scanForDuplicateFiles &&
+            findInHardLinkTable(volInfo, 0, statStruct.st_ino) == NULL )
+        {
+            rc = addToHardLinkTable(volInfo, 0, statStruct.st_ino);
+            if(rc < 0)
+            {
+                free(newFile);
+                return rc;
+            }
+        }
         
         destDir->children = BK_BASE_PTR(newFile);
     }

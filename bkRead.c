@@ -745,9 +745,13 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    //!! this has to be optional and turned off by default
-    if( !isInHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0) )
-        addToHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0);
+    if( volInfo->scanForDuplicateFiles &&
+        findInHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0) == NULL )
+    {
+        rc = addToHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0);
+        if(rc < 0)
+            return rc;
+    }
     
     /* The length of isolinux.bin given in the initial/default entry of
     * the el torito boot catalog does not match the actual length of the file

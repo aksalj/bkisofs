@@ -36,6 +36,7 @@
 #include "bkPath.h"
 #include "bkCache.h"
 #include "bkRead7x.h"
+#include "bkLink.h"
 
 /******************************************************************************
 * bk_write_image()
@@ -1253,13 +1254,49 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
     {
         if(volInfo->stopOperation)
             return BKERROR_OPER_CANCELED_BY_USER;
+
+        if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
+            return BKERROR_SANITY;
         
         if( IS_REG_FILE(child->posixFileMode) )
         {
-            if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
-                return BKERROR_SANITY;
+            BkHardLink* hardLink;
+            bool needToCopy = true;
             
             child->extentNumber = wcSeekTell(volInfo) / NBYTES_LOGICAL_BLOCK;
+            if(volInfo->scanForDuplicateFiles)
+            {
+                ino_t inode;
+                
+                inode = 0;
+                if( !(FILETW_PTR(child)->onImage) )
+                {
+                    struct stat statStruct;
+                    rc = stat(FILETW_PTR(child)->pathAndName, &statStruct);
+                    if(rc != 0)
+                        return BKERROR_STAT_FAILED;
+                    inode = statStruct.st_ino;
+                }
+                
+                hardLink = findInHardLinkTable(volInfo, 
+                                               FILETW_PTR(child)->offset, 
+                                               inode);
+                if(hardLink == NULL)
+                    return BKERROR_SANITY;
+                
+                if(hardLink->extentNumberWrittenTo == 0)
+                /* file not yet written */
+                {
+                    hardLink->extentNumberWrittenTo = child->extentNumber;
+                }
+                else
+                {
+                    child->extentNumber = hardLink->extentNumberWrittenTo;
+                    needToCopy = false;
+                }
+            }
+            
+            child->dataLength = FILETW_PTR(child)->size;
             
             if(volInfo->bootMediaType != BOOT_MEDIA_NONE && 
                volInfo->bootRecordIsVisible &&
@@ -1272,53 +1309,53 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                 currPos = wcSeekTell(volInfo);
                 
                 wcSeekSet(volInfo, volInfo->bootRecordSectorNumberOffset);
-                rc = write731(volInfo, currPos / NBYTES_LOGICAL_BLOCK);
+                rc = write731(volInfo, child->extentNumber);
                 if(rc <= 0)
                     return rc;
                 
                 wcSeekSet(volInfo, currPos);
             }
             
-            if(FILETW_PTR(child)->onImage)
-            /* copy file from original image to new one */
+            if(needToCopy)
             {
-                lseek(volInfo->imageForReading, FILETW_PTR(child)->offset, SEEK_SET);
-                
-                rc = writeByteBlockFromFile(volInfo->imageForReading, volInfo, FILETW_PTR(child)->size);
-                if(rc < 0)
-                    return rc;
-            }
-            else
-            /* copy file from fs to new image */
-            {
-                srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY);
-                if(srcFile == -1)
-                    return BKERROR_OPEN_READ_FAILED;
-                
-                rc = writeByteBlockFromFile(srcFile, volInfo, FILETW_PTR(child)->size);
-                if(rc < 0)
+                if(FILETW_PTR(child)->onImage)
+                /* copy file from original image to new one */
                 {
-                    close(srcFile);
-                    return rc;
+                    lseek(volInfo->imageForReading, FILETW_PTR(child)->offset, 
+                          SEEK_SET);
+                    
+                    rc = writeByteBlockFromFile(volInfo->imageForReading, 
+                                             volInfo, FILETW_PTR(child)->size);
+                    if(rc < 0)
+                        return rc;
+                }
+                else
+                /* copy file from fs to new image */
+                {
+                    srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY);
+                    if(srcFile == -1)
+                        return BKERROR_OPEN_READ_FAILED;
+                    
+                    rc = writeByteBlockFromFile(srcFile, 
+                                             volInfo, FILETW_PTR(child)->size);
+                    if(rc < 0)
+                    {
+                        close(srcFile);
+                        return rc;
+                    }
+                    
+                    rc = close(srcFile);
+                    if(rc < 0)
+                        return BKERROR_EXOTIC;
                 }
                 
-                rc = close(srcFile);
+                /* fill extent with zeroes */
+                numUnusedBytes = NBYTES_LOGICAL_BLOCK - 
+                                 wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK;
+                rc = writeByteBlock(volInfo, 0x00, numUnusedBytes);
                 if(rc < 0)
-                    return BKERROR_EXOTIC;
+                    return rc;
             }
-            
-            child->dataLength = wcSeekTell(volInfo) - 
-                                child->extentNumber * 
-                                NBYTES_LOGICAL_BLOCK;
-            
-            /* FILL extent with zeroes */
-            numUnusedBytes = NBYTES_LOGICAL_BLOCK - 
-                             wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK;
-            
-            rc = writeByteBlock(volInfo, 0x00, numUnusedBytes);
-            if(rc < 0)
-                return rc;
-            /* END FILL extent with zeroes */
             
             endPos = wcSeekTell(volInfo);
             

@@ -48,13 +48,15 @@ void bk_destroy_vol_info(VolInfo* volInfo)
 * bk_init_vol_info()
 *
 * */
-int bk_init_vol_info(VolInfo* volInfo)
+int bk_init_vol_info(VolInfo* volInfo, bool scanForDuplicateFiles)
 {
     bzero(volInfo, sizeof(VolInfo));
     
     volInfo->dirTree.base.posixFileMode = 040755;
     volInfo->posixFileDefaults = 0100644;
     volInfo->posixDirDefaults = 040755;
+    
+    volInfo->scanForDuplicateFiles = scanForDuplicateFiles;
     
     return 1;
 }
@@ -126,6 +128,11 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName)
     freePathContents(&path);
     
     return 1;
+}
+
+void bk_set_follow_symlinks(VolInfo* volInfo, bool doFollow)
+{
+    volInfo->followSymLinks = doFollow;
 }
 
 /*******************************************************************************

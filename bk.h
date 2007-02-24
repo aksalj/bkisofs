@@ -118,7 +118,7 @@ typedef struct BkFile
     bool onImage;
     off_t position; /* if on image, in bytes */
     char* pathAndName; /* if on filesystem, full path + filename
-                       * is to be freed by whenever the File is freed */
+                       * is to be freed whenever the File is freed */
     
 } BkFile;
 
@@ -169,6 +169,8 @@ typedef struct
     char* bootRecordPathAndName;   /* if on filesystem */
     bool bootRecordIsVisible;      /* whether boot record is a visible file 
                                    *  on the image */
+    bool scanForDuplicateFiles;    /* whether to check every file for uniqueness
+                                   * to decide is it a hard link or not */
     
     /* public use, read/write */
     char volId[33];
@@ -177,7 +179,7 @@ typedef struct
     unsigned posixFileDefaults;    /* for extracting */
     unsigned posixDirDefaults;     /* for extracting or creating on iso */
     bool(*warningCbk)(const char*);
-    bool followLinks;              /* whether to stat the link itself rather 
+    bool followSymLinks;           /* whether to stat the link itself rather 
                                    *  than the file it's pointing to */
     
 } VolInfo;
@@ -215,8 +217,9 @@ char* bk_get_error_string(int errorId);
 /* setters */
 void bk_cancel_operation(VolInfo* volInfo);
 void bk_destroy_vol_info(VolInfo* volInfo);
-int bk_init_vol_info(VolInfo* volInfo);
+int bk_init_vol_info(VolInfo* volInfo, bool scanForDuplicateFiles);
 int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName);
+void bk_set_follow_symlinks(VolInfo* volInfo, bool doFollow);
 void bk_set_publisher(VolInfo* volInfo, const char* publisher);
 void bk_set_vol_name(VolInfo* volInfo, const char* volName);
 
