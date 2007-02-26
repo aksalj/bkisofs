@@ -61,9 +61,13 @@ int addToHardLinkTable(VolInfo* volInfo, off_t position, char* pathAndName,
     return 1;
 }
 
-/* returns 2 if yes 1 if not */
-int filesAreSame(int file1, int file2, unsigned size)
+/* returns 2 if yes 1 if not
+* works even if file1 == file2 */
+int filesAreSame(int file1, off_t posFile1, int file2, off_t posFile2, 
+                 unsigned size)
 {
+    off_t origPosFile1;
+    off_t origPosFile2;
     const int blockSize = 102400;
     unsigned char* file1block[blockSize];
     unsigned char* file2block[blockSize];
@@ -71,35 +75,62 @@ int filesAreSame(int file1, int file2, unsigned size)
     int sizeLastBlock;
     int count;
     int rc;
+    bool sameSoFar;
+    
+    if(size == 0)
+        return 2;
+    
+    origPosFile1 = lseek(file1, 0, SEEK_CUR);
+    origPosFile2 = lseek(file2, 0, SEEK_CUR);
     
     numBlocks = size / blockSize;
     sizeLastBlock = size % blockSize;
     
+    sameSoFar = true;
     for(count = 0; count < numBlocks; count++)
     {
+        lseek(file1, posFile1, SEEK_SET);
         rc = read(file1, file1block, blockSize);
         if(rc != blockSize)
             return BKERROR_READ_GENERIC;
+        posFile1 = lseek(file1, 0, SEEK_CUR);
+        
+        lseek(file2, posFile2, SEEK_SET);
         rc = read(file2, file2block, blockSize);
         if(rc != blockSize)
             return BKERROR_READ_GENERIC;
+        posFile2 = lseek(file1, 0, SEEK_CUR);
+        
         if(memcmp(file1block, file2block, blockSize) != 0)
-            return 1;
+        {
+            sameSoFar = false;
+            break;
+        }
     }
     
-    if(sizeLastBlock > 0)
+    if(sameSoFar && sizeLastBlock > 0)
     {
+        lseek(file1, posFile1, SEEK_SET);
         rc = read(file1, file1block, sizeLastBlock);
         if(rc != blockSize)
             return BKERROR_READ_GENERIC;
+        
+        lseek(file2, posFile2, SEEK_SET);
         rc = read(file2, file2block, sizeLastBlock);
         if(rc != blockSize)
             return BKERROR_READ_GENERIC;
+        
         if(memcmp(file1block, file2block, sizeLastBlock) != 0)
-            return 1;
+            sameSoFar = false;
     }
     
-    return 2;
+    lseek(file1, origPosFile1, SEEK_SET);
+    lseek(file2, origPosFile2, SEEK_SET);
+    
+    if(sameSoFar)
+        return 2;
+    else
+        return 1;
 }
 
 /* returns 2 if found 1 if not found */
@@ -130,36 +161,54 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
         {
             if( memcmp(head, currentLink->head, headSize) == 0 )
             {
-                int newFile;
-                bool newFileWasOpened;
-                off_t origNewFilePos;
                 int origFile;
                 int origFileWasOpened;
-                off_t origorigFilePos;
+                off_t origFileOffset;
+                int newFile;
+                bool newFileWasOpened;
+                off_t newFileOffset;
                 
-                /* set up original file */
+                /* set up for reading original file */
+                if(currentLink->onImage)
+                {
+                    origFile = volInfo->imageForReading;
+                    origFileWasOpened = false;
+                    origFileOffset = currentLink->position;
+                }
+                else
+                {
+                    origFile = open(pathAndName, O_RDONLY);
+                    if(origFile == -1)
+                        return BKERROR_OPEN_READ_FAILED;
+                    origFileWasOpened = true;
+                    origFileOffset = 0;
+                }
                 
-                
-                /* set up new file */
+                /* set up for reading new file */
                 if(onImage)
                 {
                     newFile = volInfo->imageForReading;
-                    origNewFilePos = lseek(volInfo->imageForReading, 0, SEEK_CUR);
                     newFileWasOpened = false;
+                    newFileOffset = position;
                 }
                 else
                 {
                     newFile = open(pathAndName, O_RDONLY);
                     if(newFile == -1)
+                    {
+                        if(origFileWasOpened)
+                            close(origFile);
                         return BKERROR_OPEN_READ_FAILED;
+                    }
                     newFileWasOpened = true;
+                    newFileOffset = 0;
                 }
                 
                 //~ rc = filesAreSame(srcFile, 
                 
-                if(!newFileWasOpened)
-                    lseek(volInfo->imageForReading, origNewFilePos, SEEK_SET);
-                else
+                if(origFileWasOpened)
+                    close(origFile);
+                if(newFileWasOpened)
                     close(newFile);
                 
                 *foundLink = currentLink;
