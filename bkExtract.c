@@ -184,10 +184,10 @@ int copyByteBlock(int src, int dest, unsigned numBytes)
     {
         rc = read(src, block, sizeLastBlock);
         if(rc != sizeLastBlock)
-                return BKERROR_READ_GENERIC;
+            return BKERROR_READ_GENERIC;
         rc = write(dest, block, sizeLastBlock);
         if(rc <= 0)
-                return rc;
+            return rc;
     }
     
     return 1;

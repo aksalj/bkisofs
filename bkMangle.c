@@ -187,6 +187,8 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             
             newFile->size = origFile->size;
             
+            newFile->location = origFile->location;
+            
             newFile->onImage = origFile->onImage;
             
             newFile->offset = origFile->position;

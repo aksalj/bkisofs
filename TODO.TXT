@@ -6,6 +6,9 @@ ui:
 -add save/overwrite #undef-ed by default
 -allow editing address on iso bar
 -progress bars for reading and adding
+-iso size label should be packed into toolbar
+-shownoimageopenmsg
+-shownofileselectedmsg (iso/fs)
 
 
 bk:
@@ -17,6 +20,8 @@ bk:
 -change 8.3 filenames to 32 (to support some more bootable cds)
 -when have hard links iso size is messed up
 -written contents /W2KS.DAT from 2k multiboot cd are 0x00
+-delete hard link list
+-make sure an edited slax disk still boots
 
 
 c99 compatibility issues:

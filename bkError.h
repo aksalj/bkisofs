@@ -104,6 +104,8 @@
 #define BKERROR_CREATE_SYMLINK_FAILED_TEXT       "Failed to create symbolic link"
 #define BKERROR_SYMLINK_TARGET_TOO_LONG          -1042
 #define BKERROR_SYMLINK_TARGET_TOO_LONG_TEXT     "Too many characters in target of a symbolic link"
+#define BKERROR_HARD_LINK_CALL_PARAMS            -1043
+#define BKERROR_HARD_LINK_CALL_PARAMS_TEXT       "Call to a hard link function with both a 0 offset and a NULL filename not allowed"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

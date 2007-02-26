@@ -745,12 +745,25 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    if( volInfo->scanForDuplicateFiles &&
-        findInHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0) == NULL )
+    if( volInfo->scanForDuplicateFiles)
     {
-        rc = addToHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 0);
+        BkHardLink* newLink;
+        
+        rc = findInHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, NULL,
+                                 lenExtent, true, &newLink);
         if(rc < 0)
             return rc;
+        
+        if(newLink == NULL)
+        /* not found */
+        {
+            rc = addToHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 
+                                    NULL, lenExtent, true, &newLink);
+            if(rc < 0)
+                return rc;
+        }
+        
+        file->location = newLink;
     }
     
     /* The length of isolinux.bin given in the initial/default entry of

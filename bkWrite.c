@@ -87,7 +87,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    
+    //~ printDirToWrite(&newTree, 0, filenameTypes);
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
     volInfo->imageForWriting = open(newImagePathAndName, 
                                     O_WRONLY | O_CREAT | O_TRUNC, 
@@ -1260,38 +1260,19 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
         
         if( IS_REG_FILE(child->posixFileMode) )
         {
-            BkHardLink* hardLink;
             bool needToCopy = true;
             
             child->extentNumber = wcSeekTell(volInfo) / NBYTES_LOGICAL_BLOCK;
             if(volInfo->scanForDuplicateFiles)
-            {
-                ino_t inode;
-                
-                inode = 0;
-                if( !(FILETW_PTR(child)->onImage) )
-                {
-                    struct stat statStruct;
-                    rc = stat(FILETW_PTR(child)->pathAndName, &statStruct);
-                    if(rc != 0)
-                        return BKERROR_STAT_FAILED;
-                    inode = statStruct.st_ino;
-                }
-                
-                hardLink = findInHardLinkTable(volInfo, 
-                                               FILETW_PTR(child)->offset, 
-                                               inode);
-                if(hardLink == NULL)
-                    return BKERROR_SANITY;
-                
-                if(hardLink->extentNumberWrittenTo == 0)
+            {//printf("file '%s': ", child->nameRock);
+                if(FILETW_PTR(child)->location->extentNumberWrittenTo == 0)
                 /* file not yet written */
-                {
-                    hardLink->extentNumberWrittenTo = child->extentNumber;
+                {//printf("writing to 0x%X\n", child->extentNumber * NBYTES_LOGICAL_BLOCK);
+                    FILETW_PTR(child)->location->extentNumberWrittenTo = child->extentNumber;
                 }
                 else
-                {
-                    child->extentNumber = hardLink->extentNumberWrittenTo;
+                {//printf("not writing, already at 0x%X\n", FILETW_PTR(child)->location->extentNumberWrittenTo * NBYTES_LOGICAL_BLOCK);
+                    child->extentNumber = FILETW_PTR(child)->location->extentNumberWrittenTo;
                     needToCopy = false;
                 }
             }

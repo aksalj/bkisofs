@@ -41,6 +41,10 @@
 * of bytes in the SL record, that should probably be fixed */
 #define NCHARS_SYMLINK_TARGET_MAX 251
 
+/* maximum number of bytes to read from a file for comparing it quickly
+* with others (is it likely to be a hard link or not) */
+#define MAX_NBYTES_HARDLINK_HEAD 32
+
 /* options for VolInfo.bootMediaType */
 #define BOOT_MEDIA_NONE 0
 #define BOOT_MEDIA_NO_EMULATION 1
@@ -95,9 +99,12 @@ typedef struct BkHardLink
 {
     bool onImage;
     off_t position; /* if on image */
-    ino_t inode; /* if on filesystem */
-    //~ bool haveHead;
-    //~ unsigned char head[32];
+    char* pathAndName; /* if on filesystem, full path + filename
+                       * is to be freed whenever the BkHardLink is freed */
+    unsigned size; /* size of the file being pointed to */
+    int headSize;
+    unsigned char head[MAX_NBYTES_HARDLINK_HEAD];
+    
     unsigned extentNumberWrittenTo; /* only set once one file is written */
     
     struct BkHardLink* next;

@@ -106,15 +106,31 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
         newFile->pathAndName = malloc(strlen(srcPathAndName) + 1);
         strcpy(newFile->pathAndName, srcPathAndName);
         
-        if( volInfo->scanForDuplicateFiles &&
-            findInHardLinkTable(volInfo, 0, statStruct.st_ino) == NULL )
+        if( volInfo->scanForDuplicateFiles)
         {
-            rc = addToHardLinkTable(volInfo, 0, statStruct.st_ino);
+            BkHardLink* newLink;
+            
+            rc = findInHardLinkTable(volInfo, 0, newFile->pathAndName, 
+                                     statStruct.st_size, false, &newLink);
             if(rc < 0)
             {
                 free(newFile);
                 return rc;
             }
+            
+            if(newLink == NULL)
+            /* not found */
+            {
+                rc = addToHardLinkTable(volInfo, 0, newFile->pathAndName, 
+                                        statStruct.st_size, false, &newLink);
+                if(rc < 0)
+                {
+                    free(newFile);
+                    return rc;
+                }
+            }
+            
+            newFile->location = newLink;
         }
         
         destDir->children = BK_BASE_PTR(newFile);

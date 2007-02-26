@@ -82,6 +82,7 @@ typedef struct FileToWrite
     BaseToWrite base;
     
     unsigned size; /* in bytes */
+    BkHardLink* location; /* basically a copy of the following variables */
     bool onImage;
     unsigned offset; /* if on image, in bytes */
     char* pathAndName; /* if on filesystem, full path + filename
