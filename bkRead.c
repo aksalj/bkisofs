@@ -745,27 +745,6 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    if( volInfo->scanForDuplicateFiles)
-    {
-        BkHardLink* newLink;
-        
-        rc = findInHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, NULL,
-                                 lenExtent, true, &newLink);
-        if(rc < 0)
-            return rc;
-        
-        if(newLink == NULL)
-        /* not found */
-        {
-            rc = addToHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 
-                                    NULL, lenExtent, true, &newLink);
-            if(rc < 0)
-                return rc;
-        }
-        
-        file->location = newLink;
-    }
-    
     /* The length of isolinux.bin given in the initial/default entry of
     * the el torito boot catalog does not match the actual length of the file
     * but apparently when executed by the bios that's not a problem.
@@ -877,6 +856,27 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
         strcpy((*specialFile)->name, BK_BASE_PTR(file)->name);
         /* apparently permissions for symbolic links are never used */
         (*specialFile)->posixFileMode = 0120777;
+    }
+    
+    if(volInfo->scanForDuplicateFiles)
+    {
+        BkHardLink* newLink;
+        
+        rc = findInHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, NULL,
+                                 lenExtent, true, &newLink);
+        if(rc < 0)
+            return rc;
+        
+        if(newLink == NULL)
+        /* not found */
+        {
+            rc = addToHardLinkTable(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, 
+                                    NULL, lenExtent, true, &newLink);
+            if(rc < 0)
+                return rc;
+        }
+        
+        file->location = newLink;
     }
     
     lseek(volInfo->imageForReading, lenSU, SEEK_CUR);

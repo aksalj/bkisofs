@@ -99,7 +99,7 @@ int filesAreSame(int file1, off_t posFile1, int file2, off_t posFile2,
         rc = read(file2, file2block, blockSize);
         if(rc != blockSize)
             return BKERROR_READ_GENERIC;
-        posFile2 = lseek(file1, 0, SEEK_CUR);
+        posFile2 = lseek(file2, 0, SEEK_CUR);
         
         if(memcmp(file1block, file2block, blockSize) != 0)
         {
@@ -112,12 +112,12 @@ int filesAreSame(int file1, off_t posFile1, int file2, off_t posFile2,
     {
         lseek(file1, posFile1, SEEK_SET);
         rc = read(file1, file1block, sizeLastBlock);
-        if(rc != blockSize)
+        if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
         
         lseek(file2, posFile2, SEEK_SET);
         rc = read(file2, file2block, sizeLastBlock);
-        if(rc != blockSize)
+        if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
         
         if(memcmp(file1block, file2block, sizeLastBlock) != 0)
@@ -204,16 +204,21 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
                     newFileOffset = 0;
                 }
                 
-                //~ rc = filesAreSame(srcFile, 
+                rc = filesAreSame(origFile, origFileOffset, newFile, newFileOffset, size);
                 
                 if(origFileWasOpened)
                     close(origFile);
                 if(newFileWasOpened)
                     close(newFile);
                 
-                *foundLink = currentLink;
+                if(rc < 0)
+                    return rc;
                 
-                return 2;
+                if(rc == 2)
+                {
+                    *foundLink = currentLink;
+                    return 2;
+                }
             }
         }
         
