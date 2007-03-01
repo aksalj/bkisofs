@@ -9,6 +9,7 @@ ui:
 -iso size label should be packed into toolbar
 -shownoimageopenmsg
 -shownofileselectedmsg (iso/fs)
+-get rid of global checkboxes
 
 
 bk:
