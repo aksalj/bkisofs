@@ -52,7 +52,7 @@ typedef struct
 
 typedef struct BaseToWrite
 {
-    char name9660[13]; /* 8.3 max */
+    char name9660[15]; /* 8.3 + ";1" max */
     char nameRock[NCHARS_FILE_ID_MAX_STORE];
     char nameJoliet[NCHARS_FILE_ID_MAX_JOLIET];
     unsigned posixFileMode;

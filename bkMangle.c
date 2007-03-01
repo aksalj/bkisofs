@@ -128,9 +128,6 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
                 return BKERROR_OUT_OF_MEMORY;
             
             bzero(*currentNewChild, sizeof(DirToWrite));
-            
-            shortenNameFor9660(currentOrigChild->name, 
-                              (*currentNewChild)->name9660, true);
         }
         else if( IS_REG_FILE(currentOrigChild->posixFileMode) )
         {
@@ -139,9 +136,6 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
                 return BKERROR_OUT_OF_MEMORY;
             
             bzero(*currentNewChild, sizeof(FileToWrite));
-            
-            shortenNameFor9660(currentOrigChild->name, 
-                              (*currentNewChild)->name9660, false);
         }
         else if( IS_SYMLINK(currentOrigChild->posixFileMode) )
         {
@@ -150,12 +144,14 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
                 return BKERROR_OUT_OF_MEMORY;
             
             bzero(*currentNewChild, sizeof(SymLinkToWrite));
-            
-            shortenNameFor9660(currentOrigChild->name, 
-                              (*currentNewChild)->name9660, false);
         }
         else
             return BKERROR_NO_SPECIAL_FILES;
+        
+        if(currentOrigChild->original9660name[0] != '\0')
+            strcpy((*currentNewChild)->name9660, currentOrigChild->original9660name);
+        else
+            shortenNameFor9660(currentOrigChild->name, (*currentNewChild)->name9660);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
             strcpy((*currentNewChild)->nameRock, currentOrigChild->name);
@@ -530,7 +526,7 @@ void mangleNameForJoliet(const char* origName, char* newName, bool appendHash)
 * shortenNameFor9660()
 * Same as mangleNameFor9660() but without the ~XXXX.
 * */
-void shortenNameFor9660(const char* origName, char* newName, bool isADir)
+void shortenNameFor9660(const char* origName, char* newName)
 {
     char* dot_p;
     int i;

@@ -451,7 +451,6 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     unsigned char lenFileId9660; /* also len joliet fileid (bytes) */
     int lenSU; /* calculated as recordLength - 33 - lenFileId9660 */
     off_t origPos;
-    unsigned char recordableLenFileId; /* to prevent reading too long a name */
     
     /* should anything fail, will still be safe to delete dir, this also
     * needs to be done before calling readDirContents() (now is good) */
@@ -481,28 +480,29 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     if(lenFileId9660 % 2 == 0)
         lenSU -= 1;
     
-    recordableLenFileId = lenFileId9660;
-    
     /* READ directory name */
-    if(filenameType == FNTYPE_9660)
+    if(volInfo->rootRead)
     {
-        if(volInfo->rootRead)
-        {
-            char nameAsOnDisk[UCHAR_MAX];
-            
-            rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
-            if(rc != lenFileId9660)
-                return BKERROR_READ_GENERIC;
-            
-            strncpy(BK_BASE_PTR(dir)->name, nameAsOnDisk, recordableLenFileId);
-            BK_BASE_PTR(dir)->name[recordableLenFileId] = '\0';
-            
-            /* skip padding field if it's there */
-            if(lenFileId9660 % 2 == 0)
-                lseek(volInfo->imageForReading, 1, SEEK_CUR);
-        }
+        off_t posBeforeName = lseek(volInfo->imageForReading, 0, SEEK_CUR);
+        
+        rc = read(volInfo->imageForReading, BK_BASE_PTR(dir)->name, lenFileId9660);
+        if(rc != lenFileId9660)
+            return BKERROR_READ_GENERIC;
+        BK_BASE_PTR(dir)->name[lenFileId9660] = '\0';
+        
+        /* record 9660 name for writing later */
+        strncpy(BK_BASE_PTR(dir)->original9660name, BK_BASE_PTR(dir)->name, 12);
+        BK_BASE_PTR(dir)->original9660name[12] = '\0';
+        
+        /* skip padding field if it's there */
+        if(lenFileId9660 % 2 == 0)
+            lseek(volInfo->imageForReading, 1, SEEK_CUR);
+        
+        if(filenameType != FNTYPE_9660)
+            lseek(volInfo->imageForReading, posBeforeName, SEEK_SET);
     }
-    else if(filenameType == FNTYPE_JOLIET)
+    
+    if(filenameType == FNTYPE_JOLIET)
     {
         if(volInfo->rootRead)
         {
@@ -526,8 +526,8 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
             }
             nameInAscii[byteCount] = '\0';
             
-            strncpy(BK_BASE_PTR(dir)->name, nameInAscii, recordableLenFileId);
-            BK_BASE_PTR(dir)->name[recordableLenFileId] = '\0';
+            strncpy(BK_BASE_PTR(dir)->name, nameInAscii, lenFileId9660);
+            BK_BASE_PTR(dir)->name[lenFileId9660] = '\0';
             
             /* padding field */
             if(lenFileId9660 % 2 == 0)
@@ -549,7 +549,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
                 return rc;
         }
     }
-    else
+    else if(filenameType != FNTYPE_9660)
         return BKERROR_UNKNOWN_FILENAME_TYPE;
     /* END READ directory name */
     
@@ -771,24 +771,33 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     if(lenFileId9660 % 2 == 0)
         lenSU -= 1;
     
-    if(filenameType == FNTYPE_9660)
-    {
-        char nameAsOnDisk[UCHAR_MAX];
-        
-        rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
-        if(rc != lenFileId9660)
-            return BKERROR_READ_GENERIC;
-        
-        removeCrapFromFilename(nameAsOnDisk, lenFileId9660);
-        
-        strncpy(BK_BASE_PTR(file)->name, nameAsOnDisk, NCHARS_FILE_ID_MAX_STORE - 1);
-        BK_BASE_PTR(file)->name[NCHARS_FILE_ID_MAX_STORE - 1] = '\0';
-        
-        /* padding field */
-        if(lenFileId9660 % 2 == 0)
-            lseek(volInfo->imageForReading, 1, SEEK_CUR);
-    }
-    else if(filenameType == FNTYPE_JOLIET)
+    /* READ 9660 name */
+    off_t posBeforeName = lseek(volInfo->imageForReading, 0, SEEK_CUR);
+    char nameAsOnDisk[UCHAR_MAX];
+    
+    rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
+    if(rc != lenFileId9660)
+        return BKERROR_READ_GENERIC;
+    nameAsOnDisk[lenFileId9660] = '\0';
+    
+    //removeCrapFromFilename(nameAsOnDisk, lenFileId9660);
+    
+    strncpy(BK_BASE_PTR(file)->name, nameAsOnDisk, NCHARS_FILE_ID_MAX_STORE - 1);
+    BK_BASE_PTR(file)->name[NCHARS_FILE_ID_MAX_STORE - 1] = '\0';
+    
+    /* record 9660 name for writing later */
+    strncpy(BK_BASE_PTR(file)->original9660name, BK_BASE_PTR(file)->name, 14);
+    BK_BASE_PTR(file)->original9660name[14] = '\0';
+    
+    /* padding field */
+    if(lenFileId9660 % 2 == 0)
+        lseek(volInfo->imageForReading, 1, SEEK_CUR);
+    
+    if(filenameType != FNTYPE_9660)
+            lseek(volInfo->imageForReading, posBeforeName, SEEK_SET);
+    /* END READ 9660 name */
+    
+    if(filenameType == FNTYPE_JOLIET)
     {
         char nameAsOnDisk[UCHAR_MAX];
         /* in the worst possible case i'll use 129 bytes for this: */

@@ -72,6 +72,7 @@
 typedef struct BkFileBase
 {
     char name[NCHARS_FILE_ID_MAX_STORE]; /* '\0' terminated */
+    char original9660name[15]; /* 8.3 + ";1" max */
     unsigned posixFileMode; /* file type and permissions */
     
     struct BkFileBase* next;

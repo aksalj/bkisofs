@@ -17,7 +17,6 @@ bk:
 -split bk_write_image()
 -writeElToritoBootCatalog(), writeElToritoVd() cast return to int, no good
 -bootRecordSize?, bootRecordOffset should be off_t
--change 8.3 filenames to 32 (to support some more bootable cds)
 -when have hard links iso size is messed up
 -written contents /W2KS.DAT from 2k multiboot cd are 0x00
 -delete hard link list
