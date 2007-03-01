@@ -1,7 +1,6 @@
 ui:
 -alt shortcut keys need attention (bulgarian)
 -sometimes the help window won't come up in the middle of the main window
--delete key should work
 -change file/dir properties (especialy creation date)
 -add save/overwrite #undef-ed by default
 -progress bars for reading and adding
