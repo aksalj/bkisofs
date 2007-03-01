@@ -4,7 +4,6 @@ ui:
 -delete key should work
 -change file/dir properties (especialy creation date)
 -add save/overwrite #undef-ed by default
--allow editing address on iso bar
 -progress bars for reading and adding
 -iso size label should be packed into toolbar
 -shownoimageopenmsg
@@ -19,7 +18,6 @@ bk:
 -bootRecordSize?, bootRecordOffset should be off_t
 -when have hard links iso size is messed up
 -written contents /W2KS.DAT from 2k multiboot cd are 0x00
--make sure an edited slax disk still boots
 
 
 c99 compatibility issues:
