@@ -19,7 +19,6 @@ bk:
 -bootRecordSize?, bootRecordOffset should be off_t
 -when have hard links iso size is messed up
 -written contents /W2KS.DAT from 2k multiboot cd are 0x00
--delete hard link list
 -make sure an edited slax disk still boots
 
 

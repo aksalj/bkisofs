@@ -42,6 +42,16 @@ void bk_destroy_vol_info(VolInfo* volInfo)
     
     if(volInfo->imageForReading > 0)
         close(volInfo->imageForReading);
+    
+    BkHardLink* currentLink;
+    BkHardLink* nextLink;
+    currentLink = volInfo->fileLocations;
+    while(currentLink != NULL)
+    {
+        nextLink = currentLink->next;
+        free(currentLink);
+        currentLink = nextLink;
+    }
 }
 
 /*******************************************************************************
