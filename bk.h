@@ -173,7 +173,7 @@ typedef struct
     unsigned char bootMediaType;
     unsigned bootRecordSize;       /* in bytes */
     bool bootRecordIsOnImage;      /* unused if visible (flag below) */
-    unsigned bootRecordOffset;     /* if on image */
+    off_t bootRecordOffset;     /* if on image */
     char* bootRecordPathAndName;   /* if on filesystem */
     bool bootRecordIsVisible;      /* whether boot record is a visible file 
                                    *  on the image */

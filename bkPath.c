@@ -296,7 +296,7 @@ void printDirToWrite(DirToWrite* dir, int level, int filenameTypes)
             {
                 for(count = 0; count < level; count ++)
                     printf("  ");
-                printf("file9 '%s' location 0x%X\n", child->name9660, FILETW_PTR(child)->location);fflush(NULL);
+                printf("file9 '%s'\n", child->name9660);fflush(NULL);
             }
             
             if(filenameTypes & FNTYPE_JOLIET)

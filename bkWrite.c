@@ -115,13 +115,13 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(volInfo->bootMediaType != BOOT_MEDIA_NONE)
     {
         /* el torito volume descriptor */
-        bootCatalogSectorNumberOffset = writeElToritoVd(volInfo);
-        if(bootCatalogSectorNumberOffset <= 0)
+        rc = writeElToritoVd(volInfo, &bootCatalogSectorNumberOffset);
+        if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
             unlink(newImagePathAndName);
-            return bootCatalogSectorNumberOffset;
+            return rc;
         }
     }
     
@@ -159,14 +159,13 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         wcSeekSet(volInfo, currPos);
         
         /* write el torito booting catalog */
-        volInfo->bootRecordSectorNumberOffset = 
-                                writeElToritoBootCatalog(volInfo);
-        if(volInfo->bootRecordSectorNumberOffset <= 0)
+        rc = writeElToritoBootCatalog(volInfo, &(volInfo->bootRecordSectorNumberOffset));
+        if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
             close(volInfo->imageForWriting);
             unlink(newImagePathAndName);
-            return volInfo->bootRecordSectorNumberOffset;
+            return rc;
         }
     }
     
@@ -1132,10 +1131,10 @@ int writeDr(VolInfo* volInfo, BaseToWrite* node, time_t recordingTime, bool isAD
 * Returns the offset where the boot record sector number should
 * be written (7.3.1).
 * */
-int writeElToritoBootCatalog(VolInfo* volInfo)
+int writeElToritoBootCatalog(VolInfo* volInfo, 
+                             off_t* bootRecordSectorNumberOffset)
 {
     unsigned char buffer[NBYTES_LOGICAL_BLOCK];
-    off_t bootRecordSectorNumberOffset;
     int rc;
     
     bzero(buffer, NBYTES_LOGICAL_BLOCK);
@@ -1182,7 +1181,7 @@ int writeElToritoBootCatalog(VolInfo* volInfo)
     write721ToByteArray(&(buffer[38]), 4);
     /* logical block number of boot record file. this is not known until 
     * after that file is written */
-    bootRecordSectorNumberOffset = wcSeekTell(volInfo) + 40;
+    *bootRecordSectorNumberOffset = wcSeekTell(volInfo) + 40;
     /* the rest is unused, leave it at 0 */
     /* END SETUP INITIAL entry (next 20 bytes of boot catalog) */
     
@@ -1190,7 +1189,7 @@ int writeElToritoBootCatalog(VolInfo* volInfo)
     if(rc <= 0)
         return rc;
     
-    return (int)bootRecordSectorNumberOffset;
+    return 1;
 }
 
 /******************************************************************************
@@ -1199,10 +1198,9 @@ int writeElToritoBootCatalog(VolInfo* volInfo)
 * Returns the offset where the boot catalog sector number should 
 * be written (7.3.1).
 * */
-int writeElToritoVd(VolInfo* volInfo)
+int writeElToritoVd(VolInfo* volInfo, off_t* bootCatalogSectorNumberOffset)
 {
     char buffer[NBYTES_LOGICAL_BLOCK];
-    off_t bootCatalogSectorNumberOffset;
     int rc;
     
     bzero(buffer, NBYTES_LOGICAL_BLOCK);
@@ -1222,7 +1220,7 @@ int writeElToritoVd(VolInfo* volInfo)
     strncpy(&(buffer[7]), "EL TORITO SPECIFICATION", 23);
     /* unused 32 bytes, must be 0 (bzero at start took care of this) */
     /* boot catalog location, 4 byte intel format. written later. */
-    bootCatalogSectorNumberOffset = wcSeekTell(volInfo) + 71;
+    *bootCatalogSectorNumberOffset = wcSeekTell(volInfo) + 71;
     //write731ToByteArray(&(buffer[71]), bootCatalogSectorNumber);
     /* the rest of this sector is unused, must be set to 0 */
     /* END SETUP BOOT record volume descriptor sector */
@@ -1231,7 +1229,7 @@ int writeElToritoVd(VolInfo* volInfo)
     if(rc <= 0)
         return rc;
     
-    return (int)bootCatalogSectorNumberOffset;
+    return 1;
 }
 
 /******************************************************************************

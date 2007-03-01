@@ -329,10 +329,12 @@ int bk_read_vol_info(VolInfo* volInfo)
             
             volInfo->bootRecordIsOnImage = true;
             
-            rc = read731(volInfo->imageForReading, &(volInfo->bootRecordOffset));
+            unsigned bootRecordSectorNumber;
+            rc = read731(volInfo->imageForReading, &bootRecordSectorNumber);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
-            volInfo->bootRecordOffset *= NBYTES_LOGICAL_BLOCK;
+            volInfo->bootRecordOffset = bootRecordSectorNumber * 
+                                        NBYTES_LOGICAL_BLOCK;
         }
         else
             //!! print warning
@@ -841,7 +843,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
         if(rc < 0)
             return rc;
     }
-    else
+    else if(filenameType != FNTYPE_9660)
         return BKERROR_UNKNOWN_FILENAME_TYPE;
     
     if(keepPosixPermissions)
