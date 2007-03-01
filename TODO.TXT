@@ -4,7 +4,6 @@ ui:
 -change file/dir properties (especialy creation date)
 -add save/overwrite #undef-ed by default
 -progress bars for reading and adding
--iso size label should be packed into toolbar
 -shownoimageopenmsg
 -shownofileselectedmsg (iso/fs)
 
