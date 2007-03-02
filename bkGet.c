@@ -27,6 +27,16 @@
 * */
 off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
 {
+    /* reset alreadyCounted flags */
+    BkHardLink* currentLink;
+    currentLink = volInfo->fileLocations;
+    while(currentLink != NULL)
+    {
+        currentLink->alreadyCounted = false;
+        
+        currentLink = currentLink->next;
+    }
+    
     return estimateIsoSize(&(volInfo->dirTree), filenameTypes);
 }
 
@@ -94,8 +104,14 @@ off_t estimateIsoSize(const BkDir* tree, int filenameTypes)
         }
         else if(IS_REG_FILE(child->posixFileMode))
         {
-            thisDirSize += BK_FILE_PTR(child)->size;
-            thisDirSize += BK_FILE_PTR(child)->size % NBYTES_LOGICAL_BLOCK;
+            if(BK_FILE_PTR(child)->location == NULL ||
+               !BK_FILE_PTR(child)->location->alreadyCounted)
+            {
+                thisDirSize += BK_FILE_PTR(child)->size;
+                thisDirSize += BK_FILE_PTR(child)->size % NBYTES_LOGICAL_BLOCK;
+            }
+            if(BK_FILE_PTR(child)->location != NULL)
+                BK_FILE_PTR(child)->location->alreadyCounted = true;
         }
         
         numItems++;

@@ -650,6 +650,8 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
                 if(*nextChild == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
+                bzero(*nextChild, sizeof(BkDir));
+                
                 recordLength = readDir(volInfo, BK_DIR_PTR(*nextChild), 
                                        filenameType, keepPosixPermissions);
                 if(recordLength < 0)
@@ -664,6 +666,8 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
                 *nextChild = malloc(sizeof(BkFile));
                 if(*nextChild == NULL)
                     return BKERROR_OUT_OF_MEMORY;
+                
+                bzero(*nextChild, sizeof(BkFile));
                 
                 recordLength = readFileInfo(volInfo, BK_FILE_PTR(*nextChild), 
                                             filenameType, keepPosixPermissions, 
@@ -1117,6 +1121,8 @@ int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, unsigned lenSU)
             *dest = malloc(sizeof(BkSymLink));
             if(*dest == NULL)
                 return BKERROR_OUT_OF_MEMORY;
+            
+            bzero(*dest, sizeof(BkSymLink));
             
             numCharsUsed = 0;
             (*dest)->target[0] = '\0';

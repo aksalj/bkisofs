@@ -105,6 +105,7 @@ typedef struct BkHardLink
     unsigned size; /* size of the file being pointed to */
     int headSize;
     unsigned char head[MAX_NBYTES_HARDLINK_HEAD];
+    bool alreadyCounted; /* for estimateIsoSize() */
     
     unsigned extentNumberWrittenTo; /* only set once one file is written */
     
