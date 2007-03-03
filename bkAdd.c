@@ -37,6 +37,9 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
     BkFileBase* oldHead; /* of the children list */
     struct stat statStruct;
     
+    if(volInfo->stopOperation)
+        return BKERROR_OPER_CANCELED_BY_USER;
+    
     maybeUpdateProgress(volInfo);
     
     rc = getLastNameFromPath(srcPathAndName, lastName);

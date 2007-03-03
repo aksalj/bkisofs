@@ -462,6 +462,9 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     * needs to be done before calling readDirContents() (now is good) */
     dir->children = NULL;
     
+    if(volInfo->stopOperation)
+        return BKERROR_OPER_CANCELED_BY_USER;
+    
     maybeUpdateProgress(volInfo);
     
     rc = read(volInfo->imageForReading, &recordLength, 1);
@@ -740,6 +743,9 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     /* so if anything failes it's still safe to delete file */
     file->pathAndName = NULL;
+    
+    if(volInfo->stopOperation)
+        return BKERROR_OPER_CANCELED_BY_USER;
     
     maybeUpdateProgress(volInfo);
     

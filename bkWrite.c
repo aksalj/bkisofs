@@ -1252,7 +1252,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
     {
         if(volInfo->stopOperation)
             return BKERROR_OPER_CANCELED_BY_USER;
-
+        
         if(wcSeekTell(volInfo) % NBYTES_LOGICAL_BLOCK != 0)
             return BKERROR_SANITY;
         
