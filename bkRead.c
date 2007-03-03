@@ -28,6 +28,7 @@
 #include "bkTime.h"
 #include "bkError.h"
 #include "bkLink.h"
+#include "bkMisc.h"
 
 /* numbers as recorded on image */
 #define VDTYPE_BOOT 0
@@ -100,8 +101,11 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 * bk_read_dir_tree()
 * filenameType can be only one (do not | more then one)
 * */
-int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool keepPosixPermissions)
+int bk_read_dir_tree(VolInfo* volInfo, int filenameType, 
+                     bool keepPosixPermissions, void(*progressFunction)(void))
 {
+    volInfo->progressFunction = progressFunction;
+    
     if(filenameType == FNTYPE_ROCKRIDGE || filenameType == FNTYPE_9660)
         lseek(volInfo->imageForReading, volInfo->pRootDrOffset, SEEK_SET);
     else /* if(filenameType == FNTYPE_JOLIET) */
@@ -458,6 +462,8 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     * needs to be done before calling readDirContents() (now is good) */
     dir->children = NULL;
     
+    maybeUpdateProgress(volInfo);
+    
     rc = read(volInfo->imageForReading, &recordLength, 1);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
@@ -734,6 +740,8 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     /* so if anything failes it's still safe to delete file */
     file->pathAndName = NULL;
+    
+    maybeUpdateProgress(volInfo);
     
     *specialFile = NULL;
     

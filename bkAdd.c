@@ -28,6 +28,7 @@
 #include "bkGet.h"
 #include "bkMangle.h"
 #include "bkLink.h"
+#include "bkMisc.h"
 
 int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
 {
@@ -35,6 +36,8 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
     char lastName[NCHARS_FILE_ID_MAX_STORE];
     BkFileBase* oldHead; /* of the children list */
     struct stat statStruct;
+    
+    maybeUpdateProgress(volInfo);
     
     rc = getLastNameFromPath(srcPathAndName, lastName);
     if(rc <= 0)
@@ -59,6 +62,8 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
         newDir = malloc(sizeof(BkDir));
         if(newDir == NULL)
             return BKERROR_OUT_OF_MEMORY;
+        
+        bzero(newDir, sizeof(BkDir));
         
         strcpy(BK_BASE_PTR(newDir)->name, lastName);
         
@@ -90,6 +95,8 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
         newFile = malloc(sizeof(BkFile));
         if(newFile == NULL)
             return BKERROR_OUT_OF_MEMORY;
+        
+        bzero(newFile, sizeof(BkFile));
         
         strcpy(BK_BASE_PTR(newFile)->name, lastName);
         
@@ -143,6 +150,8 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
         newSymLink = malloc(sizeof(BkSymLink));
         if(newSymLink == NULL)
             return BKERROR_OUT_OF_MEMORY;
+        
+        bzero(newSymLink, sizeof(BkSymLink));
         
         strcpy(BK_BASE_PTR(newSymLink)->name, lastName);
         
@@ -258,7 +267,7 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
 }
 
 int bk_add(VolInfo* volInfo, const char* srcPathAndName, 
-           const char* destPathStr)
+           const char* destPathStr, void(*progressFunction)(void))
 {
     int rc;
     NewPath destPath;
@@ -267,6 +276,8 @@ int bk_add(VolInfo* volInfo, const char* srcPathAndName,
     /* vars to find the dir in the tree */
     BkDir* destDirInTree;
     bool dirFound;
+    
+    volInfo->progressFunction = progressFunction;
     
     rc = makeNewPathFromString(destPathStr, &destPath);
     if(rc <= 0)

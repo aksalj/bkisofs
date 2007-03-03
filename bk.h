@@ -163,6 +163,7 @@ typedef struct
     bool rootRead; /* did i read the root record inside volume descriptor? */
     bool stopOperation; /* cancel current opertion */
     int imageForWriting;
+    void(*progressFunction)(void);
     void(*writeProgressFunction)(double);
     time_t lastTimeCalledProgress;
     off_t estimatedIsoSize;
@@ -199,7 +200,7 @@ typedef struct
 int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName, 
                        int bootMediaType);
 int bk_add(VolInfo* volInfo, const char* srcPathAndName, 
-           const char* destPathStr);
+           const char* destPathStr, void(*progressFunction)(void));
 int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
                   const char* newDirName);
 
@@ -208,7 +209,7 @@ void bk_delete_boot_record(VolInfo* volInfo);
 int bk_delete(VolInfo* volInfo, const char* pathAndName);
 
 /* extracting */
-int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 
+int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName,
                            unsigned destFilePerms);
 int bk_extract(VolInfo* volInfo, const char* srcPathAndName, 
                const char* destDir, bool keepPermissions, 
@@ -234,7 +235,8 @@ void bk_set_vol_name(VolInfo* volInfo, const char* volName);
 
 /* reading */
 int bk_open_image(VolInfo* volInfo, const char* filename);
-int bk_read_dir_tree(VolInfo* volInfo, int filenameType, bool keepPosixPermissions);
+int bk_read_dir_tree(VolInfo* volInfo, int filenameType, 
+                     bool keepPosixPermissions, void(*progressFunction)(void));
 int bk_read_vol_info(VolInfo* volInfo);
 
 /* writing */
