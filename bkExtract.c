@@ -25,6 +25,7 @@
 #include "bkExtract.h"
 #include "bkPath.h"
 #include "bkError.h"
+#include "bkMisc.h"
 
 /*******************************************************************************
 * bk_extract_boot_record()
@@ -121,6 +122,9 @@ int bk_extract(VolInfo* volInfo, const char* srcPathAndName,
     BkDir* parentDir;
     bool dirFound;
     
+    volInfo->progressFunction = progressFunction;
+    volInfo->stopOperation = false;
+    
     rc = makeNewPathFromString(srcPathAndName, &srcPath);
     if(rc <= 0)
     {
@@ -134,8 +138,6 @@ int bk_extract(VolInfo* volInfo, const char* srcPathAndName,
         return BKERROR_EXTRACT_ROOT;
     }
     
-    volInfo->stopOperation = false;
-    
     /* i want the parent directory */
     srcPath.numChildren--;
     dirFound = findDirByNewPath(&srcPath, &(volInfo->dirTree), &parentDir);
@@ -147,7 +149,7 @@ int bk_extract(VolInfo* volInfo, const char* srcPathAndName,
     }
     
     rc = extract(volInfo, parentDir, srcPath.children[srcPath.numChildren - 1], 
-                 destDir, keepPermissions, progressFunction);
+                 destDir, keepPermissions);
     if(rc <= 0)
     {
         freePathContents(&srcPath);
@@ -194,8 +196,7 @@ int copyByteBlock(int src, int dest, unsigned numBytes)
 }
 
 int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract, 
-            const char* destDir, bool keepPermissions, 
-            void(*progressFunction)(void))
+            const char* destDir, bool keepPermissions)
 {
     BkFileBase* child;
     int rc;
@@ -203,22 +204,22 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
     child = parentDir->children;
     while(child != NULL)
     {
-        if(progressFunction != NULL)
-            progressFunction();
         if(volInfo->stopOperation)
             return BKERROR_OPER_CANCELED_BY_USER;
+        
+        maybeUpdateProgress(volInfo);
         
         if(strcmp(child->name, nameToExtract) == 0)
         {
             if( IS_DIR(child->posixFileMode) )
             {
                 rc = extractDir(volInfo, BK_DIR_PTR(child), destDir, 
-                                keepPermissions, progressFunction);
+                                keepPermissions);
             }
             else if ( IS_REG_FILE(child->posixFileMode) )
             {
                 rc = extractFile(volInfo, BK_FILE_PTR(child), destDir, 
-                                 keepPermissions, progressFunction);
+                                 keepPermissions);
             }
             else if ( IS_SYMLINK(child->posixFileMode) )
             {
@@ -261,7 +262,7 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
 }
 
 int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir, 
-               bool keepPermissions, void(*progressFunction)(void))
+               bool keepPermissions)
 {
     int rc;
     BkFileBase* child;
@@ -307,7 +308,7 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
     child = srcDir->children;
     while(child != NULL)
     {
-        rc = extract(volInfo, srcDir, child->name, newDestDir, keepPermissions, progressFunction);
+        rc = extract(volInfo, srcDir, child->name, newDestDir, keepPermissions);
         if(rc <= 0)
         {
             free(newDestDir);
@@ -324,7 +325,7 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
 }
 
 int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir, 
-                bool keepPermissions, void(*progressFunction)(void))
+                bool keepPermissions)
 {
     int srcFile;
     bool srcFileWasOpened;
