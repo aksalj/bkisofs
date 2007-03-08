@@ -263,3 +263,16 @@ int readFileHead(VolInfo* volInfo, off_t position, char* pathAndName,
     
     return 1;
 }
+
+void resetWriteStatus(BkHardLink* fileLocations)
+{
+    BkHardLink* currentNode;
+    
+    currentNode = fileLocations;
+    while(currentNode != NULL)
+    {
+        currentNode->extentNumberWrittenTo = 0;
+        
+        currentNode = currentNode->next;
+    }
+}

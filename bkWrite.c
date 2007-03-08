@@ -337,6 +337,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     }
     
     printf("writing files at %X\n", (int)wcSeekTell(volInfo));fflush(NULL);
+    resetWriteStatus(volInfo->fileLocations);
     /* all files and offsets/sizes */
     rc = writeFileContents(volInfo, &newTree, filenameTypes);
     if(rc <= 0)
