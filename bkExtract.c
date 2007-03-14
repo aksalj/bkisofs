@@ -115,7 +115,7 @@ int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName,
 
 int bk_extract(VolInfo* volInfo, const char* srcPathAndName, 
                const char* destDir, bool keepPermissions, 
-               void(*progressFunction)(void))
+               void(*progressFunction)(VolInfo*))
 {
     int rc;
     NewPath srcPath;

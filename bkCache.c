@@ -74,7 +74,7 @@ int wcWrite(VolInfo* volInfo, const char* block, off_t numBytes)
             else if (percentComplete < 0)
                 percentComplete = 0;
             
-            volInfo->writeProgressFunction(percentComplete);
+            volInfo->writeProgressFunction(volInfo, percentComplete);
             volInfo->lastTimeCalledProgress = timeNow;
         }
     }

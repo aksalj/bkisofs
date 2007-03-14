@@ -45,7 +45,7 @@
 * */
 int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
-                   void(*progressFunction)(double))
+                   void(*progressFunction)(VolInfo*, double))
 {
     int rc;
     struct stat statStruct;
@@ -68,7 +68,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     volInfo->stopOperation = false;
     
     volInfo->estimatedIsoSize = bk_estimate_iso_size(volInfo, filenameTypes);
-    progressFunction(0);
+    progressFunction(volInfo, 0);
     
     rc = stat(newImagePathAndName, &statStruct);
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)

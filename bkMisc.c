@@ -28,7 +28,7 @@ void maybeUpdateProgress(VolInfo* volInfo)
     
     if(timeNow - volInfo->lastTimeCalledProgress >= 1)
     {
-        volInfo->progressFunction();
+        volInfo->progressFunction(volInfo);
         
         volInfo->lastTimeCalledProgress = timeNow;
     }

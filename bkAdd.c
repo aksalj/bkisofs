@@ -270,7 +270,7 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
 }
 
 int bk_add(VolInfo* volInfo, const char* srcPathAndName, 
-           const char* destPathStr, void(*progressFunction)(void))
+           const char* destPathStr, void(*progressFunction)(VolInfo*))
 {
     int rc;
     NewPath destPath;

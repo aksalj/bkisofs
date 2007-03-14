@@ -147,7 +147,7 @@ typedef struct BkSymLink
 * VolInfo
 * Information about a volume (one image).
 * Strings are '\0' terminated. */
-typedef struct
+typedef struct VolInfo
 {
     /* private bk use  */
     unsigned filenameTypes;
@@ -163,8 +163,8 @@ typedef struct
     bool rootRead; /* did i read the root record inside volume descriptor? */
     bool stopOperation; /* cancel current opertion */
     int imageForWriting;
-    void(*progressFunction)(void);
-    void(*writeProgressFunction)(double);
+    void(*progressFunction)(struct VolInfo*);
+    void(*writeProgressFunction)(struct VolInfo*, double);
     time_t lastTimeCalledProgress;
     off_t estimatedIsoSize;
     BkHardLink* fileLocations; /* list of where to find regular files */
@@ -200,7 +200,7 @@ typedef struct
 int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName, 
                        int bootMediaType);
 int bk_add(VolInfo* volInfo, const char* srcPathAndName, 
-           const char* destPathStr, void(*progressFunction)(void));
+           const char* destPathStr, void(*progressFunction)(VolInfo*));
 int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
                   const char* newDirName);
 
@@ -213,7 +213,7 @@ int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName,
                            unsigned destFilePerms);
 int bk_extract(VolInfo* volInfo, const char* srcPathAndName, 
                const char* destDir, bool keepPermissions, 
-               void(*progressFunction)(void));
+               void(*progressFunction)(VolInfo*));
 
 /* getters */
 off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
@@ -236,12 +236,13 @@ void bk_set_vol_name(VolInfo* volInfo, const char* volName);
 /* reading */
 int bk_open_image(VolInfo* volInfo, const char* filename);
 int bk_read_dir_tree(VolInfo* volInfo, int filenameType, 
-                     bool keepPosixPermissions, void(*progressFunction)(void));
+                     bool keepPosixPermissions, 
+                     void(*progressFunction)(VolInfo*));
 int bk_read_vol_info(VolInfo* volInfo);
 
 /* writing */
 int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
-                   void(*progressFunction)(double));
+                   void(*progressFunction)(VolInfo*, double));
 
 #endif

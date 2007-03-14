@@ -102,7 +102,8 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 * filenameType can be only one (do not | more then one)
 * */
 int bk_read_dir_tree(VolInfo* volInfo, int filenameType, 
-                     bool keepPosixPermissions, void(*progressFunction)(void))
+                     bool keepPosixPermissions, 
+                     void(*progressFunction)(VolInfo*))
 {
     volInfo->progressFunction = progressFunction;
     
