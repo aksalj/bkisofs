@@ -106,6 +106,8 @@
 #define BKERROR_SYMLINK_TARGET_TOO_LONG_TEXT     "Too many characters in target of a symbolic link"
 #define BKERROR_HARD_LINK_CALL_PARAMS            -1043
 #define BKERROR_HARD_LINK_CALL_PARAMS_TEXT       "Call to a hard link function with both a 0 offset and a NULL filename not allowed"
+#define BKERROR_NAME_INVALID                     -1044
+#define BKERROR_NAME_INVALID_TEXT                "Invalid file/directory name"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

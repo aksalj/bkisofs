@@ -46,6 +46,9 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
     if(rc <= 0)
         return rc;
     
+    if(strcmp(lastName, ".") == 0 || strcmp(lastName, "..") == 0)
+        return BKERROR_NAME_INVALID;
+    
     if( !nameIsValid(lastName) )
         return BKERROR_NAME_INVALID_CHAR;
     
@@ -390,6 +393,9 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     if(nameLen == 0)
         return BKERROR_NEW_DIR_ZERO_LEN_NAME;
+    
+    if(strcmp(newDirName, ".") == 0 || strcmp(newDirName, "..") == 0)
+        return BKERROR_NAME_INVALID;
     
     if( !nameIsValid(newDirName) )
         return BKERROR_NAME_INVALID_CHAR;
