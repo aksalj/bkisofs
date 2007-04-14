@@ -53,6 +53,8 @@
 #define BOOT_MEDIA_2_88_FLOPPY 4
 #define BOOT_MEDIA_HARD_DISK 5
 
+#define READ_WRITE_BUFFERS_SIZE 102400
+
 /* warning message string lengths in VolInfo */
 #define BK_WARNING_MAX_LEN 512
 
@@ -168,6 +170,7 @@ typedef struct VolInfo
     time_t lastTimeCalledProgress;
     off_t estimatedIsoSize;
     BkHardLink* fileLocations; /* list of where to find regular files */
+    char extractBuffer[READ_WRITE_BUFFERS_SIZE];
     
     /* public use, read only */
     time_t creationTime;
