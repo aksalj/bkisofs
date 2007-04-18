@@ -1,4 +1,4 @@
-int copyByteBlock(int src, int dest, unsigned numBytes);
+int copyByteBlock(VolInfo* volInfo, int src, int dest, unsigned numBytes);
 int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract, 
             const char* destDir, bool keepPermissions);
 int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir, 

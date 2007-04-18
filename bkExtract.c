@@ -32,7 +32,7 @@
 * Extracts the el torito boot record to the file destPathAndName, with
 * permissions destFilePerms.
 * */
-int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName, 
+int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName, 
                            unsigned destFilePerms)
 {
     int srcFile; /* returned by open() */
@@ -97,7 +97,7 @@ int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName,
         return BKERROR_OPEN_WRITE_FAILED;
     }
     
-    rc = copyByteBlock(srcFile, destFile, volInfo->bootRecordSize);
+    rc = copyByteBlock(volInfo, srcFile, destFile, volInfo->bootRecordSize);
     if(rc <= 0)
     {
         if(srcFileWasOpened)
@@ -161,33 +161,32 @@ int bk_extract(VolInfo* volInfo, const char* srcPathAndName,
     return 1;
 }
 
-int copyByteBlock(int src, int dest, unsigned numBytes)
+int copyByteBlock(VolInfo* volInfo, int src, int dest, unsigned numBytes)
 {
     int rc;
     int count;
-    char block[102400]; /* 100K */
     int numBlocks;
     int sizeLastBlock;
     
-    numBlocks = numBytes / 102400;
-    sizeLastBlock = numBytes % 102400;
+    numBlocks = numBytes / READ_WRITE_BUFFER_SIZE;
+    sizeLastBlock = numBytes % READ_WRITE_BUFFER_SIZE;
     
     for(count = 0; count < numBlocks; count++)
     {
-        rc = read(src, block, 102400);
-        if(rc != 102400)
+        rc = read(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
+        if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
-        rc = write(dest, block, 102400);
+        rc = write(dest, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc <= 0)
             return rc;
     }
     
     if(sizeLastBlock > 0)
     {
-        rc = read(src, block, sizeLastBlock);
+        rc = read(src, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
-        rc = write(dest, block, sizeLastBlock);
+        rc = write(dest, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc <= 0)
             return rc;
     }
@@ -387,7 +386,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     
     free(destPathAndName);
     
-    rc = copyByteBlock(srcFile, destFile, srcFileInTree->size);
+    rc = copyByteBlock(volInfo, srcFile, destFile, srcFileInTree->size);
     if(rc < 0)
     {
         close(destFile);

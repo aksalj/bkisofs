@@ -63,14 +63,11 @@ int addToHardLinkTable(VolInfo* volInfo, off_t position, char* pathAndName,
 
 /* returns 2 if yes 1 if not
 * works even if file1 == file2 */
-int filesAreSame(int file1, off_t posFile1, int file2, off_t posFile2, 
-                 unsigned size)
+int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1, 
+                 int file2, off_t posFile2, unsigned size)
 {
     off_t origPosFile1;
     off_t origPosFile2;
-    const int blockSize = 102400;
-    unsigned char* file1block[blockSize];
-    unsigned char* file2block[blockSize];
     int numBlocks;
     int sizeLastBlock;
     int count;
@@ -83,25 +80,26 @@ int filesAreSame(int file1, off_t posFile1, int file2, off_t posFile2,
     origPosFile1 = lseek(file1, 0, SEEK_CUR);
     origPosFile2 = lseek(file2, 0, SEEK_CUR);
     
-    numBlocks = size / blockSize;
-    sizeLastBlock = size % blockSize;
+    numBlocks = size / READ_WRITE_BUFFER_SIZE;
+    sizeLastBlock = size % READ_WRITE_BUFFER_SIZE;
     
     sameSoFar = true;
     for(count = 0; count < numBlocks; count++)
     {
         lseek(file1, posFile1, SEEK_SET);
-        rc = read(file1, file1block, blockSize);
-        if(rc != blockSize)
+        rc = read(file1, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
+        if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
         posFile1 = lseek(file1, 0, SEEK_CUR);
         
         lseek(file2, posFile2, SEEK_SET);
-        rc = read(file2, file2block, blockSize);
-        if(rc != blockSize)
+        rc = read(file2, volInfo->readWriteBuffer2, READ_WRITE_BUFFER_SIZE);
+        if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
         posFile2 = lseek(file2, 0, SEEK_CUR);
         
-        if(memcmp(file1block, file2block, blockSize) != 0)
+        if( memcmp(volInfo->readWriteBuffer, volInfo->readWriteBuffer2, 
+            READ_WRITE_BUFFER_SIZE) != 0 )
         {
             sameSoFar = false;
             break;
@@ -111,16 +109,16 @@ int filesAreSame(int file1, off_t posFile1, int file2, off_t posFile2,
     if(sameSoFar && sizeLastBlock > 0)
     {
         lseek(file1, posFile1, SEEK_SET);
-        rc = read(file1, file1block, sizeLastBlock);
+        rc = read(file1, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
         
         lseek(file2, posFile2, SEEK_SET);
-        rc = read(file2, file2block, sizeLastBlock);
+        rc = read(file2, volInfo->readWriteBuffer2, sizeLastBlock);
         if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
         
-        if(memcmp(file1block, file2block, sizeLastBlock) != 0)
+        if(memcmp(volInfo->readWriteBuffer, volInfo->readWriteBuffer2, sizeLastBlock) != 0)
             sameSoFar = false;
     }
     
@@ -204,7 +202,8 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
                     newFileOffset = 0;
                 }
                 
-                rc = filesAreSame(origFile, origFileOffset, newFile, newFileOffset, size);
+                rc = filesAreSame(volInfo, origFile, origFileOffset, 
+                                  newFile, newFileOffset, size);
                 
                 if(origFileWasOpened)
                     close(origFile);

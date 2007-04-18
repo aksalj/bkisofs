@@ -53,7 +53,7 @@
 #define BOOT_MEDIA_2_88_FLOPPY 4
 #define BOOT_MEDIA_HARD_DISK 5
 
-#define READ_WRITE_BUFFERS_SIZE 102400
+#define READ_WRITE_BUFFER_SIZE 102400
 
 /* warning message string lengths in VolInfo */
 #define BK_WARNING_MAX_LEN 512
@@ -170,7 +170,8 @@ typedef struct VolInfo
     time_t lastTimeCalledProgress;
     off_t estimatedIsoSize;
     BkHardLink* fileLocations; /* list of where to find regular files */
-    char extractBuffer[READ_WRITE_BUFFERS_SIZE];
+    char readWriteBuffer[READ_WRITE_BUFFER_SIZE];
+    char readWriteBuffer2[READ_WRITE_BUFFER_SIZE];
     
     /* public use, read only */
     time_t creationTime;
@@ -212,7 +213,7 @@ void bk_delete_boot_record(VolInfo* volInfo);
 int bk_delete(VolInfo* volInfo, const char* pathAndName);
 
 /* extracting */
-int bk_extract_boot_record(const VolInfo* volInfo, const char* destPathAndName,
+int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
                            unsigned destFilePerms);
 int bk_extract(VolInfo* volInfo, const char* srcPathAndName, 
                const char* destDir, bool keepPermissions, 

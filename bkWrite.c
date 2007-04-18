@@ -555,32 +555,30 @@ unsigned short elToritoChecksum(const unsigned char* record)
 /******************************************************************************
 * writeByteBlock()
 * Fills numBytes with byteToWrite.
-* Writes 1024 bytes at a time, this should be enough as this functions is only
-* called to complete an extent and such.
+
 * */
 int writeByteBlock(VolInfo* volInfo, unsigned char byteToWrite, int numBytes)
 {
     int rc;
     int count;
-    char block[1024];
     int numBlocks;
     int sizeLastBlock;
     
-    memset(block, byteToWrite, 1024);
+    memset(volInfo->readWriteBuffer, byteToWrite, READ_WRITE_BUFFER_SIZE);
     
-    numBlocks = numBytes / 1024;
-    sizeLastBlock = numBytes % 1024;
+    numBlocks = numBytes / READ_WRITE_BUFFER_SIZE;
+    sizeLastBlock = numBytes % READ_WRITE_BUFFER_SIZE;
     
     for(count = 0; count < numBlocks; count++)
     {
-        rc = wcWrite(volInfo, block, 1024);
+        rc = wcWrite(volInfo, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc <= 0)
             return rc;
     }
     
     if(sizeLastBlock > 0)
     {
-        rc = wcWrite(volInfo, block, sizeLastBlock);
+        rc = wcWrite(volInfo, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc <= 0)
             return rc;
     }
@@ -596,29 +594,28 @@ int writeByteBlockFromFile(int src, VolInfo* volInfo, unsigned numBytes)
 {
     int rc;
     int count;
-    char block[10240]; /* 10K */
     int numBlocks;
     int sizeLastBlock;
     
-    numBlocks = numBytes / 10240;
-    sizeLastBlock = numBytes % 10240;
+    numBlocks = numBytes / READ_WRITE_BUFFER_SIZE;
+    sizeLastBlock = numBytes % READ_WRITE_BUFFER_SIZE;
     
     for(count = 0; count < numBlocks; count++)
     {
-        rc = read(src, block, 10240);
-        if(rc != 10240)
+        rc = read(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
+        if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
-        rc = wcWrite(volInfo, block, 10240);
+        rc = wcWrite(volInfo, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc <= 0)
             return rc;
     }
     
     if(sizeLastBlock > 0)
     {
-        rc = read(src, block, sizeLastBlock);
+        rc = read(src, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc != sizeLastBlock)
                 return BKERROR_READ_GENERIC;
-        rc = wcWrite(volInfo, block, sizeLastBlock);
+        rc = wcWrite(volInfo, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc <= 0)
                 return rc;
     }

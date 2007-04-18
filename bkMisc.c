@@ -32,5 +32,4 @@ void maybeUpdateProgress(VolInfo* volInfo)
         
         volInfo->lastTimeCalledProgress = timeNow;
     }
-    
 }
