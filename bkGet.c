@@ -132,7 +132,7 @@ off_t estimateIsoSize(const BkDir* tree, int filenameTypes)
 }
 
 /*******************************************************************************
-* bk_get_dir_from_string()
+* getDirFromString()
 * recursive
 * gets a pointer to a Dir in tree described by the string pathStr
 * */

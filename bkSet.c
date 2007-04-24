@@ -72,6 +72,71 @@ int bk_init_vol_info(VolInfo* volInfo, bool scanForDuplicateFiles)
 }
 
 /*******************************************************************************
+* bk_rename()
+* Rename the file/dir.
+* */
+int bk_rename(VolInfo* volInfo, const char* srcPathAndName, 
+              const char* newName)
+{
+    int rc;
+    NewPath srcPath;
+    BkDir* parentDir;
+    bool dirFound;
+    BkFileBase* child;
+    bool done;
+    
+    if(strlen(newName) > NCHARS_FILE_ID_MAX_STORE - 1)
+        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+    
+    //!! check for valid chars
+    
+    rc = makeNewPathFromString(srcPathAndName, &srcPath);
+    if(rc <= 0)
+    {
+        freePathContents(&srcPath);
+        return rc;
+    }
+    
+    if(srcPath.numChildren == 0)
+    {
+        freePathContents(&srcPath);
+        return BKERROR_RENAME_ROOT;
+    }
+    
+    /* i want the parent directory */
+    srcPath.numChildren--;
+    dirFound = findDirByNewPath(&srcPath, &(volInfo->dirTree), &parentDir);
+    srcPath.numChildren++;
+    if(!dirFound)
+    {
+        freePathContents(&srcPath);
+        return BKERROR_DIR_NOT_FOUND_ON_IMAGE;
+    }
+    
+    done = false;
+    
+    child = parentDir->children;
+    while(child != NULL && !done)
+    {
+        if(strcmp(child->name, srcPath.children[srcPath.numChildren - 1]) == 0)
+        {
+            strcpy(child->name, newName);
+            
+            done = true;
+        }
+        
+        child = child->next;
+    }
+    
+    freePathContents(&srcPath);
+    
+    if(done)
+        return 1;
+    else
+        return BKERROR_ITEM_NOT_FOUND_ON_IMAGE;
+}
+
+/*******************************************************************************
 * bk_set_boot_file()
 * Set a file on the image to be the no-emulation boot record for el torito.
 * */

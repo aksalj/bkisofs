@@ -232,6 +232,8 @@ char* bk_get_error_string(int errorId);
 void bk_cancel_operation(VolInfo* volInfo);
 void bk_destroy_vol_info(VolInfo* volInfo);
 int bk_init_vol_info(VolInfo* volInfo, bool scanForDuplicateFiles);
+int bk_rename(VolInfo* volInfo, const char* srcPathAndName, 
+              const char* newName);
 int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName);
 void bk_set_follow_symlinks(VolInfo* volInfo, bool doFollow);
 void bk_set_publisher(VolInfo* volInfo, const char* publisher);
