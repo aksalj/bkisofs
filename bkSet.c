@@ -84,11 +84,16 @@ int bk_rename(VolInfo* volInfo, const char* srcPathAndName,
     bool dirFound;
     BkFileBase* child;
     bool done;
+    int newNameLen;
     
-    if(strlen(newName) > NCHARS_FILE_ID_MAX_STORE - 1)
+    newNameLen = strlen(newName);
+    
+    if(newNameLen > NCHARS_FILE_ID_MAX_STORE - 1)
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
-    
-    //!! check for valid chars
+    if(newNameLen == 0)
+        return BKERROR_BLANK_NAME;
+    if( !nameIsValid(newName) )
+        return BKERROR_NAME_INVALID_CHAR;
     
     rc = makeNewPathFromString(srcPathAndName, &srcPath);
     if(rc <= 0)

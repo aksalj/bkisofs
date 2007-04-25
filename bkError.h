@@ -84,8 +84,8 @@
 #define BKERROR_DUPLICATE_CREATE_DIR_TEXT        "Cannot create directory because another file or directory with the same name exists"
 #define BKERROR_NAME_INVALID_CHAR                -1035
 #define BKERROR_NAME_INVALID_CHAR_TEXT           "Name contains invalid character(s)"
-#define BKERROR_NEW_DIR_ZERO_LEN_NAME            -1036
-#define BKERROR_NEW_DIR_ZERO_LEN_NAME_TEXT       "Cannot create new directory without a name"
+#define BKERROR_BLANK_NAME                       -1036
+#define BKERROR_BLANK_NAME_TEXT                  "Name cannot be blank"
 #define BKERROR_ADD_FILE_TOO_BIG                 -1037
 #define BKERROR_ADD_FILE_TOO_BIG_TEXT            "Cannot add file larger than 4294967295 bytes because the ISO filesystem does not support such large files"
 #define BKERROR_SAVE_OVERWRITE                   -1038

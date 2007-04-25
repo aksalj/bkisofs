@@ -392,7 +392,7 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     if(nameLen > NCHARS_FILE_ID_MAX_STORE - 1)
         return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
     if(nameLen == 0)
-        return BKERROR_NEW_DIR_ZERO_LEN_NAME;
+        return BKERROR_BLANK_NAME;
     
     if(strcmp(newDirName, ".") == 0 || strcmp(newDirName, "..") == 0)
         return BKERROR_NAME_INVALID;
