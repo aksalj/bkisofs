@@ -171,8 +171,12 @@ int copyByteBlock(VolInfo* volInfo, int src, int dest, unsigned numBytes)
     numBlocks = numBytes / READ_WRITE_BUFFER_SIZE;
     sizeLastBlock = numBytes % READ_WRITE_BUFFER_SIZE;
     
+    maybeUpdateProgress(volInfo);
+    
     for(count = 0; count < numBlocks; count++)
     {
+        maybeUpdateProgress(volInfo);
+        
         rc = read(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
@@ -205,8 +209,6 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
     {
         if(volInfo->stopOperation)
             return BKERROR_OPER_CANCELED_BY_USER;
-        
-        maybeUpdateProgress(volInfo);
         
         if(strcmp(child->name, nameToExtract) == 0)
         {
