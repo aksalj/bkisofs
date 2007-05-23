@@ -155,7 +155,7 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
     currentLink = volInfo->fileLocations;
     while(currentLink != NULL)
     {
-        if(size <= currentLink->size)
+        if(size == currentLink->size)
         {
             if( memcmp(head, currentLink->head, headSize) == 0 )
             {
