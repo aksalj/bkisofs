@@ -1,4 +1,4 @@
-=/******************************* LICENCE **************************************
+/******************************* LICENCE **************************************
 * Any code in this file may be redistributed or modified under the terms of
 * the GNU General Public Licence as published by the Free Software 
 * Foundation; version 2 of the licence.
@@ -211,12 +211,9 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
     child = parentDir->children;
     while(child != NULL)
     {
-<<<<<<< .mine
-=======
         if(volInfo->stopOperation)
             return BKERROR_OPER_CANCELED_BY_USER;
         
->>>>>>> .r354
         if(strcmp(child->name, nameToExtract) == 0)
         {
             if( IS_DIR(child->posixFileMode) )
