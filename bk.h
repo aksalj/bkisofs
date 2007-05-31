@@ -97,7 +97,8 @@ typedef struct BkDir
 * BkHardLink
 * Linked list node.
 * Information about a hard link (where to find a certain file).
-* This is for internal use but is here because BkFile references it. */
+* This is for internal use but is defined here because BkFile references it.
+* You don't need to use this structure, please ignore it. */
 typedef struct BkHardLink
 {
     bool onImage;
