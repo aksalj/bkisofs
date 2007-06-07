@@ -78,7 +78,7 @@ const struct MessageStruct messageStructs[] =
     { BKERROR_END, BKERROR_END_TEXT }
 };
 
-char* bk_get_error_string(int errorId)
+const char* bk_get_error_string(int errorId)
 {
     int count;
     

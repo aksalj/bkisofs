@@ -227,7 +227,7 @@ int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr,
                            BkDir** dirFoundPtr);
 const char* bk_get_publisher(const VolInfo* volInfo);
 const char* bk_get_volume_name(const VolInfo* volInfo);
-char* bk_get_error_string(int errorId);
+const char* bk_get_error_string(int errorId);
 
 /* setters */
 void bk_cancel_operation(VolInfo* volInfo);
