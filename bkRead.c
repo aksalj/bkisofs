@@ -794,7 +794,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     /* READ 9660 name */
     off_t posBeforeName = lseek(volInfo->imageForReading, 0, SEEK_CUR);
-    char nameAsOnDisk[UCHAR_MAX];
+    char nameAsOnDisk[UCHAR_MAX + 1];
     
     rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
     if(rc != lenFileId9660)
