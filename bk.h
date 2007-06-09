@@ -48,9 +48,9 @@
 /* options for VolInfo.bootMediaType */
 #define BOOT_MEDIA_NONE 0
 #define BOOT_MEDIA_NO_EMULATION 1
-#define BOOT_MEDIA_1_2_FLOPPY 2
-#define BOOT_MEDIA_1_44_FLOPPY 3
-#define BOOT_MEDIA_2_88_FLOPPY 4
+#define BOOT_MEDIA_1_2_FLOPPY 2 /* 1228800 byte floppy disk image */
+#define BOOT_MEDIA_1_44_FLOPPY 3 /* 1474560 byte floppy disk image */
+#define BOOT_MEDIA_2_88_FLOPPY 4 /* 2949120 byte floppy disk image */
 #define BOOT_MEDIA_HARD_DISK 5
 
 #define READ_WRITE_BUFFER_SIZE 102400
