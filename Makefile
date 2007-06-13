@@ -15,5 +15,9 @@ bk.a: $(OBJECTS)
 $(OBJECTS): %.o: %.c Makefile bk.h bkInternal.h
 	$(CC) $< $(CFLAGS) $(CPPFLAGS) -c -o $@
 
+example: example.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) example.c bk.a -o example
+
 clean: 
 	$(RM) *.o bk.a
+
