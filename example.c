@@ -1,17 +1,21 @@
 /******************************************************************************
 * example.c
 * Example for using bkisofs
+* Author: Andrew Smith
 * Compile with: cc example.c bk.a -o example
 * */
 
 #include <stdio.h>
+#include <time.h>
 
 /* need to include bk.h for access to bkisofs functions and structures */
 #include "bk.h"
 
-void fatalError(const char* message);
-void readProgressUpdaterCbk(VolInfo* volInfo);
 void addProgressUpdaterCbk(VolInfo* volInfo);
+void fatalError(const char* message);
+void printNameAndContents(BkFileBase* item, int numSpaces);
+void readProgressUpdaterCbk(VolInfo* volInfo);
+void writeProgressUpdaterCbk(VolInfo* volInfo, double percentComplete);
 
 int main( int argv, char** argc)
 {
@@ -54,9 +58,25 @@ int main( int argv, char** argc)
     if(rc <= 0)
         fatalError(bk_get_error_string(rc));
     
+    /* print the entire directory tree */
+    printNameAndContents(BK_BASE_PTR( &(volInfo.dirTree) ), 0);
     
+    /* save the new ISO as /tmp/example.iso */
+    /* note that bkisofs will print some stuff to stdout when writing an ISO */
+    rc = bk_write_image("/tmp/example.iso", &volInfo, time(NULL),
+                        FNTYPE_9660 | FNTYPE_ROCKRIDGE | FNTYPE_JOLIET,
+                        writeProgressUpdaterCbk);
+    
+    /* we're finished with this ISO, so clean up */
+    bk_destroy_vol_info(&volInfo);
     
     return 0;
+}
+
+/* you can use this to update a progress bar or something */
+void addProgressUpdaterCbk(VolInfo* volInfo)
+{
+    printf("Add progress updater\n");
 }
 
 void fatalError(const char* message)
@@ -65,12 +85,47 @@ void fatalError(const char* message)
     exit(1);
 }
 
-void readProgressUpdaterCbk(VolInfo* volInfo)
+void printNameAndContents(BkFileBase* base, int numSpaces)
 {
-    printf("Read progress updater 1\n");
+    int count;
+    
+    /* print the spaces (indentation, for prettyness) */
+    for(count = 0; count < numSpaces; count++)
+        printf(" ");
+    
+    if(IS_DIR(base->posixFileMode))
+    {
+        /* print name of the directory */
+        printf("%s (directory)\n", base->name);
+        
+        /* print all the directory's children */
+        BkFileBase* child = BK_DIR_PTR(base)->children;
+        while(child != NULL)
+        {
+            printNameAndContents(child, numSpaces + 2);
+            child = child->next;
+        }
+    }
+    else if(IS_REG_FILE(base->posixFileMode))
+    {
+        /* print name and size of the file */
+        printf("%s (regular file), size %u\n", base->name, BK_FILE_PTR(base)->size);
+    }
+    else if(IS_SYMLINK(base->posixFileMode))
+    {
+        /* print name and target of the symbolic link */
+        printf("%s -> %s (symbolic link)\n", base->name, BK_SYMLINK_PTR(base)->target);
+    }
 }
 
-void addProgressUpdaterCbk(VolInfo* volInfo)
+/* you can use this to update a progress bar or something */
+void readProgressUpdaterCbk(VolInfo* volInfo)
 {
-    printf("Read progress updater 1\n");
+    printf("Read progress updater\n");
+}
+
+/* you can use this to update a progress bar or something */
+void writeProgressUpdaterCbk(VolInfo* volInfo, double percentComplete)
+{
+    printf("Write progress updater: ~%.2lf%% complete\n", percentComplete);
 }
