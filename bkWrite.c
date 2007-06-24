@@ -1234,6 +1234,7 @@ int writeElToritoVd(VolInfo* volInfo, off_t* bootCatalogSectorNumberOffset)
 * writeFileContents()
 * Write file contents into an extent and also write the file's location and 
 * size into the directory records back in the tree.
+* Also write location and size for symbolic links.
 * */
 int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
 {
@@ -1403,6 +1404,38 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
             rc = writeFileContents(volInfo, DIRTW_PTR(child), filenameTypes);
             if(rc < 0)
                 return rc;
+        }
+        else if( IS_SYMLINK(child->posixFileMode) )
+        {
+            /* WRITE symlink location and size (0) */
+            endPos = wcSeekTell(volInfo);
+            
+            wcSeekSet(volInfo, child->extentLocationOffset);
+            
+            rc = write733(volInfo, 0);
+            if(rc <= 0)
+                return rc;
+            
+            rc = write733(volInfo, 0);
+            if(rc <= 0)
+                return rc;
+            
+            if(filenameTypes & FNTYPE_JOLIET)
+            /* also update location and size on joliet tree */
+            {
+                wcSeekSet(volInfo, child->extentLocationOffset2);
+                
+                rc = write733(volInfo, 0);
+                if(rc <= 0)
+                    return rc;
+                
+                rc = write733(volInfo, 0);
+                if(rc <= 0)
+                    return rc;
+            }
+            
+            wcSeekSet(volInfo, endPos);
+            /* END WRITE symlink location and size (0)  */
         }
         
         child = child->next;
