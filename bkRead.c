@@ -503,8 +503,8 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
         BK_BASE_PTR(dir)->name[lenFileId9660] = '\0';
         
         /* record 9660 name for writing later */
-        strncpy(BK_BASE_PTR(dir)->original9660name, BK_BASE_PTR(dir)->name, 12);
-        BK_BASE_PTR(dir)->original9660name[12] = '\0';
+        strncpy(BK_BASE_PTR(dir)->original9660name, BK_BASE_PTR(dir)->name, 14);
+        BK_BASE_PTR(dir)->original9660name[14] = '\0';
         
         /* skip padding field if it's there */
         if(lenFileId9660 % 2 == 0)
@@ -884,6 +884,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     /* the file is actually a symbolic link */
     {
         strcpy((*specialFile)->name, BK_BASE_PTR(file)->name);
+        strcpy((*specialFile)->original9660name, BK_BASE_PTR(file)->original9660name);
         /* apparently permissions for symbolic links are never used */
         (*specialFile)->posixFileMode = 0120777;
     }

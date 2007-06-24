@@ -217,7 +217,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
     
     haveCollisions = true;
     numTimesTried = 0;
-    while(haveCollisions && numTimesTried < 500) /* random big number */
+    while(haveCollisions && numTimesTried < 50000) /* random big number */
     {
         haveCollisions = false;
         
