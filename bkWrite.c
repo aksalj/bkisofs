@@ -1310,6 +1310,16 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                 else
                 /* copy file from fs to new image */
                 {
+                    /* UPDATE the file's size */
+                    struct stat statStruct;
+                    
+                    rc = stat(FILETW_PTR(child)->pathAndName, &statStruct);
+                    if(rc != 0)
+                        return BKERROR_STAT_FAILED;
+                    
+                    FILETW_PTR(child)->size = statStruct.st_size;
+                    /* UPDATE the file's size */
+                    
                     srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY);
                     if(srcFile == -1)
                         return BKERROR_OPEN_READ_FAILED;
