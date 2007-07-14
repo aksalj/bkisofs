@@ -98,19 +98,19 @@
 #define BKERROR_WRONG_EXTRACT_FILE_TEXT          "Tried to extract something that's not a file using the file extracting function"
 #define BKERROR_NOT_REG_FILE_FOR_BR              -1042
 #define BKERROR_NOT_REG_FILE_FOR_BR_TEXT         "Can only use a regular file as a boot record"
-#define BKERROR_WRITE_CACHE_OVERFLOWED           -1042
+#define BKERROR_WRITE_CACHE_OVERFLOWED           -1043
 #define BKERROR_WRITE_CACHE_OVERFLOWED_TEXT      "Write cache overflowed, please report bug"
-#define BKERROR_CREATE_SYMLINK_FAILED            -1042
+#define BKERROR_CREATE_SYMLINK_FAILED            -1044
 #define BKERROR_CREATE_SYMLINK_FAILED_TEXT       "Failed to create symbolic link"
-#define BKERROR_SYMLINK_TARGET_TOO_LONG          -1042
+#define BKERROR_SYMLINK_TARGET_TOO_LONG          -1045
 #define BKERROR_SYMLINK_TARGET_TOO_LONG_TEXT     "Too many characters in target of a symbolic link"
-#define BKERROR_HARD_LINK_CALL_PARAMS            -1043
+#define BKERROR_HARD_LINK_CALL_PARAMS            -1046
 #define BKERROR_HARD_LINK_CALL_PARAMS_TEXT       "Call to a hard link function with both a 0 offset and a NULL filename not allowed"
-#define BKERROR_NAME_INVALID                     -1044
+#define BKERROR_NAME_INVALID                     -1047
 #define BKERROR_NAME_INVALID_TEXT                "Invalid file/directory name"
-#define BKERROR_RENAME_ROOT                      -1045
+#define BKERROR_RENAME_ROOT                      -1048
 #define BKERROR_RENAME_ROOT_TEXT                 "Cannot rename the root directory"
-#define BKERROR_ITEM_NOT_FOUND_ON_IMAGE          -1046
+#define BKERROR_ITEM_NOT_FOUND_ON_IMAGE          -1049
 #define BKERROR_ITEM_NOT_FOUND_ON_IMAGE_TEXT     "Item not found on image"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001

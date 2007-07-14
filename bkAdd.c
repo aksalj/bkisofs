@@ -30,7 +30,8 @@
 #include "bkLink.h"
 #include "bkMisc.h"
 
-int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
+int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir, 
+        const char* nameToUse)
 {
     int rc;
     char lastName[NCHARS_FILE_ID_MAX_STORE];
@@ -42,9 +43,18 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir)
     
     maybeUpdateProgress(volInfo);
     
-    rc = getLastNameFromPath(srcPathAndName, lastName);
-    if(rc <= 0)
-        return rc;
+    if(nameToUse == NULL)
+    {
+        rc = getLastNameFromPath(srcPathAndName, lastName);
+        if(rc <= 0)
+            return rc;
+    }
+    else
+    {
+        if(strlen(nameToUse) > NCHARS_FILE_ID_MAX_STORE - 1)
+            return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+        strcpy(lastName, nameToUse);
+    }
     
     if(strcmp(lastName, ".") == 0 || strcmp(lastName, "..") == 0)
         return BKERROR_NAME_INVALID;
@@ -232,7 +242,7 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
         /* append file/dir name */
         strcpy(newSrcPathAndName + srcPathLen, dirEnt->d_name);
         
-        rc = add(volInfo, newSrcPathAndName, destDir);
+        rc = add(volInfo, newSrcPathAndName, destDir, NULL);
         if(rc <= 0 && rc != BKWARNING_OPER_PARTLY_FAILED)
         {
             bool goOn;
@@ -275,6 +285,14 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
 int bk_add(VolInfo* volInfo, const char* srcPathAndName, 
            const char* destPathStr, void(*progressFunction)(VolInfo*))
 {
+    return bk_add_as(volInfo, srcPathAndName, destPathStr, NULL, 
+                     progressFunction);
+}
+
+int bk_add_as(VolInfo* volInfo, const char* srcPathAndName, 
+              const char* destPathStr, const char* nameToUse, 
+              void(*progressFunction)(VolInfo*))
+{
     int rc;
     NewPath destPath;
     char lastName[NCHARS_FILE_ID_MAX_STORE];
@@ -313,7 +331,7 @@ int bk_add(VolInfo* volInfo, const char* srcPathAndName,
     
     volInfo->stopOperation = false;
     
-    rc = add(volInfo, srcPathAndName, destDirInTree);
+    rc = add(volInfo, srcPathAndName, destDirInTree, nameToUse);
     if(rc <= 0)
         return rc;
     

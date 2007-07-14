@@ -206,6 +206,9 @@ int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName,
                        int bootMediaType);
 int bk_add(VolInfo* volInfo, const char* srcPathAndName, 
            const char* destPathStr, void(*progressFunction)(VolInfo*));
+int bk_add_as(VolInfo* volInfo, const char* srcPathAndName, 
+              const char* destPathStr, const char* nameToUse, 
+              void(*progressFunction)(VolInfo*));
 int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
                   const char* newDirName);
 
@@ -219,6 +222,9 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
 int bk_extract(VolInfo* volInfo, const char* srcPathAndName, 
                const char* destDir, bool keepPermissions, 
                void(*progressFunction)(VolInfo*));
+int bk_extract_as(VolInfo* volInfo, const char* srcPathAndName, 
+                  const char* destDir, const char* nameToUse,
+                  bool keepPermissions, void(*progressFunction)(VolInfo*));
 
 /* getters */
 off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
