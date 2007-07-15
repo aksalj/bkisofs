@@ -20,6 +20,11 @@
 #ifndef bk_h
 #define bk_h
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -257,5 +262,9 @@ int bk_read_vol_info(VolInfo* volInfo);
 int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
                    void(*progressFunction)(VolInfo*, double));
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
