@@ -1308,15 +1308,15 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                 else
                 /* copy file from fs to new image */
                 {
-                    /* UPDATE the file's size */
+                    /* UPDATE the file's size, in case it's changed since we added it */
                     struct stat statStruct;
                     
                     rc = stat(FILETW_PTR(child)->pathAndName, &statStruct);
                     if(rc != 0)
                         return BKERROR_STAT_FAILED;
-                    printf("updated size for %s to %llu\n", child->nameRock, statStruct.st_size);
+                    
                     FILETW_PTR(child)->size = statStruct.st_size;
-                    /* UPDATE the file's size */
+                    /* UPDATE the file's size, in case it's changed since we added it */
                     
                     srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY);
                     if(srcFile == -1)

@@ -368,6 +368,16 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
         if(srcFile == -1)
             return BKERROR_OPEN_READ_FAILED;
         srcFileWasOpened = true;
+        
+        /* UPDATE the file's size, in case it's changed since we added it */
+        struct stat statStruct;
+        
+        rc = stat(srcFileInTree->pathAndName, &statStruct);
+        if(rc != 0)
+            return BKERROR_STAT_FAILED;
+        
+        srcFileInTree->size = statStruct.st_size;
+        /* UPDATE the file's size, in case it's changed since we added it */
     }
     
     if(nameToUse == NULL)
