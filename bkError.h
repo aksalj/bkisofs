@@ -112,6 +112,8 @@
 #define BKERROR_RENAME_ROOT_TEXT                 "Cannot rename the root directory"
 #define BKERROR_ITEM_NOT_FOUND_ON_IMAGE          -1049
 #define BKERROR_ITEM_NOT_FOUND_ON_IMAGE_TEXT     "Item not found on image"
+#define BKERROR_DUPLICATE_RENAME                 -1050
+#define BKERROR_DUPLICATE_RENAME_TEXT            "Cannot rename item because another file or directory with the same name exists"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

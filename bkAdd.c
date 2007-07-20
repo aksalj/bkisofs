@@ -29,6 +29,7 @@
 #include "bkMangle.h"
 #include "bkLink.h"
 #include "bkMisc.h"
+#include "bkSet.h"
 
 int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir, 
         const char* nameToUse)
@@ -442,24 +443,4 @@ int bk_create_dir(VolInfo* volInfo, const char* destPathStr,
     destDir->children = BK_BASE_PTR(newDir);
     
     return 1;
-}
-
-/*******************************************************************************
-* itemIsInDir()
-* checks the contents of a directory (files and dirs) to see whether it
-* has an item named 
-* */
-bool itemIsInDir(const char* name, const BkDir* dir)
-{
-    BkFileBase* child;
-    
-    child = dir->children;
-    while(child != NULL)
-    {
-        if(strcmp(child->name, name) == 0)
-            return true;
-        child = child->next;
-    }
-    
-    return false;
 }

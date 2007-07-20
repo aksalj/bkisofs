@@ -18,6 +18,7 @@
 #include <stdio.h>
 
 #include "bk.h"
+#include "bkSet.h"
 #include "bkDelete.h"
 #include "bkPath.h"
 #include "bkError.h"
@@ -108,6 +109,10 @@ int bk_rename(VolInfo* volInfo, const char* srcPathAndName,
         return BKERROR_RENAME_ROOT;
     }
     
+    if( strcmp(srcPath.children[srcPath.numChildren - 1], newName) == 0 )
+    /* rename to the same name, ignore silently */
+        return 1;
+    
     /* i want the parent directory */
     srcPath.numChildren--;
     dirFound = findDirByNewPath(&srcPath, &(volInfo->dirTree), &parentDir);
@@ -123,6 +128,9 @@ int bk_rename(VolInfo* volInfo, const char* srcPathAndName,
     child = parentDir->children;
     while(child != NULL && !done)
     {
+        if(itemIsInDir(newName, parentDir))
+            return BKERROR_DUPLICATE_RENAME;
+        
         if(strcmp(child->name, srcPath.children[srcPath.numChildren - 1]) == 0)
         {
             strcpy(child->name, newName);
@@ -231,4 +239,24 @@ void bk_set_publisher(VolInfo* volInfo, const char* publisher)
 void bk_set_vol_name(VolInfo* volInfo, const char* volName)
 {
     strncpy(volInfo->volId, volName, 32);
+}
+
+/*******************************************************************************
+* itemIsInDir()
+* checks the contents of a directory (files and dirs) to see whether it
+* has an item named 
+* */
+bool itemIsInDir(const char* name, const BkDir* dir)
+{
+    BkFileBase* child;
+    
+    child = dir->children;
+    while(child != NULL)
+    {
+        if(strcmp(child->name, name) == 0)
+            return true;
+        child = child->next;
+    }
+    
+    return false;
 }
