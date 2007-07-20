@@ -602,6 +602,9 @@ int writeByteBlockFromFile(int src, VolInfo* volInfo, unsigned numBytes)
     
     for(count = 0; count < numBlocks; count++)
     {
+        if(volInfo->stopOperation)
+            return BKERROR_OPER_CANCELED_BY_USER;
+
         rc = read(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
