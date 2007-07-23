@@ -519,7 +519,7 @@ void mangleNameForJoliet(const char* origName, char* newName, bool appendHash)
     /* END ASSEMBLE name */
     
     if(appendHash)
-        printf("joliet mangle '%s' -> '%s', len %d\n", origName, newName, strlen(newName));
+        printf("joliet mangle '%s' -> '%s'\n", origName, newName);
 }
 
 /******************************************************************************

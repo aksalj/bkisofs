@@ -9,7 +9,8 @@
 * Andrew Smith, http://littlesvr.ca/misc/contactandrew.php
 *
 * Contributors:
-* 
+* Henrique Pinto
+* - fixed bug that caused crash in makeNewPathFromString()
 ******************************************************************************/
 
 #include <stdio.h>
@@ -27,7 +28,7 @@
 bool findDirByNewPath(const NewPath* path, BkDir* tree, BkDir** dir)
 {
     bool dirFound;
-    int count;
+    unsigned count;
     BkFileBase* child;
     
     *dir = tree;
@@ -90,7 +91,7 @@ void freeDirToWriteContents(DirToWrite* dir)
 
 void freePathContents(NewPath* path)
 {
-    int count;
+    unsigned count;
     
     for(count = 0; count < path->numChildren; count++)
     {
@@ -165,12 +166,13 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
     int pathStrLen;
     
     pathStrLen = strlen(strPath);
+    pathPath->numChildren = 0;
+    pathPath->children = NULL;
     
     if(strPath[0] != '/')
         return BKERROR_MISFORMED_PATH;
     
     /* count number of children */
-    pathPath->numChildren = 0;
     for(count = 1; count < pathStrLen; count++)
     {
         if(strPath[count] != '/' && strPath[count - 1] == '/')
@@ -187,7 +189,7 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
     if(pathPath->children == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
-    int numChildrenDone = 0;
+    unsigned numChildrenDone = 0;
     int nextChildLen = 0;
     const char* nextChild = &(strPath[1]);
     for(count = 1; count <= pathStrLen; count++)

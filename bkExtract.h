@@ -5,5 +5,5 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
                const char* nameToUse, bool keepPermissions);
 int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir, 
                 const char* nameToUse, bool keepPermissions);
-int extractSymlink(VolInfo* volInfo, BkSymLink* srcLink, const char* destDir, 
+int extractSymlink(BkSymLink* srcLink, const char* destDir, 
                    const char* nameToUse);

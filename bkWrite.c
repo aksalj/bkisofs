@@ -405,7 +405,8 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
 * */
 int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
 {
-    int rc;
+    ssize_t rc;
+    int rc2;
     int srcFile;
     unsigned char* contents;
     int count;
@@ -447,8 +448,8 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
             return BKERROR_READ_GENERIC;
         }
         
-        rc = close(srcFile);
-        if(rc < 0)
+        rc2 = close(srcFile);
+        if(rc2 < 0)
         {
             free(contents);
             return BKERROR_EXOTIC;

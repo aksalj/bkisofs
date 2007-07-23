@@ -236,7 +236,7 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
             }
             else if ( IS_SYMLINK(child->posixFileMode) )
             {
-                rc = extractSymlink(volInfo, BK_SYMLINK_PTR(child), destDir, 
+                rc = extractSymlink(BK_SYMLINK_PTR(child), destDir, 
                                     nameToUse);
             }
             else
@@ -449,7 +449,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     return 1;
 }
 
-int extractSymlink(VolInfo* volInfo, BkSymLink* srcLink, const char* destDir, 
+int extractSymlink(BkSymLink* srcLink, const char* destDir, 
                    const char* nameToUse)
 {
     char* destPathAndName;

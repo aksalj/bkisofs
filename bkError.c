@@ -22,7 +22,7 @@
 struct MessageStruct
 {
     int number;
-    char* text;
+    const char* text;
 };
 
 const struct MessageStruct messageStructs[] = 

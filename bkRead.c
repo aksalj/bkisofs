@@ -630,8 +630,8 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
                     int filenameType, bool keepPosixPermissions)
 {
     int rc;
-    int bytesRead = 0;
-    int childrenBytesRead;
+    unsigned bytesRead = 0;
+    unsigned childrenBytesRead;
     BkFileBase** nextChild; /* pointer to pointer to modify pointer :) */
     
     /* skip self and parent */
@@ -923,7 +923,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
 * readPosixFileMode()
 * looks for the PX system use field and gets the permissions field out of it
 * */
-int readPosixFileMode(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
+int readPosixFileMode(VolInfo* volInfo, unsigned* posixFileMode, int lenSU)
 {
     off_t origPos;
     unsigned char* suFields;
@@ -1005,7 +1005,7 @@ int readPosixFileMode(VolInfo* volInfo, unsigned* posixFileMode, unsigned lenSU)
 * this directory record, the function returns a failure.
 * Leaves the file pointer where it was.
 */
-int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU, 
+int readRockridgeFilename(VolInfo* volInfo, char* dest, int lenSU, 
                           unsigned numCharsReadAlready)
 {
     off_t origPos;
@@ -1101,7 +1101,7 @@ int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU,
 }
 
 /* if no SL record is found does not return failure */
-int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, unsigned lenSU)
+int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, int lenSU)
 {
     off_t origPos;
     unsigned char* suFields;

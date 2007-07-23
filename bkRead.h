@@ -10,10 +10,10 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
                  bool keepPosixPermissions, BkFileBase** specialFile);
 unsigned char readNextRecordLen(int image);
 int readPosixFileMode(VolInfo* volInfo, unsigned* posixPermissions, 
-                         unsigned lenSU);
-int readRockridgeFilename(VolInfo* volInfo, char* dest, unsigned lenSU, 
+                      int lenSU);
+int readRockridgeFilename(VolInfo* volInfo, char* dest, int lenSU, 
                           unsigned numCharsReadAlready);
-int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, unsigned lenSU);
+int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, int lenSU);
 void removeCrapFromFilename(char* filename, int length);
 int skipDR(int image);
 void stripSpacesFromEndOfString(char* str);
