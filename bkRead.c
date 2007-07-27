@@ -303,13 +303,13 @@ int bk_read_vol_info(VolInfo* volInfo)
                 volInfo->bootMediaType = BOOT_MEDIA_2_88_FLOPPY;
             else if(bootMediaType == 4)
             {
-                //!! print warning
+                /* !! print warning */
                 printf("hard disk boot emulation not supported\n");
                 volInfo->bootMediaType = BOOT_MEDIA_NONE;
             }
             else
             {
-                //!! print warning
+                /* !! print warning */
                 printf("unknown boot media type on iso\n");
                 volInfo->bootMediaType = BOOT_MEDIA_NONE;
             }
@@ -342,7 +342,7 @@ int bk_read_vol_info(VolInfo* volInfo)
                                         NBYTES_LOGICAL_BLOCK;
         }
         else
-            //!! print warning
+            /* !! print warning */
             printf("err, boot record not el torito\n");
         
         /* go to the sector after the boot record */
@@ -801,7 +801,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
         return BKERROR_READ_GENERIC;
     nameAsOnDisk[lenFileId9660] = '\0';
     
-    //removeCrapFromFilename(nameAsOnDisk, lenFileId9660);
+    /* removeCrapFromFilename(nameAsOnDisk, lenFileId9660); */
     
     strncpy(BK_BASE_PTR(file)->name, nameAsOnDisk, NCHARS_FILE_ID_MAX_STORE - 1);
     BK_BASE_PTR(file)->name[NCHARS_FILE_ID_MAX_STORE - 1] = '\0';

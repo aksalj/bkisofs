@@ -87,7 +87,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         freeDirToWriteContents(&newTree);
         return rc;
     }
-    //~ printDirToWrite(&newTree, 0, filenameTypes);
+    
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
     volInfo->imageForWriting = open(newImagePathAndName, 
                                     O_WRONLY | O_CREAT | O_TRUNC, 
@@ -248,7 +248,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     printf("sorting 9660\n");
     sortDir(&newTree, FNTYPE_9660);
-    //printDirToWrite(&newTree, 0, FNTYPE_9660 | FNTYPE_JOLIET);
     
     pRealRootDrOffset = wcSeekTell(volInfo);
     
@@ -1223,7 +1222,7 @@ int writeElToritoVd(VolInfo* volInfo, off_t* bootCatalogSectorNumberOffset)
     /* unused 32 bytes, must be 0 (bzero at start took care of this) */
     /* boot catalog location, 4 byte intel format. written later. */
     *bootCatalogSectorNumberOffset = wcSeekTell(volInfo) + 71;
-    //write731ToByteArray(&(buffer[71]), bootCatalogSectorNumber);
+    /*write731ToByteArray(&(buffer[71]), bootCatalogSectorNumber);*/
     /* the rest of this sector is unused, must be set to 0 */
     /* END SETUP BOOT record volume descriptor sector */
     
@@ -1265,14 +1264,14 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
             
             child->extentNumber = wcSeekTell(volInfo) / NBYTES_LOGICAL_BLOCK;
             if(volInfo->scanForDuplicateFiles)
-            {//printf("file '%s': ", child->nameRock);
+            {
                 if(FILETW_PTR(child)->location->extentNumberWrittenTo == 0)
                 /* file not yet written */
-                {//printf("writing to 0x%X\n", child->extentNumber * NBYTES_LOGICAL_BLOCK);
+                {
                     FILETW_PTR(child)->location->extentNumberWrittenTo = child->extentNumber;
                 }
                 else
-                {//printf("not writing, already at 0x%X\n", FILETW_PTR(child)->location->extentNumberWrittenTo * NBYTES_LOGICAL_BLOCK);
+                {
                     child->extentNumber = FILETW_PTR(child)->location->extentNumberWrittenTo;
                     needToCopy = false;
                 }
@@ -1894,7 +1893,6 @@ int writeRockPX(VolInfo* volInfo, unsigned posixFileMode, bool isADir)
 {
     int rc;
     unsigned char record[36];
-    //DirToWriteLL* nextDir;
     unsigned posixFileLinks;
     
     /* identification */
@@ -1911,11 +1909,13 @@ int writeRockPX(VolInfo* volInfo, unsigned posixFileMode, bool isADir)
     write733ToByteArray(&(record[4]), posixFileMode);
     
     /* POSIX file links */
-    // this i think is number of subdirectories + 2 (self and parent)
-    // and 1 for a file
-    // it's probably not used on read-only filesystems
-    // to add it, i would need to pass the number of links in a parent dir
-    // recursively in writeDir(). brrrrr.
+    /*
+    * this i think is number of subdirectories + 2 (self and parent)
+    * and 1 for a file
+    * it's probably not used on read-only filesystems
+    * to add it, i would need to pass the number of links in a parent dir
+    * recursively in writeDir(). brrrrr.
+    */
     if(isADir)
         posixFileLinks = 2;
     else
