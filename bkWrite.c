@@ -409,7 +409,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     int rc2;
     int srcFile;
     unsigned char* contents;
-    int count;
+    unsigned count;
     
     if(file->size % 4 != 0)
         return BKERROR_WRITE_BOOT_FILE_4;
@@ -424,7 +424,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
         lseek(oldImage, file->offset, SEEK_SET);
         
         rc = read(oldImage, contents, file->size);
-        if(rc != file->size)
+        if(rc == -1 || rc != (int)(file->size))
         {
             free(contents);
             return BKERROR_READ_GENERIC;
@@ -441,7 +441,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
         }
         
         rc = read(srcFile, contents, file->size);
-        if(rc != file->size)
+        if(rc == -1 || rc != (int)(file->size))
         {
             close(srcFile);
             free(contents);

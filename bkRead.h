@@ -1,4 +1,4 @@
-int appendStringIfHaveRoom(char* dest, char* src, int destMaxLen, 
+int appendStringIfHaveRoom(char* dest, const char* src, int destMaxLen, 
                            int destCharsAlreadyUsed, int maxSrcLen);
 bool dirDrFollows(int image);
 bool haveNextRecordInSector(int image);

@@ -44,7 +44,7 @@
 * returns number of chars appended
 * destMaxLen doesn't include '\0'
 * if maxSrcLen is -1 tries to copy all of it */
-int appendStringIfHaveRoom(char* dest, char* src, int destMaxLen, 
+int appendStringIfHaveRoom(char* dest, const char* src, int destMaxLen, 
                            int destCharsAlreadyUsed, int maxSrcLen)
 {
     int srcLen;
