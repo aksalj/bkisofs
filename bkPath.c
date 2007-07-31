@@ -25,6 +25,27 @@
 #include "bkPath.h"
 #include "bkMangle.h"
 
+/******************************************************************************
+* nameIsValid9660()
+* Checks each character in name to see whether it's allowed in the more strict
+* ISO9660 fields.
+* */
+bool nameIsValid9660(const char* name)
+{
+    int count;
+    int nameLen;
+    
+    nameLen = strlen(name);
+    
+    for(count = 0; count < nameLen; count++)
+    {
+        if(!charIsValid9660(name[count]))
+            return false;
+    }
+    
+    return true;
+}
+
 bool findBaseByNewPath(NewPath* path, BkDir* tree, BkFileBase** base)
 {
     BkDir* parentDir;

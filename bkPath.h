@@ -10,6 +10,7 @@ void freePathContents(NewPath* path);
 int getLastNameFromPath(const char* srcPathAndName, char* lastName);
 int makeNewPathFromString(const char* strPath, NewPath* pathPath);
 bool nameIsValid(const char* name);
+bool nameIsValid9660(const char* name);
 void printDirToWrite(DirToWrite* dir, int level, int filenameTypes);
 
 #endif

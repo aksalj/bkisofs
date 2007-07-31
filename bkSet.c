@@ -263,24 +263,28 @@ int bk_set_permissions(VolInfo* volInfo, const char* pathAndName,
 * bk_set_publisher()
 * Copies publisher into volInfo, a maximum of 128 characters.
 * */
-void bk_set_publisher(VolInfo* volInfo, const char* publisher)
+int bk_set_publisher(VolInfo* volInfo, const char* publisher)
 {
-    if( !nameIsValid(publisher) )
+    if( !nameIsValid9660(publisher) )
         return BKERROR_NAME_INVALID_CHAR;
     
     strncpy(volInfo->publisher, publisher, 128);
+    
+    return 1;
 }
 
 /*******************************************************************************
 * bk_set_vol_name()
 * Copies volName into volInfo, a maximum of 32 characters.
 * */
-void bk_set_vol_name(VolInfo* volInfo, const char* volName)
+int bk_set_vol_name(VolInfo* volInfo, const char* volName)
 {
-    if( !nameIsValid(volName) )
+    if( !nameIsValid9660(volName) )
         return BKERROR_NAME_INVALID_CHAR;
     
     strncpy(volInfo->volId, volName, 32);
+    
+    return 1;
 }
 
 /*******************************************************************************

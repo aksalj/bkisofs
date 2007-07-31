@@ -252,8 +252,8 @@ int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName);
 void bk_set_follow_symlinks(VolInfo* volInfo, bool doFollow);
 int bk_set_permissions(VolInfo* volInfo, const char* pathAndName, 
                        mode_t permissions);
-void bk_set_publisher(VolInfo* volInfo, const char* publisher);
-void bk_set_vol_name(VolInfo* volInfo, const char* volName);
+int bk_set_publisher(VolInfo* volInfo, const char* publisher);
+int bk_set_vol_name(VolInfo* volInfo, const char* volName);
 
 /* reading */
 int bk_open_image(VolInfo* volInfo, const char* filename);
