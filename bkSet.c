@@ -224,6 +224,42 @@ void bk_set_follow_symlinks(VolInfo* volInfo, bool doFollow)
 }
 
 /*******************************************************************************
+* bk_get_sermissions()
+* public function
+* sets the permissions (not all of the posix info) for an item (file, dir, etc.)
+* */
+int bk_set_permissions(VolInfo* volInfo, const char* pathAndName, 
+                       mode_t permissions)
+{
+    int rc;
+    NewPath srcPath;
+    BkFileBase* base;
+    bool itemFound;
+    
+    rc = makeNewPathFromString(pathAndName, &srcPath);
+    if(rc <= 0)
+    {
+        freePathContents(&srcPath);
+        return rc;
+    }
+    
+    itemFound = findBaseByNewPath(&srcPath, &(volInfo->dirTree), &base);
+    
+    freePathContents(&srcPath);
+    
+    if(!itemFound)
+        return BKERROR_ITEM_NOT_FOUND_ON_IMAGE;
+    
+    /* set all permission bits in posixFileMode to 0 */
+    base->posixFileMode &= ~0777;
+    
+    /* copy permissions into posixFileMode */
+    base->posixFileMode |= permissions & 0777;
+    
+    return 1;
+}
+
+/*******************************************************************************
 * bk_set_publisher()
 * Copies publisher into volInfo, a maximum of 128 characters.
 * */

@@ -236,6 +236,8 @@ off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
 time_t bk_get_creation_time(const VolInfo* volInfo);
 int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr, 
                            BkDir** dirFoundPtr);
+int bk_get_permissions(VolInfo* volInfo, const char* pathAndName, 
+                       mode_t* permissions);
 const char* bk_get_publisher(const VolInfo* volInfo);
 const char* bk_get_volume_name(const VolInfo* volInfo);
 const char* bk_get_error_string(int errorId);
@@ -248,6 +250,8 @@ int bk_rename(VolInfo* volInfo, const char* srcPathAndName,
               const char* newName);
 int bk_set_boot_file(VolInfo* volInfo, const char* srcPathAndName);
 void bk_set_follow_symlinks(VolInfo* volInfo, bool doFollow);
+int bk_set_permissions(VolInfo* volInfo, const char* pathAndName, 
+                       mode_t permissions);
 void bk_set_publisher(VolInfo* volInfo, const char* publisher);
 void bk_set_vol_name(VolInfo* volInfo, const char* volName);
 

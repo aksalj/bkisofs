@@ -25,6 +25,34 @@
 #include "bkPath.h"
 #include "bkMangle.h"
 
+bool findBaseByNewPath(NewPath* path, BkDir* tree, BkFileBase** base)
+{
+    BkDir* parentDir;
+    bool dirFound;
+    BkFileBase* child;
+    
+    /* parent directory */
+    path->numChildren--;
+    dirFound = findDirByNewPath(path, tree, &parentDir);
+    path->numChildren++;
+    if(!dirFound)
+        return false;
+    
+    child = parentDir->children;
+    while(child != NULL)
+    {
+        if(strcmp(child->name, path->children[path->numChildren - 1]) == 0)
+        {
+            *base = child;
+            return true;
+        }
+        
+        child = child->next;
+    }
+    
+    return false;
+}
+
 bool findDirByNewPath(const NewPath* path, BkDir* tree, BkDir** dir)
 {
     bool dirFound;
@@ -54,7 +82,6 @@ bool findDirByNewPath(const NewPath* path, BkDir* tree, BkDir** dir)
         if(!dirFound)
             return false;
     }
-    /* END FIND dir to add to */
     
     return true;
 }

@@ -11,8 +11,8 @@
 #define BKWARNING_MAX_ID                         -10001
 #define BKWARNING_MIN_ID                         -20000
 
-//~ #define IS_ERROR(number)   ( (((number) >= BKERROR_MIN_ID) && ((number) <= BKERROR_MAX_ID)) ? true : false )
-//~ #define IS_WARNING(number) ( (((number) >= BKWARNING_MIN_ID) && ((number) <= BKWARNING_MAX_ID)) ? true : false )
+/* #define IS_ERROR(number)   ( (((number) >= BKERROR_MIN_ID) && ((number) <= BKERROR_MAX_ID)) ? true : false )
+* #define IS_WARNING(number) ( (((number) >= BKWARNING_MIN_ID) && ((number) <= BKWARNING_MAX_ID)) ? true : false )*/
 
 #define BKERROR_READ_GENERIC                     -1001
 #define BKERROR_READ_GENERIC_TEXT                "Failed to read expected number of bytes"
@@ -114,6 +114,8 @@
 #define BKERROR_ITEM_NOT_FOUND_ON_IMAGE_TEXT     "Item not found on image"
 #define BKERROR_DUPLICATE_RENAME                 -1050
 #define BKERROR_DUPLICATE_RENAME_TEXT            "Cannot rename item because another file or directory with the same name exists"
+#define BKERROR_GET_PERM_BAD_PARAM               -1051
+#define BKERROR_GET_PERM_BAD_PARAM_TEXT          "bk_get_permissions() called with NULL mode_t*"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"
