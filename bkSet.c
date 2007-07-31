@@ -265,6 +265,9 @@ int bk_set_permissions(VolInfo* volInfo, const char* pathAndName,
 * */
 void bk_set_publisher(VolInfo* volInfo, const char* publisher)
 {
+    if( !nameIsValid(publisher) )
+        return BKERROR_NAME_INVALID_CHAR;
+    
     strncpy(volInfo->publisher, publisher, 128);
 }
 
@@ -274,6 +277,9 @@ void bk_set_publisher(VolInfo* volInfo, const char* publisher)
 * */
 void bk_set_vol_name(VolInfo* volInfo, const char* volName)
 {
+    if( !nameIsValid(volName) )
+        return BKERROR_NAME_INVALID_CHAR;
+    
     strncpy(volInfo->volId, volName, 32);
 }
 
