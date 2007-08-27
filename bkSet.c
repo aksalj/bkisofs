@@ -265,8 +265,9 @@ int bk_set_permissions(VolInfo* volInfo, const char* pathAndName,
 * */
 int bk_set_publisher(VolInfo* volInfo, const char* publisher)
 {
+    /* unfortunately some disks (e.g. Fedora 7) don't follow this rule
     if( !nameIsValid9660(publisher) )
-        return BKERROR_NAME_INVALID_CHAR;
+        return BKERROR_NAME_INVALID_CHAR;*/
     
     strncpy(volInfo->publisher, publisher, 128);
     
@@ -279,8 +280,9 @@ int bk_set_publisher(VolInfo* volInfo, const char* publisher)
 * */
 int bk_set_vol_name(VolInfo* volInfo, const char* volName)
 {
+    /* unfortunately some disks (e.g. Fedora 7) don't follow this rule
     if( !nameIsValid9660(volName) )
-        return BKERROR_NAME_INVALID_CHAR;
+        return BKERROR_NAME_INVALID_CHAR;*/
     
     strncpy(volInfo->volId, volName, 32);
     
