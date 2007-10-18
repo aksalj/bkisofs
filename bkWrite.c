@@ -404,18 +404,21 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
 * */
 int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
 {
+    int numTrailingBytes; /* to make sure the file size is divisible by 4 */
     ssize_t rc;
     int rc2;
     int srcFile;
     unsigned char* contents;
     unsigned count;
     
-    if(file->size % 4 != 0)
-        return BKERROR_WRITE_BOOT_FILE_4;
+    numTrailingBytes = file->size % 4;
     
-    contents = malloc(file->size);
+    contents = malloc(file->size + numTrailingBytes);
     if(contents == NULL)
         return BKERROR_OUT_OF_MEMORY;
+    
+    /* make sure the extra bytes i added are 0s */
+    bzero(contents + file->size, numTrailingBytes);
     
     if(file->onImage)
     /* read file from original image */
