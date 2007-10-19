@@ -30,6 +30,7 @@ extern "C"
 #include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
+#include <sys/timeb.h>
 
 #include "bkError.h"
 
@@ -173,7 +174,7 @@ typedef struct VolInfo
     int imageForWriting;
     void(*progressFunction)(struct VolInfo*);
     void(*writeProgressFunction)(struct VolInfo*, double);
-    time_t lastTimeCalledProgress;
+    struct timeb lastTimeCalledProgress;
     off_t estimatedIsoSize;
     BkHardLink* fileLocations; /* list of where to find regular files */
     char readWriteBuffer[READ_WRITE_BUFFER_SIZE];

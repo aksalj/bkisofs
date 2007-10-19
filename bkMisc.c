@@ -19,14 +19,15 @@
 
 void maybeUpdateProgress(VolInfo* volInfo)
 {
-    time_t timeNow;
+    struct timeb timeNow;
     
     if(volInfo->progressFunction == NULL)
         return;
     
-    time(&timeNow);
+    ftime(&timeNow);
     
-    if(timeNow - volInfo->lastTimeCalledProgress >= 1)
+    if(timeNow.time - volInfo->lastTimeCalledProgress.time >= 1 ||
+       timeNow.millitm - volInfo->lastTimeCalledProgress.millitm >= 100)
     {
         volInfo->progressFunction(volInfo);
         

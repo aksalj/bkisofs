@@ -21,7 +21,7 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <time.h>
+#include <sys/timeb.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -57,10 +57,11 @@ int wcWrite(VolInfo* volInfo, const char* block, off_t numBytes)
     
     if(volInfo->writeProgressFunction != NULL)
     {
-        time_t timeNow;
-        time(&timeNow);
+        struct timeb timeNow;
+        ftime(&timeNow);
         
-        if(timeNow - volInfo->lastTimeCalledProgress >= 1)
+        if(timeNow.time - volInfo->lastTimeCalledProgress.time >= 1 ||
+           timeNow.millitm - volInfo->lastTimeCalledProgress.millitm >= 100)
         {
             struct stat statStruct;
             double percentComplete;
