@@ -12,6 +12,9 @@
 * 
 ******************************************************************************/
 
+#ifdef WIN32
+    #define _CRT_SECURE_NO_WARNINGS 1
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -175,8 +178,8 @@ off_t estimateIsoSize(const BkDir* tree, int filenameTypes)
 * */
 int getDirFromString(const BkDir* tree, const char* pathStr, BkDir** dirFoundPtr)
 {
-    int count;
-    int pathStrLen;
+    size_t count;
+    size_t pathStrLen;
     bool stopLooking;
     /* name of the directory in the path this instance of the function works on */
     char* currentDirName;

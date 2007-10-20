@@ -12,9 +12,10 @@
 * Henrique Pinto
 * - fixed bug that caused crash in makeNewPathFromString()
 ******************************************************************************/
-
+#ifdef WIN32
+    #define _CRT_SECURE_NO_WARNINGS 1
+#endif
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -32,8 +33,8 @@
 * */
 bool nameIsValid9660(const char* name)
 {
-    int count;
-    int nameLen;
+    size_t count;
+    size_t nameLen;
     
     nameLen = strlen(name);
     
@@ -157,10 +158,10 @@ void freePathContents(NewPath* path)
 
 int getLastNameFromPath(const char* srcPathAndName, char* lastName)
 {
-    int count;
-    int srcLen;
-    int lastCharIndex;
-    int firstCharIndex;
+    size_t count;
+    size_t srcLen;
+    size_t lastCharIndex;
+    size_t firstCharIndex;
     bool lastCharFound;
     int count2;
     
@@ -210,8 +211,11 @@ int getLastNameFromPath(const char* srcPathAndName, char* lastName)
 
 int makeNewPathFromString(const char* strPath, NewPath* pathPath)
 {
-    int count;
-    int pathStrLen;
+    size_t count;
+    size_t pathStrLen;
+    unsigned numChildrenDone;
+    int nextChildLen;
+    const char* nextChild;
     
     pathStrLen = strlen(strPath);
     pathPath->numChildren = 0;
@@ -237,9 +241,9 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
     if(pathPath->children == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
-    unsigned numChildrenDone = 0;
-    int nextChildLen = 0;
-    const char* nextChild = &(strPath[1]);
+    numChildrenDone = 0;
+    nextChildLen = 0;
+    nextChild = &(strPath[1]);
     for(count = 1; count <= pathStrLen; count++)
     {
         if(strPath[count] == '/' || (strPath[count] == '\0' && strPath[count - 1] != '/'))
@@ -284,8 +288,8 @@ int makeNewPathFromString(const char* strPath, NewPath* pathPath)
 * */
 bool nameIsValid(const char* name)
 {
-    int count;
-    int nameLen;
+    size_t count;
+    size_t nameLen;
     
     nameLen = strlen(name);
     

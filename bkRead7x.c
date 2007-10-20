@@ -12,11 +12,10 @@
 * 
 ******************************************************************************/
 
-#include <unistd.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include "bkRead7x.h"
+#include "bk.h"
 
 int read711(int image, unsigned char* value)
 {

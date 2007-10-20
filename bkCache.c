@@ -24,7 +24,6 @@
 #include <sys/timeb.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 #include "bkInternal.h"
 #include "bkCache.h"
@@ -48,7 +47,7 @@ off_t wcSeekTell(VolInfo* volInfo)
     return lseek(volInfo->imageForWriting, 0, SEEK_CUR);
 }
 
-int wcWrite(VolInfo* volInfo, const char* block, off_t numBytes)
+int wcWrite(VolInfo* volInfo, const char* block, size_t numBytes)
 {
     int rc;
     rc = write(volInfo->imageForWriting, block, numBytes);

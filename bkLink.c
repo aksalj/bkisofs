@@ -12,13 +12,14 @@
 * 
 ******************************************************************************/
 
-#include <stdbool.h>
+#ifdef WIN32
+    #define _CRT_SECURE_NO_WARNINGS 1
+#endif
 #include <stdlib.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "bkInternal.h"
 #include "bkLink.h"
@@ -32,7 +33,7 @@ int addToHardLinkTable(VolInfo* volInfo, off_t position, char* pathAndName,
     if(*newLink == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
-    bzero(*newLink, sizeof(BkHardLink));
+    memset(*newLink, 0, sizeof(BkHardLink));
     
     (*newLink)->onImage = onImage;
     (*newLink)->position = position;
@@ -175,7 +176,7 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
                 }
                 else
                 {
-                    origFile = open(pathAndName, O_RDONLY);
+                    origFile = open(pathAndName, O_RDONLY, 0);
                     if(origFile == -1)
                         return BKERROR_OPEN_READ_FAILED;
                     origFileWasOpened = true;
@@ -191,7 +192,7 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
                 }
                 else
                 {
-                    newFile = open(pathAndName, O_RDONLY);
+                    newFile = open(pathAndName, O_RDONLY, 0);
                     if(newFile == -1)
                     {
                         if(origFileWasOpened)
@@ -244,7 +245,7 @@ int readFileHead(VolInfo* volInfo, off_t position, char* pathAndName,
     }
     else
     {
-        srcFile = open(pathAndName, O_RDONLY);
+        srcFile = open(pathAndName, O_RDONLY, 0);
         if(srcFile == -1)
             return BKERROR_OPEN_READ_FAILED;
         srcFileWasOpened = true;

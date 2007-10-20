@@ -17,8 +17,6 @@
 * unsutable for anything else, except for the ones that write to arrays.
 ******************************************************************************/
 
-#include <unistd.h>
-
 #include "bkInternal.h"
 #include "bkWrite7x.h"
 #include "bkCache.h"

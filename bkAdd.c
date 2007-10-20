@@ -12,11 +12,13 @@
 * 
 ******************************************************************************/
 
-#include <stdbool.h>
-#include <dirent.h>
+#ifndef WIN32
+    #include <dirent.h>
+#else
+    #define _CRT_SECURE_NO_WARNINGS 1
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -65,10 +67,15 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
     
     oldHead = destDir->children;
     
+#ifndef WIN32
     if(volInfo->followSymLinks)
+#endif
         rc = stat(srcPathAndName, &statStruct);
+#ifndef WIN32 //!!WIN32
+    /* windows doesn't have symbolic links anyway */
     else
         rc = lstat(srcPathAndName, &statStruct);
+#endif
     if(rc == -1)
         return BKERROR_STAT_FAILED;
     
@@ -80,7 +87,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         if(newDir == NULL)
             return BKERROR_OUT_OF_MEMORY;
         
-        bzero(newDir, sizeof(BkDir));
+        memset(newDir, 0, sizeof(BkDir));
         
         strcpy(BK_BASE_PTR(newDir)->name, lastName);
         
@@ -113,7 +120,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         if(newFile == NULL)
             return BKERROR_OUT_OF_MEMORY;
         
-        bzero(newFile, sizeof(BkFile));
+        memset(newFile, 0, sizeof(BkFile));
         
         strcpy(BK_BASE_PTR(newFile)->name, lastName);
         
@@ -159,6 +166,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         
         destDir->children = BK_BASE_PTR(newFile);
     }
+#ifndef WIN32
     else if( IS_SYMLINK(statStruct.st_mode) )
     {
         BkSymLink* newSymLink;
@@ -168,7 +176,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         if(newSymLink == NULL)
             return BKERROR_OUT_OF_MEMORY;
         
-        bzero(newSymLink, sizeof(BkSymLink));
+        memset(newSymLink, 0, sizeof(BkSymLink));
         
         strcpy(BK_BASE_PTR(newSymLink)->name, lastName);
         
@@ -187,98 +195,100 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         
         destDir->children = BK_BASE_PTR(newSymLink);
     }
+#endif
     else
         return BKERROR_NO_SPECIAL_FILES;
     
     return 1;
 }
 
+//needs a rewrite for windows //!!WIN32
 int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
 {
-    int rc;
-    int srcPathLen;
-    char* newSrcPathAndName;
-    
-    /* vars to read contents of a dir on fs */
-    DIR* srcDir;
-    struct dirent* dirEnt;
-    
-    srcPathLen = strlen(srcPath);
-    
-    /* including the new name and the possibly needed trailing '/' */
-    newSrcPathAndName = malloc(srcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
-    if(newSrcPathAndName == NULL)
-        return BKERROR_OUT_OF_MEMORY;
-    
-    strcpy(newSrcPathAndName, srcPath);
-    if(srcPath[srcPathLen - 1] != '/')
-    {
-        strcat(newSrcPathAndName, "/");
-        srcPathLen++;
-    }
-    
-    srcDir = opendir(srcPath);
-    if(srcDir == NULL)
-    {
-        free(newSrcPathAndName);
-        return BKERROR_OPENDIR_FAILED;
-    }
-    
-    /* it may be possible but in any case very unlikely that readdir() will fail
-    * if it does, it returns NULL (same as end of dir) */
-    while( (dirEnt = readdir(srcDir)) != NULL )
-    {
-        if( strcmp(dirEnt->d_name, ".") == 0 || strcmp(dirEnt->d_name, "..") == 0 )
-        /* ignore "." and ".." */
-            continue;
-        
-        if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX_STORE - 1)
-        {
-            closedir(srcDir);
-            free(newSrcPathAndName);
-            
-            return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
-        }
-        
-        /* append file/dir name */
-        strcpy(newSrcPathAndName + srcPathLen, dirEnt->d_name);
-        
-        rc = add(volInfo, newSrcPathAndName, destDir, NULL);
-        if(rc <= 0 && rc != BKWARNING_OPER_PARTLY_FAILED)
-        {
-            bool goOn;
-            
-            if(volInfo->warningCbk != NULL && !volInfo->stopOperation)
-            /* perhaps the user wants to ignore this failure */
-            {
-                snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-                         "Failed to add item '%s': '%s'",
-                         dirEnt->d_name, 
-                         bk_get_error_string(rc));
-                goOn = volInfo->warningCbk(volInfo->warningMessage);
-                rc = BKWARNING_OPER_PARTLY_FAILED;
-            }
-            else
-                goOn = false;
-            
-            if(goOn)
-                continue;
-            else
-            {
-                volInfo->stopOperation = true;
-                closedir(srcDir);
-                free(newSrcPathAndName);
-                return rc;
-            }
-        }
-    }
-    
-    free(newSrcPathAndName);
-    
-    rc = closedir(srcDir);
-    if(rc != 0)
-    /* exotic error */
-        return BKERROR_EXOTIC;
+    //int rc;
+    //int srcPathLen;
+    //char* newSrcPathAndName;
+    //
+    ///* vars to read contents of a dir on fs */
+    //DIR* srcDir;
+    //struct dirent* dirEnt;
+    //
+    //srcPathLen = strlen(srcPath);
+    //
+    ///* including the new name and the possibly needed trailing '/' */
+    //newSrcPathAndName = malloc(srcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
+    //if(newSrcPathAndName == NULL)
+    //    return BKERROR_OUT_OF_MEMORY;
+    //
+    //strcpy(newSrcPathAndName, srcPath);
+    //if(srcPath[srcPathLen - 1] != '/')
+    //{
+    //    strcat(newSrcPathAndName, "/");
+    //    srcPathLen++;
+    //}
+    //
+    //srcDir = opendir(srcPath);
+    //if(srcDir == NULL)
+    //{
+    //    free(newSrcPathAndName);
+    //    return BKERROR_OPENDIR_FAILED;
+    //}
+    //
+    ///* it may be possible but in any case very unlikely that readdir() will fail
+    //* if it does, it returns NULL (same as end of dir) */
+    //while( (dirEnt = readdir(srcDir)) != NULL )
+    //{
+    //    if( strcmp(dirEnt->d_name, ".") == 0 || strcmp(dirEnt->d_name, "..") == 0 )
+    //    /* ignore "." and ".." */
+    //        continue;
+    //    
+    //    if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX_STORE - 1)
+    //    {
+    //        closedir(srcDir);
+    //        free(newSrcPathAndName);
+    //        
+    //        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+    //    }
+    //    
+    //    /* append file/dir name */
+    //    strcpy(newSrcPathAndName + srcPathLen, dirEnt->d_name);
+    //    
+    //    rc = add(volInfo, newSrcPathAndName, destDir, NULL);
+    //    if(rc <= 0 && rc != BKWARNING_OPER_PARTLY_FAILED)
+    //    {
+    //        bool goOn;
+    //        
+    //        if(volInfo->warningCbk != NULL && !volInfo->stopOperation)
+    //        /* perhaps the user wants to ignore this failure */
+    //        {
+    //            snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+    //                     "Failed to add item '%s': '%s'",
+    //                     dirEnt->d_name, 
+    //                     bk_get_error_string(rc));
+    //            goOn = volInfo->warningCbk(volInfo->warningMessage);
+    //            rc = BKWARNING_OPER_PARTLY_FAILED;
+    //        }
+    //        else
+    //            goOn = false;
+    //        
+    //        if(goOn)
+    //            continue;
+    //        else
+    //        {
+    //            volInfo->stopOperation = true;
+    //            closedir(srcDir);
+    //            free(newSrcPathAndName);
+    //            return rc;
+    //        }
+    //    }
+    //}
+    //
+    //free(newSrcPathAndName);
+    //
+    //rc = closedir(srcDir);
+    //if(rc != 0)
+    ///* exotic error */
+    //    return BKERROR_EXOTIC;
     
     return 1;
 }
@@ -401,7 +411,7 @@ int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName,
 int bk_create_dir(VolInfo* volInfo, const char* destPathStr, 
                   const char* newDirName)
 {
-    int nameLen;
+    size_t nameLen;
     BkDir* destDir;
     int rc;
     BkFileBase* oldHead;

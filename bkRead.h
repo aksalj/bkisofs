@@ -1,5 +1,5 @@
-int appendStringIfHaveRoom(char* dest, const char* src, int destMaxLen, 
-                           int destCharsAlreadyUsed, int maxSrcLen);
+size_t appendStringIfHaveRoom(char* dest, const char* src, size_t destMaxLen, 
+                              size_t destCharsAlreadyUsed, int maxSrcLen);
 bool dirDrFollows(int image);
 bool haveNextRecordInSector(int image);
 int readDir(VolInfo* volInfo, BkDir* dir, int filenameType, 

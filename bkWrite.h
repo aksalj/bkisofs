@@ -16,7 +16,7 @@ int writeElToritoBootCatalog(VolInfo* volInfo,
                              off_t* bootRecordSectorNumberOffset);
 int writeElToritoVd(VolInfo* volInfo, off_t* bootCatalogSectorNumberOffset);
 int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes);
-int writeJolietStringField(VolInfo* volInfo, const char* name, int fieldSize);
+int writeJolietStringField(VolInfo* volInfo, const char* name, size_t fieldSize);
 int writeLongNM(VolInfo* volInfo, BaseToWrite* dir);
 int writeLongNMsInDir(VolInfo* volInfo, DirToWrite* dir);
 int writePathTable(VolInfo* volInfo, const DirToWrite* tree, bool isTypeL, 
@@ -26,7 +26,7 @@ int writePathTableRecordsOnLevel(VolInfo* volInfo, const DirToWrite* dir,
                                  int targetLevel, int thisLevel,
                                  int* parentDirNum);
 int writeRockER(VolInfo* volInfo);
-int writeRockNM(VolInfo* volInfo, char* name, int nameLen, bool doesContinue);
+int writeRockNM(VolInfo* volInfo, char* name, size_t nameLen, bool doesContinue);
 int writeRockPX(VolInfo* volInfo, unsigned posixFileMode, bool isADir);
 int writeRockSL(VolInfo* volInfo, SymLinkToWrite* symlink, bool doWrite);
 int writeRockSP(VolInfo* volInfo);

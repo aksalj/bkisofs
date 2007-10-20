@@ -22,9 +22,9 @@
 /* strings cannot be equal */
 bool rightIsBigger(char* leftStr, char* rightStr)
 {
-    int leftLen;
-    int rightLen;
-    int count;
+    size_t leftLen;
+    size_t rightLen;
+    size_t count;
     bool resultFound;
     bool rc;
     
@@ -61,6 +61,8 @@ bool rightIsBigger(char* leftStr, char* rightStr)
 void sortDir(DirToWrite* dir, int filenameType)
 {
     BaseToWrite* child;
+    BaseToWrite** outerPtr;
+    BaseToWrite** innerPtr;
     
     child = dir->children;
     while(child != NULL)
@@ -70,9 +72,6 @@ void sortDir(DirToWrite* dir, int filenameType)
         
         child = child->next;
     }
-    
-    BaseToWrite** outerPtr;
-    BaseToWrite** innerPtr;
     
     outerPtr = &(dir->children);
     while(*outerPtr != NULL)
@@ -90,19 +89,21 @@ void sortDir(DirToWrite* dir, int filenameType)
                 
                 if( (*outerPtr)->next != *innerPtr )
                 {
+                    BaseToWrite* oldInnerNext = inner->next;
+
                     *outerPtr = inner;
                     *innerPtr = outer;
                     
-                    BaseToWrite* oldInnerNext = inner->next;
                     inner->next = outer->next;
                     outer->next = oldInnerNext;
                 }
                 else
                 {
+                    BaseToWrite* oldInnerNext = inner->next;
+
                     *outerPtr = inner;
                     innerPtr = &(inner->next);
                     
-                    BaseToWrite* oldInnerNext = inner->next;
                     inner->next = outer;
                     outer->next = oldInnerNext;
                 }

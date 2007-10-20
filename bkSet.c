@@ -12,9 +12,12 @@
 * 
 ******************************************************************************/
 
+#ifndef WIN32
+    #include <strings.h>
+#else
+    #define _CRT_SECURE_NO_WARNINGS 1
+#endif
 #include <string.h>
-#include <unistd.h>
-#include <strings.h>
 #include <stdio.h>
 
 #include "bk.h"
@@ -36,6 +39,9 @@ void bk_cancel_operation(VolInfo* volInfo)
 * */
 void bk_destroy_vol_info(VolInfo* volInfo)
 {
+    BkHardLink* currentLink;
+    BkHardLink* nextLink;
+
     deleteDirContents(volInfo, &(volInfo->dirTree));
     
     if(volInfo->bootRecordPathAndName != NULL)
@@ -44,8 +50,6 @@ void bk_destroy_vol_info(VolInfo* volInfo)
     if(volInfo->imageForReading > 0)
         close(volInfo->imageForReading);
     
-    BkHardLink* currentLink;
-    BkHardLink* nextLink;
     currentLink = volInfo->fileLocations;
     while(currentLink != NULL)
     {
@@ -61,7 +65,7 @@ void bk_destroy_vol_info(VolInfo* volInfo)
 * */
 int bk_init_vol_info(VolInfo* volInfo, bool scanForDuplicateFiles)
 {
-    bzero(volInfo, sizeof(VolInfo));
+    memset(volInfo, 0, sizeof(VolInfo));
     
     volInfo->dirTree.base.posixFileMode = 040755;
     volInfo->posixFileDefaults = 0100644;
@@ -85,7 +89,7 @@ int bk_rename(VolInfo* volInfo, const char* srcPathAndName,
     bool dirFound;
     BkFileBase* child;
     bool done;
-    int newNameLen;
+    size_t newNameLen;
     
     newNameLen = strlen(newName);
     

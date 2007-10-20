@@ -13,11 +13,15 @@
 * - most of the filename mangling code
 ******************************************************************************/
 
+#ifndef WIN32
+    #include <strings.h>
+#else
+    #define _CRT_SECURE_NO_WARNINGS 1
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <strings.h>
 
 #include "bk.h"
 #include "bkInternal.h"
@@ -127,7 +131,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             if(*currentNewChild == NULL)
                 return BKERROR_OUT_OF_MEMORY;
             
-            bzero(*currentNewChild, sizeof(DirToWrite));
+            memset(*currentNewChild, 0, sizeof(DirToWrite));
         }
         else if( IS_REG_FILE(currentOrigChild->posixFileMode) )
         {
@@ -135,7 +139,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             if(*currentNewChild == NULL)
                 return BKERROR_OUT_OF_MEMORY;
             
-            bzero(*currentNewChild, sizeof(FileToWrite));
+            memset(*currentNewChild, 0, sizeof(FileToWrite));
         }
         else if( IS_SYMLINK(currentOrigChild->posixFileMode) )
         {
@@ -143,7 +147,7 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             if(*currentNewChild == NULL)
                 return BKERROR_OUT_OF_MEMORY;
             
-            bzero(*currentNewChild, sizeof(SymLinkToWrite));
+            memset(*currentNewChild, 0, sizeof(SymLinkToWrite));
         }
         else
             return BKERROR_NO_SPECIAL_FILES;

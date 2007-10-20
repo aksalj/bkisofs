@@ -12,9 +12,10 @@
 * 
 ******************************************************************************/
 
+#ifdef WIN32
+    #define _CRT_SECURE_NO_WARNINGS 1
+#endif
 #include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -44,10 +45,10 @@
 * returns number of chars appended
 * destMaxLen doesn't include '\0'
 * if maxSrcLen is -1 tries to copy all of it */
-int appendStringIfHaveRoom(char* dest, const char* src, int destMaxLen, 
-                           int destCharsAlreadyUsed, int maxSrcLen)
+size_t appendStringIfHaveRoom(char* dest, const char* src, size_t destMaxLen, 
+                              size_t destCharsAlreadyUsed, int maxSrcLen)
 {
-    int srcLen;
+    size_t srcLen;
     
     if(maxSrcLen == -1)
         srcLen = strlen(src);
@@ -70,8 +71,9 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 {
     int rc;
     struct stat statStruct;
+    size_t len;
     
-    volInfo->imageForReading = open(filename, O_RDONLY);
+    volInfo->imageForReading = open(filename, O_RDONLY, 0);
     if(volInfo->imageForReading == -1)
     {
         volInfo->imageForReading = 0;
@@ -86,7 +88,7 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
     volInfo->imageForReadingInode = statStruct.st_ino;
     
     /* skip the first 150 sectors if the image is an NRG */
-    int len = strlen(filename);
+    len = strlen(filename);
     if( (filename[len - 3] == 'N' || filename[len - 3] == 'n') &&
         (filename[len - 2] == 'R' || filename[len - 2] == 'r') &&
         (filename[len - 1] == 'G' || filename[len - 1] == 'g') )
@@ -128,6 +130,12 @@ int bk_read_vol_info(VolInfo* volInfo)
     bool haveMorePvd; /* to skip extra pvds */
     unsigned char escapeSequence[3]; /* only interested in a joliet sequence */
     char timeString[17]; /* for creation time */
+    off_t locationOfNextDescriptor;
+    unsigned bootCatalogLocation; /* logical sector number */
+    char elToritoSig[24];
+    unsigned char bootMediaType;
+    unsigned short bootRecordSize;
+    unsigned bootRecordSectorNumber;
     
     /* vars for checking rockridge */
     unsigned realRootLoc; /* location of the root dr inside root dir */
@@ -252,11 +260,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     /* END SKIP all extra copies of pvd */
     
     /* TRY read boot record */
-    off_t locationOfNextDescriptor;
-    unsigned bootCatalogLocation; /* logical sector number */
-    char elToritoSig[24];
-    unsigned char bootMediaType;
-    
+   
     locationOfNextDescriptor = lseek(volInfo->imageForReading, 0, SEEK_CUR) + 2048;
     
     rc = read711(volInfo->imageForReading, &vdType);
@@ -317,7 +321,6 @@ int bk_read_vol_info(VolInfo* volInfo)
             /* skip load segment, system type and unused byte */
             lseek(volInfo->imageForReading, 4, SEEK_CUR);
             
-            unsigned short bootRecordSize;
             rc = read721(volInfo->imageForReading, &bootRecordSize);
             if(rc != 2)
                 return BKERROR_READ_GENERIC;
@@ -334,7 +337,6 @@ int bk_read_vol_info(VolInfo* volInfo)
             
             volInfo->bootRecordIsOnImage = true;
             
-            unsigned bootRecordSectorNumber;
             rc = read731(volInfo->imageForReading, &bootRecordSectorNumber);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
@@ -660,7 +662,7 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
                 if(*nextChild == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
-                bzero(*nextChild, sizeof(BkDir));
+                memset(*nextChild, 0, sizeof(BkDir));
                 
                 recordLength = readDir(volInfo, BK_DIR_PTR(*nextChild), 
                                        filenameType, keepPosixPermissions);
@@ -677,7 +679,7 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
                 if(*nextChild == NULL)
                     return BKERROR_OUT_OF_MEMORY;
                 
-                bzero(*nextChild, sizeof(BkFile));
+                memset(*nextChild, 0, sizeof(BkFile));
                 
                 recordLength = readFileInfo(volInfo, BK_FILE_PTR(*nextChild), 
                                             filenameType, keepPosixPermissions, 
@@ -741,6 +743,8 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     unsigned lenExtent; /* in bytes */
     unsigned char lenFileId9660; /* also len joliet fileid (bytes) */
     int lenSU; /* calculated as recordLength - 33 - lenFileId9660 */
+    off_t posBeforeName;
+    char nameAsOnDisk[UCHAR_MAX + 1];
     
     /* so if anything failes it's still safe to delete file */
     file->pathAndName = NULL;
@@ -793,8 +797,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
         lenSU -= 1;
     
     /* READ 9660 name */
-    off_t posBeforeName = lseek(volInfo->imageForReading, 0, SEEK_CUR);
-    char nameAsOnDisk[UCHAR_MAX + 1];
+    posBeforeName = lseek(volInfo->imageForReading, 0, SEEK_CUR);
     
     rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
     if(rc != lenFileId9660)
@@ -1132,13 +1135,13 @@ int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, int lenSU)
         
         if(suFields[count] == 'S' && suFields[count + 1] == 'L')
         {
-            int numCharsUsed; /* in dest->target, not including '\0' */
+            size_t numCharsUsed; /* in dest->target, not including '\0' */
             
             *dest = malloc(sizeof(BkSymLink));
             if(*dest == NULL)
                 return BKERROR_OUT_OF_MEMORY;
             
-            bzero(*dest, sizeof(BkSymLink));
+            memset(*dest, 0, sizeof(BkSymLink));
             
             numCharsUsed = 0;
             (*dest)->target[0] = '\0';
@@ -1248,10 +1251,13 @@ int skipDR(int image)
 * */
 void stripSpacesFromEndOfString(char* str)
 {
-    int count;
+    size_t count;
     
-    for(count = strlen(str) - 1; count >= 0 && str[count] == ' '; count--)
+    for(count = strlen(str) - 1; str[count] == ' '; count--)
     {
         str[count] = '\0';
+
+        if(count == 0) /* unsigned */
+            break;
     }
 }
