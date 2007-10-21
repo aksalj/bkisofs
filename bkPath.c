@@ -170,7 +170,7 @@ int getLastNameFromPath(const char* srcPathAndName, char* lastName)
     /* FIND the last name */
     lastCharIndex = srcLen;
     lastCharFound = false;
-    for(count = srcLen; count >= 0; count--)
+    for(count = srcLen; /* unsigned */; count--)
     {
         if(srcPathAndName[count] != '/')
         {
@@ -191,6 +191,9 @@ int getLastNameFromPath(const char* srcPathAndName, char* lastName)
             if(lastCharFound)
                 break;
         }
+        
+        if(count == 0)
+            break;
     }
     if(!lastCharFound)
         return BKERROR_MISFORMED_PATH;
