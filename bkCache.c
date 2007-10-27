@@ -49,9 +49,9 @@ off_t wcSeekTell(VolInfo* volInfo)
 
 int wcWrite(VolInfo* volInfo, const char* block, size_t numBytes)
 {
-    int rc;
+    ssize_t rc;
     rc = write(volInfo->imageForWriting, block, numBytes);
-    if(rc != numBytes)
+    if(rc == -1)
         return BKERROR_WRITE_GENERIC;
     
     if(volInfo->writeProgressFunction != NULL)
