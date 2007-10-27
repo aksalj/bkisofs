@@ -36,6 +36,8 @@
 * Only a max of 64 characters of this will be stored. (plus '\0') */
 #define NCHARS_FILE_ID_MAX_JOLIET 65
 
+#define NBYTES_FILE_ID_MAX_9660 15 /* 8.3 + ";1" */
+
 #define BASETW_PTR(item) ((BaseToWrite*)(item))
 #define DIRTW_PTR(item) ((DirToWrite*)(item))
 #define FILETW_PTR(item) ((FileToWrite*)(item))
@@ -52,7 +54,7 @@ typedef struct
 
 typedef struct BaseToWrite
 {
-    char name9660[15]; /* 8.3 + ";1" max */
+    char name9660[NBYTES_FILE_ID_MAX_9660]; /* 8.3 + ";1" max */
     char nameRock[NCHARS_FILE_ID_MAX_STORE];
     char nameJoliet[NCHARS_FILE_ID_MAX_JOLIET];
     unsigned posixFileMode;

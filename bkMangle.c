@@ -109,7 +109,8 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
     bool haveCollisions;
     int numTimesTried;
     int num9660Collisions;
-    char newName9660[13]; /* for remangling */
+    const int name9660len = 13;
+    char newName9660[name9660len]; /* for remangling */
     int numJolietCollisions;
     char newNameJoliet[NCHARS_FILE_ID_MAX_JOLIET]; /* for remangling */
     
@@ -153,12 +154,12 @@ int mangleDir(const BkDir* origDir, DirToWrite* newDir, int filenameTypes)
             return BKERROR_NO_SPECIAL_FILES;
         
         if(currentOrigChild->original9660name[0] != '\0')
-            strcpy((*currentNewChild)->name9660, currentOrigChild->original9660name);
+            strncpy((*currentNewChild)->name9660, currentOrigChild->original9660name, NBYTES_FILE_ID_MAX_9660);
         else
             shortenNameFor9660(currentOrigChild->name, (*currentNewChild)->name9660);
         
         if(filenameTypes | FNTYPE_ROCKRIDGE)
-            strcpy((*currentNewChild)->nameRock, currentOrigChild->name);
+            strncpy((*currentNewChild)->nameRock, currentOrigChild->name, NCHARS_FILE_ID_MAX_STORE);
         else
             (*currentNewChild)->nameRock[0] = '\0';
         
