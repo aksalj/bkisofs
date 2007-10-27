@@ -205,90 +205,90 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
 //needs a rewrite for windows //!!WIN32
 int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
 {
-    //int rc;
-    //int srcPathLen;
-    //char* newSrcPathAndName;
-    //
-    ///* vars to read contents of a dir on fs */
-    //DIR* srcDir;
-    //struct dirent* dirEnt;
-    //
-    //srcPathLen = strlen(srcPath);
-    //
-    ///* including the new name and the possibly needed trailing '/' */
-    //newSrcPathAndName = malloc(srcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
-    //if(newSrcPathAndName == NULL)
-    //    return BKERROR_OUT_OF_MEMORY;
-    //
-    //strcpy(newSrcPathAndName, srcPath);
-    //if(srcPath[srcPathLen - 1] != '/')
-    //{
-    //    strcat(newSrcPathAndName, "/");
-    //    srcPathLen++;
-    //}
-    //
-    //srcDir = opendir(srcPath);
-    //if(srcDir == NULL)
-    //{
-    //    free(newSrcPathAndName);
-    //    return BKERROR_OPENDIR_FAILED;
-    //}
-    //
-    ///* it may be possible but in any case very unlikely that readdir() will fail
-    //* if it does, it returns NULL (same as end of dir) */
-    //while( (dirEnt = readdir(srcDir)) != NULL )
-    //{
-    //    if( strcmp(dirEnt->d_name, ".") == 0 || strcmp(dirEnt->d_name, "..") == 0 )
-    //    /* ignore "." and ".." */
-    //        continue;
-    //    
-    //    if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX_STORE - 1)
-    //    {
-    //        closedir(srcDir);
-    //        free(newSrcPathAndName);
-    //        
-    //        return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
-    //    }
-    //    
-    //    /* append file/dir name */
-    //    strcpy(newSrcPathAndName + srcPathLen, dirEnt->d_name);
-    //    
-    //    rc = add(volInfo, newSrcPathAndName, destDir, NULL);
-    //    if(rc <= 0 && rc != BKWARNING_OPER_PARTLY_FAILED)
-    //    {
-    //        bool goOn;
-    //        
-    //        if(volInfo->warningCbk != NULL && !volInfo->stopOperation)
-    //        /* perhaps the user wants to ignore this failure */
-    //        {
-    //            snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
-    //                     "Failed to add item '%s': '%s'",
-    //                     dirEnt->d_name, 
-    //                     bk_get_error_string(rc));
-    //            goOn = volInfo->warningCbk(volInfo->warningMessage);
-    //            rc = BKWARNING_OPER_PARTLY_FAILED;
-    //        }
-    //        else
-    //            goOn = false;
-    //        
-    //        if(goOn)
-    //            continue;
-    //        else
-    //        {
-    //            volInfo->stopOperation = true;
-    //            closedir(srcDir);
-    //            free(newSrcPathAndName);
-    //            return rc;
-    //        }
-    //    }
-    //}
-    //
-    //free(newSrcPathAndName);
-    //
-    //rc = closedir(srcDir);
-    //if(rc != 0)
-    ///* exotic error */
-    //    return BKERROR_EXOTIC;
+    int rc;
+    int srcPathLen;
+    char* newSrcPathAndName;
+    
+    /* vars to read contents of a dir on fs */
+    DIR* srcDir;
+    struct dirent* dirEnt;
+    
+    srcPathLen = strlen(srcPath);
+    
+    /* including the new name and the possibly needed trailing '/' */
+    newSrcPathAndName = malloc(srcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
+    if(newSrcPathAndName == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    strcpy(newSrcPathAndName, srcPath);
+    if(srcPath[srcPathLen - 1] != '/')
+    {
+        strcat(newSrcPathAndName, "/");
+        srcPathLen++;
+    }
+    
+    srcDir = opendir(srcPath);
+    if(srcDir == NULL)
+    {
+        free(newSrcPathAndName);
+        return BKERROR_OPENDIR_FAILED;
+    }
+    
+    /* it may be possible but in any case very unlikely that readdir() will fail
+    * if it does, it returns NULL (same as end of dir) */
+    while( (dirEnt = readdir(srcDir)) != NULL )
+    {
+        if( strcmp(dirEnt->d_name, ".") == 0 || strcmp(dirEnt->d_name, "..") == 0 )
+        /* ignore "." and ".." */
+            continue;
+        
+        if(strlen(dirEnt->d_name) > NCHARS_FILE_ID_MAX_STORE - 1)
+        {
+            closedir(srcDir);
+            free(newSrcPathAndName);
+            
+            return BKERROR_MAX_NAME_LENGTH_EXCEEDED;
+        }
+        
+        /* append file/dir name */
+        strcpy(newSrcPathAndName + srcPathLen, dirEnt->d_name);
+        
+        rc = add(volInfo, newSrcPathAndName, destDir, NULL);
+        if(rc <= 0 && rc != BKWARNING_OPER_PARTLY_FAILED)
+        {
+            bool goOn;
+            
+            if(volInfo->warningCbk != NULL && !volInfo->stopOperation)
+            /* perhaps the user wants to ignore this failure */
+            {
+                snprintf(volInfo->warningMessage, BK_WARNING_MAX_LEN, 
+                         "Failed to add item '%s': '%s'",
+                         dirEnt->d_name, 
+                         bk_get_error_string(rc));
+                goOn = volInfo->warningCbk(volInfo->warningMessage);
+                rc = BKWARNING_OPER_PARTLY_FAILED;
+            }
+            else
+                goOn = false;
+            
+            if(goOn)
+                continue;
+            else
+            {
+                volInfo->stopOperation = true;
+                closedir(srcDir);
+                free(newSrcPathAndName);
+                return rc;
+            }
+        }
+    }
+    
+    free(newSrcPathAndName);
+    
+    rc = closedir(srcDir);
+    if(rc != 0)
+    /* exotic error */
+        return BKERROR_EXOTIC;
     
     return 1;
 }

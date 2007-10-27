@@ -453,39 +453,39 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
 int extractSymlink(BkSymLink* srcLink, const char* destDir, 
                    const char* nameToUse)
 {
-    //char* destPathAndName;
-    //int rc;
-    //
-    //if(nameToUse == NULL)
-    //    destPathAndName = malloc(strlen(destDir) + 
-    //                             strlen(BK_BASE_PTR(srcLink)->name) + 2);
-    //else
-    //    destPathAndName = malloc(strlen(destDir) + strlen(nameToUse) + 2);
-    //if(destPathAndName == NULL)
-    //    return BKERROR_OUT_OF_MEMORY;
-    //
-    //strcpy(destPathAndName, destDir);
-    //if(destDir[strlen(destDir) - 1] != '/')
-    //    strcat(destPathAndName, "/");
-    //if(nameToUse == NULL)
-    //    strcat(destPathAndName, BK_BASE_PTR(srcLink)->name);
-    //else
-    //    strcat(destPathAndName, nameToUse);
-    //
-    //if(access(destPathAndName, F_OK) == 0)
-    //{
-    //    free(destPathAndName);
-    //    return BKERROR_DUPLICATE_EXTRACT;
-    //}
-    //
-    //rc = symlink(srcLink->target, destPathAndName);
-    //if(rc == -1)
-    //{
-    //    free(destPathAndName);
-    //    return BKERROR_CREATE_SYMLINK_FAILED;
-    //}
-    //
-    //free(destPathAndName);
+    char* destPathAndName;
+    int rc;
+    
+    if(nameToUse == NULL)
+        destPathAndName = malloc(strlen(destDir) + 
+                                 strlen(BK_BASE_PTR(srcLink)->name) + 2);
+    else
+        destPathAndName = malloc(strlen(destDir) + strlen(nameToUse) + 2);
+    if(destPathAndName == NULL)
+        return BKERROR_OUT_OF_MEMORY;
+    
+    strcpy(destPathAndName, destDir);
+    if(destDir[strlen(destDir) - 1] != '/')
+        strcat(destPathAndName, "/");
+    if(nameToUse == NULL)
+        strcat(destPathAndName, BK_BASE_PTR(srcLink)->name);
+    else
+        strcat(destPathAndName, nameToUse);
+    
+    if(access(destPathAndName, F_OK) == 0)
+    {
+        free(destPathAndName);
+        return BKERROR_DUPLICATE_EXTRACT;
+    }
+    
+    rc = symlink(srcLink->target, destPathAndName);
+    if(rc == -1)
+    {
+        free(destPathAndName);
+        return BKERROR_CREATE_SYMLINK_FAILED;
+    }
+    
+    free(destPathAndName);
     
     return 1;
 }
