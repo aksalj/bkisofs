@@ -72,9 +72,11 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
 #endif
         rc = stat(srcPathAndName, &statStruct);
 #ifndef WIN32 //!!WIN32
+#ifndef MINGW_TEST
     /* windows doesn't have symbolic links anyway */
     else
         rc = lstat(srcPathAndName, &statStruct);
+#endif
 #endif
     if(rc == -1)
         return BKERROR_STAT_FAILED;
@@ -167,6 +169,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         destDir->children = BK_BASE_PTR(newFile);
     }
 #ifndef WIN32
+#ifndef MINGW_TEST
     else if( IS_SYMLINK(statStruct.st_mode) )
     {
         BkSymLink* newSymLink;
@@ -196,6 +199,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         destDir->children = BK_BASE_PTR(newSymLink);
     }
 #endif
+#endif
     else
         return BKERROR_NO_SPECIAL_FILES;
     
@@ -205,6 +209,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
 //needs a rewrite for windows //!!WIN32
 int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
 {
+#ifndef MINGW_TEST
     int rc;
     int srcPathLen;
     char* newSrcPathAndName;
@@ -289,7 +294,7 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
     if(rc != 0)
     /* exotic error */
         return BKERROR_EXOTIC;
-    
+#endif
     return 1;
 }
 

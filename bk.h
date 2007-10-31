@@ -25,6 +25,9 @@ extern "C"
 {
 #endif
 
+#undef WIN32
+#define MINGW_TEST
+
 #ifndef WIN32
     #include <stdbool.h>
     #include <unistd.h>

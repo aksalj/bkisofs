@@ -317,8 +317,9 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         free(newDestDir);
         return BKERROR_DUPLICATE_EXTRACT;
     }
-    
+#ifndef MINGW_TEST    
     rc = mkdir(newDestDir, destDirPerms);
+#endif
     if(rc == -1)
     {
         free(newDestDir);
@@ -477,8 +478,9 @@ int extractSymlink(BkSymLink* srcLink, const char* destDir,
         free(destPathAndName);
         return BKERROR_DUPLICATE_EXTRACT;
     }
-    
+#ifndef MINGW_TEST    
     rc = symlink(srcLink->target, destPathAndName);
+#endif
     if(rc == -1)
     {
         free(destPathAndName);
