@@ -16,7 +16,20 @@
 
 #include "bkInternal.h"
 
-bk_off_t bkReadSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
+size_t readRead(VolInfo* volInfo, char* dest, size_t numytes)
+{
+#ifdef MINGW_TEST
+    
+#else
+    return read(volInfo->imageForReading, dest, numBytes);
+#endif
+}
+
+/******************************************************************************
+* bkReadSeekSet()
+* Seek set for reading from the iso
+* */
+bk_off_t readSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 {
 #ifdef MINGW_TEST
     
@@ -25,7 +38,11 @@ bk_off_t bkReadSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 #endif
 }
 
-bk_off_t bkReadSeekTell(VolInfo* volInfo)
+/******************************************************************************
+* bkReadSeekTell()
+* Seek tell for reading from the iso
+* */
+bk_off_t readSeekTell(VolInfo* volInfo)
 {
 #ifdef MINGW_TEST
     

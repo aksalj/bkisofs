@@ -55,6 +55,7 @@ extern "C"
 #include <sys/types.h>
 #include <limits.h>
 #include <sys/timeb.h>
+#include <stdio.h>
 
 #include "bkError.h"
 
@@ -188,6 +189,7 @@ typedef struct VolInfo
     bk_off_t sRootDrOffset; /* secondary (joliet), 0 if does not exist */
     bk_off_t bootRecordSectorNumberOffset;
     int imageForReading;
+    FILE* imageForReadingF;
     ino_t imageForReadingInode; /* to know which file was open for reading
                                 * (filename is not reliable) */
     const BkFile* bootRecordOnImage; /* if visible, pointer to the file in the 
