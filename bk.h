@@ -45,8 +45,10 @@ extern "C"
 #ifdef MINGW_TEST
     /* on windows i can't get an off_t to be 64 bits */
     typedef long long bk_off_t;
+    #define bk_lseek _lseeki64
 #else
     typedef off_t bk_off_t;
+    #define bk_lseek lseek
 #endif
 
 #include <stdlib.h>
