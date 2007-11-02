@@ -30,7 +30,7 @@
 * Public function
 * Estimates the size of the directory trees + file contents on the iso
 * */
-off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
+bk_off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes)
 {
     /* reset alreadyCounted flags */
     BkHardLink* currentLink;

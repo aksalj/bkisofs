@@ -1139,7 +1139,7 @@ int writeDr(VolInfo* volInfo, BaseToWrite* node, time_t recordingTime, bool isAD
 * be written (7.3.1).
 * */
 int writeElToritoBootCatalog(VolInfo* volInfo, 
-                             off_t* bootRecordSectorNumberOffset)
+                             bk_off_t* bootRecordSectorNumberOffset)
 {
     unsigned char buffer[NBYTES_LOGICAL_BLOCK];
     int rc;

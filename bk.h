@@ -130,7 +130,7 @@ typedef struct BkDir
 typedef struct BkHardLink
 {
     bool onImage;
-    my_off_t position; /* if on image */
+    bk_off_t position; /* if on image */
     char* pathAndName; /* if on filesystem, full path + filename
                        * is to be freed whenever the BkHardLink is freed */
     unsigned size; /* size of the file being pointed to */
@@ -156,7 +156,7 @@ typedef struct BkFile
                    * in a 32bit unsigned int on the iso */
     BkHardLink* location; /* basically a copy of the following variables */
     bool onImage;
-    my_off_t position; /* if on image, in bytes */
+    bk_off_t position; /* if on image, in bytes */
     char* pathAndName; /* if on filesystem, full path + filename
                        * is to be freed whenever the File is freed */
     
@@ -182,9 +182,9 @@ typedef struct VolInfo
 {
     /* private bk use  */
     unsigned filenameTypes;
-    my_off_t pRootDrOffset; /* primary (9660 and maybe rockridge) */
-    my_off_t sRootDrOffset; /* secondary (joliet), 0 if does not exist */
-    my_off_t bootRecordSectorNumberOffset;
+    bk_off_t pRootDrOffset; /* primary (9660 and maybe rockridge) */
+    bk_off_t sRootDrOffset; /* secondary (joliet), 0 if does not exist */
+    bk_off_t bootRecordSectorNumberOffset;
     int imageForReading;
     ino_t imageForReadingInode; /* to know which file was open for reading
                                 * (filename is not reliable) */
@@ -197,7 +197,7 @@ typedef struct VolInfo
     void(*progressFunction)(struct VolInfo*);
     void(*writeProgressFunction)(struct VolInfo*, double);
     struct timeb lastTimeCalledProgress;
-    my_off_t estimatedIsoSize;
+    bk_off_t estimatedIsoSize;
     BkHardLink* fileLocations; /* list of where to find regular files */
     char readWriteBuffer[READ_WRITE_BUFFER_SIZE];
     char readWriteBuffer2[READ_WRITE_BUFFER_SIZE];
@@ -208,7 +208,7 @@ typedef struct VolInfo
     unsigned char bootMediaType;
     unsigned bootRecordSize;       /* in bytes */
     bool bootRecordIsOnImage;      /* unused if visible (flag below) */
-    my_off_t bootRecordOffset;     /* if on image */
+    bk_off_t bootRecordOffset;     /* if on image */
     char* bootRecordPathAndName;   /* if on filesystem */
     bool bootRecordIsVisible;      /* whether boot record is a visible file 
                                    *  on the image */
@@ -255,7 +255,7 @@ int bk_extract_as(VolInfo* volInfo, const char* srcPathAndName,
                   bool keepPermissions, void(*progressFunction)(VolInfo*));
 
 /* getters */
-my_off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
+bk_off_t bk_estimate_iso_size(const VolInfo* volInfo, int filenameTypes);
 time_t bk_get_creation_time(const VolInfo* volInfo);
 int bk_get_dir_from_string(const VolInfo* volInfo, const char* pathStr, 
                            BkDir** dirFoundPtr);

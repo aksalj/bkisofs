@@ -13,7 +13,7 @@ int writeDir(VolInfo* volInfo, DirToWrite* dir, int parentLbNum,
 int writeDr(VolInfo* volInfo, BaseToWrite* dir, time_t recordingTime, bool isADir, 
             bool isSelfOrParent, bool isFirstRecord, int filenameTypes);
 int writeElToritoBootCatalog(VolInfo* volInfo, 
-                             off_t* bootRecordSectorNumberOffset);
+                             bk_off_t* bootRecordSectorNumberOffset);
 int writeElToritoVd(VolInfo* volInfo, off_t* bootCatalogSectorNumberOffset);
 int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes);
 int writeJolietStringField(VolInfo* volInfo, const char* name, size_t fieldSize);
