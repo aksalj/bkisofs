@@ -15,37 +15,40 @@
 #include <stdio.h>
 
 #include "bkInternal.h"
+#include "bkIoWrappers.h"
 
 size_t readRead(VolInfo* volInfo, void* dest, size_t numBytes)
 {
 #ifdef MINGW_TEST
-    
+    return fread(dest, 1, numBytes, volInfo->imageForReadingF);
 #else
     return read(volInfo->imageForReading, dest, numBytes);
 #endif
 }
 
 /******************************************************************************
-* bkReadSeekSet()
+* readSeekSet()
 * Seek set for reading from the iso
 * */
 bk_off_t readSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 {
 #ifdef MINGW_TEST
-    
+    //return _fseeki64(volInfo->imageForReadingF, offset, origin);
+    return fseek(volInfo->imageForReadingF, offset, origin);
 #else
     return lseek(volInfo->imageForReading, offset, origin);
 #endif
 }
 
 /******************************************************************************
-* bkReadSeekTell()
+* readSeekTell()
 * Seek tell for reading from the iso
 * */
 bk_off_t readSeekTell(VolInfo* volInfo)
 {
 #ifdef MINGW_TEST
-    
+    //return _ftelli64(volInfo->imageForReadingF);
+    return ftell(volInfo->imageForReadingF);
 #else
     return lseek(volInfo->imageForReading, 0, SEEK_CUR);
 #endif

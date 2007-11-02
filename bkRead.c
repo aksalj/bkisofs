@@ -70,12 +70,10 @@ size_t appendStringIfHaveRoom(char* dest, const char* src, size_t destMaxLen,
 * */
 int bk_open_image(VolInfo* volInfo, const char* filename)
 {
-    int rc;
-    struct stat statStruct;
     size_t len;
     
 #ifdef MINGW_TEST
-    volInfo->imageForReadingF = fopen(filename, "r");
+    volInfo->imageForReadingF = fopen(filename, "rb");
     if(volInfo->imageForReadingF == NULL)
         return BKERROR_OPEN_READ_FAILED;
 #else
@@ -91,6 +89,9 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
     //!! WIN32 problem detect save overwrite
     
 #else
+    int rc;
+    struct stat statStruct;
+    
     /* record inode number */
     rc = stat(filename, &statStruct);
     if(rc == -1)
@@ -511,7 +512,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     /* READ directory name */
     if(volInfo->rootRead)
     {
-        bk_off_t posBeforeName = readSeekSet(volInfo, 0, SEEK_CUR);
+        bk_off_t posBeforeName = readSeekTell(volInfo);
         
         rc = readRead(volInfo, BK_BASE_PTR(dir)->name, lenFileId9660);
         if(rc != lenFileId9660)
@@ -959,9 +960,9 @@ int readPosixFileMode(VolInfo* volInfo, unsigned* posixFileMode, int lenSU)
     origPos = readSeekTell(volInfo);
     
     rc = readRead(volInfo, suFields, lenSU);
+    
     if(rc != lenSU)
         return BKERROR_READ_GENERIC;
-    
     count = 0;
     foundPosix = false;
     foundCE = false;
