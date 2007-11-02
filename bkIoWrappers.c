@@ -16,7 +16,20 @@
 
 #include "bkInternal.h"
 
-bk_off_t bk_lseek_set(VolInfo* volInfo, bk_off_t offset, int origin)
+bk_off_t bkReadSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 {
+#ifdef MINGW_TEST
     
+#else
+    return lseek(volInfo->imageForReading, offset, origin);
+#endif
+}
+
+bk_off_t bkReadSeekTell(VolInfo* volInfo)
+{
+#ifdef MINGW_TEST
+    
+#else
+    return lseek(volInfo->imageForReading, 0, SEEK_CUR);
+#endif
 }

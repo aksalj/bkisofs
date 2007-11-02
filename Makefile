@@ -13,7 +13,7 @@ bk.a: $(OBJECTS)
 	@$(AR) -cr bk.a $(OBJECTS)
 
 # static pattern rule
-$(OBJECTS): %.o: %.c Makefile bk.h bkInternal.h
+$(OBJECTS): %.o: %.c %.h Makefile bk.h bkInternal.h
 	@echo 'Compiling' $<
 	@$(CC) $< $(CFLAGS) $(CPPFLAGS) -c -o $@
 

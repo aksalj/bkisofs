@@ -1,7 +1,7 @@
 size_t appendStringIfHaveRoom(char* dest, const char* src, size_t destMaxLen, 
                               size_t destCharsAlreadyUsed, int maxSrcLen);
-bool dirDrFollows(int image);
-bool haveNextRecordInSector(int image);
+bool dirDrFollows(VolInfo* volInfo);
+bool haveNextRecordInSector(VolInfo* volInfo);
 int readDir(VolInfo* volInfo, BkDir* dir, int filenameType, 
             bool keepPosixPermissions);
 int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size, 
@@ -15,5 +15,5 @@ int readRockridgeFilename(VolInfo* volInfo, char* dest, int lenSU,
                           unsigned numCharsReadAlready);
 int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, int lenSU);
 void removeCrapFromFilename(char* filename, int length);
-int skipDR(int image);
+int skipDR(VolInfo* volInfo);
 void stripSpacesFromEndOfString(char* str);
