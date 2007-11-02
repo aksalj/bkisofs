@@ -163,7 +163,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     
     /* READ PVD */
     /* make sure pvd exists */
-    rc = read711(volInfo->imageForReading, &vdType);
+    rc = read711(volInfo, &vdType);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
@@ -173,7 +173,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     
     readSeekSet(volInfo, 39, SEEK_CUR);
     
-    rc = read(volInfo->imageForReading, volInfo->volId, 32);
+    rc = readRead(volInfo, volInfo->volId, 32);
     if(rc != 32)
         return BKERROR_READ_GENERIC;
     volInfo->volId[32] = '\0';
@@ -187,14 +187,14 @@ int bk_read_vol_info(VolInfo* volInfo)
     /* SEE if rockridge exists */
     readSeekSet(volInfo, 2, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &realRootLoc);
+    rc = read733(volInfo, &realRootLoc);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     realRootLoc *= NBYTES_LOGICAL_BLOCK;
     
     readSeekSet(volInfo, realRootLoc, SEEK_SET);
     
-    rc = read711(volInfo->imageForReading, &recordLen);
+    rc = read711(volInfo, &recordLen);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
@@ -206,7 +206,7 @@ int bk_read_vol_info(VolInfo* volInfo)
         
         /* a rockridge root dr has an SP su entry here */
         
-        rc = read(volInfo->imageForReading, &sPsUentry, 7);
+        rc = readRead(volInfo, &sPsUentry, 7);
         if(rc != 7)
             return BKERROR_READ_GENERIC;
         
@@ -225,13 +225,13 @@ int bk_read_vol_info(VolInfo* volInfo)
     
     readSeekSet(volInfo, 162, SEEK_CUR);
     
-    rc = read(volInfo->imageForReading, volInfo->publisher, 128);
+    rc = readRead(volInfo, volInfo->publisher, 128);
     if(rc != 128)
         return BKERROR_READ_GENERIC;
     volInfo->publisher[128] = '\0';
     stripSpacesFromEndOfString(volInfo->publisher);
     
-    rc = read(volInfo->imageForReading, volInfo->dataPreparer, 128);
+    rc = readRead(volInfo, volInfo->dataPreparer, 128);
     if(rc != 128)
         return BKERROR_READ_GENERIC;
     volInfo->dataPreparer[128] = '\0';
@@ -239,7 +239,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     
     readSeekSet(volInfo, 239, SEEK_CUR);
     
-    rc = read(volInfo->imageForReading, timeString, 17);
+    rc = readRead(volInfo, timeString, 17);
     if(rc != 17)
         return BKERROR_READ_GENERIC;
     
@@ -253,7 +253,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     haveMorePvd = true;
     while(haveMorePvd)
     {
-        rc = read711(volInfo->imageForReading, &vdType);
+        rc = read711(volInfo, &vdType);
         if(rc != 1)
             return BKERROR_READ_GENERIC;
         
@@ -273,7 +273,7 @@ int bk_read_vol_info(VolInfo* volInfo)
    
     locationOfNextDescriptor = readSeekTell(volInfo) + 2048;
     
-    rc = read711(volInfo->imageForReading, &vdType);
+    rc = read711(volInfo, &vdType);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
@@ -282,7 +282,7 @@ int bk_read_vol_info(VolInfo* volInfo)
         
         readSeekSet(volInfo, 6, SEEK_CUR);
         
-        rc = read(volInfo->imageForReading, elToritoSig, 24);
+        rc = readRead(volInfo, elToritoSig, 24);
         if(rc != 24)
             return BKERROR_READ_GENERIC;
         elToritoSig[23] = '\0'; /* just in case */
@@ -292,7 +292,7 @@ int bk_read_vol_info(VolInfo* volInfo)
         {
             readSeekSet(volInfo, 40, SEEK_CUR);
             
-            rc = read731(volInfo->imageForReading, &bootCatalogLocation);
+            rc = read731(volInfo, &bootCatalogLocation);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
             
@@ -304,7 +304,7 @@ int bk_read_vol_info(VolInfo* volInfo)
             /* skip boot indicator */
             readSeekSet(volInfo, 1, SEEK_CUR);
             
-            rc = read(volInfo->imageForReading, &bootMediaType, 1);
+            rc = readRead(volInfo, &bootMediaType, 1);
             if(rc != 1)
                 return BKERROR_READ_GENERIC;
             if(bootMediaType == 0)
@@ -331,7 +331,7 @@ int bk_read_vol_info(VolInfo* volInfo)
             /* skip load segment, system type and unused byte */
             readSeekSet(volInfo, 4, SEEK_CUR);
             
-            rc = read721(volInfo->imageForReading, &bootRecordSize);
+            rc = read721(volInfo, &bootRecordSize);
             if(rc != 2)
                 return BKERROR_READ_GENERIC;
             volInfo->bootRecordSize = bootRecordSize;
@@ -347,7 +347,7 @@ int bk_read_vol_info(VolInfo* volInfo)
             
             volInfo->bootRecordIsOnImage = true;
             
-            rc = read731(volInfo->imageForReading, &bootRecordSectorNumber);
+            rc = read731(volInfo, &bootRecordSectorNumber);
             if(rc != 4)
                 return BKERROR_READ_GENERIC;
             volInfo->bootRecordOffset = bootRecordSectorNumber * 
@@ -369,7 +369,7 @@ int bk_read_vol_info(VolInfo* volInfo)
     /* END TRY read boot record */
     
     /* TRY read svd */
-    rc = read711(volInfo->imageForReading, &vdType);
+    rc = read711(volInfo, &vdType);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
@@ -378,7 +378,9 @@ int bk_read_vol_info(VolInfo* volInfo)
     {
         readSeekSet(volInfo, 87, SEEK_CUR);
         
-        read(volInfo->imageForReading, escapeSequence, 3);
+        rc = readRead(volInfo, escapeSequence, 3);
+        if(rc != 3)
+            return BKERROR_READ_GENERIC;
         
         if( (escapeSequence[0] == 0x25 && escapeSequence[1] == 0x2F &&
              escapeSequence[2] == 0x40) ||
@@ -414,7 +416,7 @@ bool dirDrFollows(VolInfo* volInfo)
     
     readSeekSet(volInfo, 25, SEEK_CUR);
     
-    rc = read711(volInfo->imageForReading, &fileFlags);
+    rc = read711(volInfo, &fileFlags);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
@@ -441,7 +443,7 @@ bool haveNextRecordInSector(VolInfo* volInfo)
     
     origPos = readSeekTell(volInfo);
     
-    rc = read(volInfo->imageForReading, &testByte, 1);
+    rc = readRead(volInfo, &testByte, 1);
     if(rc != 1)
         return false;
     
@@ -480,23 +482,23 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     
     maybeUpdateProgress(volInfo);
     
-    rc = read(volInfo->imageForReading, &recordLength, 1);
+    rc = readRead(volInfo, &recordLength, 1);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
     readSeekSet(volInfo, 1, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &locExtent);
+    rc = read733(volInfo, &locExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    rc = read733(volInfo->imageForReading, &lenExtent);
+    rc = read733(volInfo, &lenExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
     readSeekSet(volInfo, 14, SEEK_CUR);
     
-    rc = read(volInfo->imageForReading, &lenFileId9660, 1);
+    rc = readRead(volInfo, &lenFileId9660, 1);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
@@ -509,7 +511,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
     {
         bk_off_t posBeforeName = readSeekSet(volInfo, 0, SEEK_CUR);
         
-        rc = read(volInfo->imageForReading, BK_BASE_PTR(dir)->name, lenFileId9660);
+        rc = readRead(volInfo, BK_BASE_PTR(dir)->name, lenFileId9660);
         if(rc != lenFileId9660)
             return BKERROR_READ_GENERIC;
         BK_BASE_PTR(dir)->name[lenFileId9660] = '\0';
@@ -539,7 +541,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
             if(lenFileId9660 % 2 != 0)
                 return BKERROR_INVALID_UCS2;
             
-            rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
+            rc = readRead(volInfo, nameAsOnDisk, lenFileId9660);
             if(rc != lenFileId9660)
                 return BKERROR_READ_GENERIC;
             
@@ -589,7 +591,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
             readSeekSet(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, SEEK_SET);
             
             /* read record length */
-            read(volInfo->imageForReading, &realRootRecordLen, 1);
+            readRead(volInfo, &realRootRecordLen, 1);
             if(rc != 1)
                 return BKERROR_READ_GENERIC;
             
@@ -721,7 +723,7 @@ int readDirContents(VolInfo* volInfo, BkDir* dir, unsigned size,
             {
                 origPos = readSeekTell(volInfo);
                 
-                rc = read(volInfo->imageForReading, &testByte, 1);
+                rc = readRead(volInfo, &testByte, 1);
                 if(rc != 1)
                     return BKERROR_READ_GENERIC;
                 
@@ -766,17 +768,17 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     *specialFile = NULL;
     
-    rc = read(volInfo->imageForReading, &recordLength, 1);
+    rc = readRead(volInfo, &recordLength, 1);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
     readSeekSet(volInfo, 1, SEEK_CUR);
     
-    rc = read733(volInfo->imageForReading, &locExtent);
+    rc = read733(volInfo, &locExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
-    rc = read733(volInfo->imageForReading, &lenExtent);
+    rc = read733(volInfo, &lenExtent);
     if(rc != 8)
         return BKERROR_READ_GENERIC;
     
@@ -798,7 +800,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     
     readSeekSet(volInfo, 14, SEEK_CUR);
     
-    rc = read(volInfo->imageForReading, &lenFileId9660, 1);
+    rc = readRead(volInfo, &lenFileId9660, 1);
     if(rc != 1)
         return BKERROR_READ_GENERIC;
     
@@ -809,7 +811,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     /* READ 9660 name */
     posBeforeName = readSeekTell(volInfo);
     
-    rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
+    rc = readRead(volInfo, nameAsOnDisk, lenFileId9660);
     if(rc != lenFileId9660)
         return BKERROR_READ_GENERIC;
     nameAsOnDisk[lenFileId9660] = '\0';
@@ -841,7 +843,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
         if(lenFileId9660 % 2 != 0)
             return BKERROR_INVALID_UCS2;
         
-        rc = read(volInfo->imageForReading, nameAsOnDisk, lenFileId9660);
+        rc = readRead(volInfo, nameAsOnDisk, lenFileId9660);
         if(rc != lenFileId9660)
             return BKERROR_READ_GENERIC;
         
@@ -954,7 +956,7 @@ int readPosixFileMode(VolInfo* volInfo, unsigned* posixFileMode, int lenSU)
     
     origPos = readSeekTell(volInfo);
     
-    rc = read(volInfo->imageForReading, suFields, lenSU);
+    rc = readRead(volInfo, suFields, lenSU);
     if(rc != lenSU)
         return BKERROR_READ_GENERIC;
     
@@ -1040,7 +1042,7 @@ int readRockridgeFilename(VolInfo* volInfo, char* dest, int lenSU,
     
     origPos = readSeekTell(volInfo);
     
-    rc = read(volInfo->imageForReading, suFields, lenSU);
+    rc = readRead(volInfo, suFields, lenSU);
     if(rc != lenSU)
     {
         free(suFields);
@@ -1128,7 +1130,7 @@ int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, int lenSU)
     
     origPos = readSeekTell(volInfo);
     
-    rc = read(volInfo->imageForReading, suFields, lenSU);
+    rc = readRead(volInfo, suFields, lenSU);
     if(rc != lenSU)
     {
         free(suFields);
@@ -1245,7 +1247,7 @@ int skipDR(VolInfo* volInfo)
     unsigned char dRLen;
     int rc;
     
-    rc = read711(volInfo->imageForReading, &dRLen);
+    rc = read711(volInfo, &dRLen);
     if(rc <= 0)
         return BKERROR_READ_GENERIC;
     

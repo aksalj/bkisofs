@@ -16,18 +16,19 @@
 
 #include "bkRead7x.h"
 #include "bk.h"
+#include "bkIoWrappers.h"
 
-int read711(int image, unsigned char* value)
+int read711(VolInfo* volInfo, unsigned char* value)
 {
-    return read(image, value, 1);
+    return readRead(volInfo, value, 1);
 }
 
-int read721(int image, unsigned short* value)
+int read721(VolInfo* volInfo, unsigned short* value)
 {
     int rc;
     unsigned char array[2];
     
-    rc = read(image, array, 2);
+    rc = readRead(volInfo, array, 2);
     if(rc != 2)
         return rc;
     
@@ -38,12 +39,12 @@ int read721(int image, unsigned short* value)
     return rc;
 }
 
-int read731(int image, unsigned* value)
+int read731(VolInfo* volInfo, unsigned* value)
 {
     int rc;
     unsigned char array[4];
     
-    rc = read(image, array, 4);
+    rc = readRead(volInfo, array, 4);
     if(rc != 4)
         return rc;
     
@@ -58,12 +59,12 @@ int read731(int image, unsigned* value)
     return rc;
 }
 
-int read733(int image, unsigned* value)
+int read733(VolInfo* volInfo, unsigned* value)
 {
     int rc;
     unsigned char both[8];
     
-    rc = read(image, &both, 8);
+    rc = readRead(volInfo, both, 8);
     if(rc != 8)
         return rc;
     

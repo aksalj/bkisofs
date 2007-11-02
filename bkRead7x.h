@@ -8,8 +8,10 @@
 *
 * */
 
-int read711(int image, unsigned char* value);
-int read721(int image, unsigned short* value);
-int read731(int image, unsigned* value);
-int read733(int image, unsigned* value);
+#include "bk.h"
+
+int read711(VolInfo* volInfo, unsigned char* value);
+int read721(VolInfo* volInfo, unsigned short* value);
+int read731(VolInfo* volInfo, unsigned* value);
+int read733(VolInfo* volInfo, unsigned* value);
 void read733FromCharArray(unsigned char* array, unsigned* value);

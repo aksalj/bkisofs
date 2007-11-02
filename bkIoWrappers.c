@@ -16,7 +16,7 @@
 
 #include "bkInternal.h"
 
-size_t readRead(VolInfo* volInfo, char* dest, size_t numytes)
+size_t readRead(VolInfo* volInfo, void* dest, size_t numBytes)
 {
 #ifdef MINGW_TEST
     
