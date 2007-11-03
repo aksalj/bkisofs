@@ -12,9 +12,6 @@
 * 
 ******************************************************************************/
 
-#ifdef WIN32
-    #define _CRT_SECURE_NO_WARNINGS 1
-#endif
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
@@ -450,7 +447,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     return 1;
 }
 
-// !!WIN32 windows doesn't have symlimks
+// !!WIN32 windows doesn't have symlimks, just touch the destination instead
 int extractSymlink(BkSymLink* srcLink, const char* destDir, 
                    const char* nameToUse)
 {

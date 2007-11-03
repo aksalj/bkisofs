@@ -17,11 +17,7 @@
 * unsutable for anything else.
 ******************************************************************************/
 
-#ifndef WIN32
-    #include <strings.h>
-#else
-    #define _CRT_SECURE_NO_WARNINGS 1
-#endif
+#include <strings.h>
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
@@ -1071,7 +1067,7 @@ int writeDr(VolInfo* volInfo, BaseToWrite* node, time_t recordingTime, bool isAD
         
         if(!isSelfOrParent)
         {
-            if(wcSeekTell(volInfo) - startPos < strlen(node->nameRock) + 5)
+            if(wcSeekTell(volInfo) - startPos < (int)strlen(node->nameRock) + 5)
             /* have no room for the NM entry in this directory record */
             {
                 node->offsetForCE = wcSeekTell(volInfo);

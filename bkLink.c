@@ -12,9 +12,6 @@
 * 
 ******************************************************************************/
 
-#ifdef WIN32
-    #define _CRT_SECURE_NO_WARNINGS 1
-#endif
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>

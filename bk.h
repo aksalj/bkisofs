@@ -25,21 +25,18 @@ extern "C"
 {
 #endif
 
-#ifdef WIN32
-    #undef WIN32
-    #define MINGW_TEST
-#endif
+#include <stdbool.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <limits.h>
+#include <sys/timeb.h>
+#include <stdio.h>
 
-#ifndef WIN32
-    #include <stdbool.h>
-    #include <unistd.h>
-#else
-    typedef int bool;
-    #define true 1
-    #define false 0
-    typedef unsigned int mode_t;
-    typedef long ssize_t;
-    #define snprintf _snprintf
+#include "bkError.h"
+
+#ifdef WIN32
+    #define MINGW_TEST
 #endif
 
 #ifdef MINGW_TEST
@@ -50,14 +47,6 @@ extern "C"
     typedef off_t bk_off_t;
     #define bk_lseek lseek
 #endif
-
-#include <stdlib.h>
-#include <sys/types.h>
-#include <limits.h>
-#include <sys/timeb.h>
-#include <stdio.h>
-
-#include "bkError.h"
 
 /* can be |ed */
 #define FNTYPE_9660 1
@@ -293,25 +282,6 @@ int bk_read_vol_info(VolInfo* volInfo);
 int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo, 
                    time_t creationTime, int filenameTypes, 
                    void(*progressFunction)(VolInfo*, double));
-
-#ifdef WIN32 //!!WIN32
-    off_t lseek(int filedes, off_t offset, int whence);
-    int open(const char* pathname, int flags, mode_t mode);
-    int close(int fd);
-    ssize_t read(int fd, void* buf, size_t const);
-    ssize_t write(int fd, const void* buf, size_t const);
-    int access(const char* pathname, int mode);
-    #define F_OK 1
-    int mkdir(const char* pathname, mode_t mode);
-    #define _S_IRWXU    (_S_IREAD | _S_IWRITE | _S_IEXEC)
-    #define _S_IXUSR    _S_IEXEC
-    #define _S_IWUSR    _S_IWRITE
-    #define _S_IRUSR    _S_IREAD
-    #define S_IRUSR     _S_IRUSR
-    #define S_IWUSR     _S_IWUSR
-    #define S_IXUSR     _S_IXUSR
-    #define unlink _unlink
-#endif
 
 #ifdef __cplusplus
 }

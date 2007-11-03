@@ -12,9 +12,7 @@
 * Henrique Pinto
 * - fixed bug that caused crash in makeNewPathFromString()
 ******************************************************************************/
-#ifdef WIN32
-    #define _CRT_SECURE_NO_WARNINGS 1
-#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

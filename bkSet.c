@@ -12,11 +12,7 @@
 * 
 ******************************************************************************/
 
-#ifndef WIN32
-    #include <strings.h>
-#else
-    #define _CRT_SECURE_NO_WARNINGS 1
-#endif
+#include <strings.h>
 #include <string.h>
 #include <stdio.h>
 
