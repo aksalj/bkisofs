@@ -24,6 +24,7 @@
 #include "bkPath.h"
 #include "bkError.h"
 #include "bkMisc.h"
+#include "bkIoWrappers.h"
 
 /*******************************************************************************
 * bk_extract_boot_record()
@@ -187,20 +188,20 @@ int copyByteBlock(VolInfo* volInfo, int src, int dest, unsigned numBytes)
         if(volInfo->stopOperation)
             return BKERROR_OPER_CANCELED_BY_USER;
         
-        rc = read(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
+        rc = bkRead(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
-        rc = write(dest, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
+        rc = bkWrite(dest, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc <= 0)
             return rc;
     }
     
     if(sizeLastBlock > 0)
     {
-        rc = read(src, volInfo->readWriteBuffer, sizeLastBlock);
+        rc = bkRead(src, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
-        rc = write(dest, volInfo->readWriteBuffer, sizeLastBlock);
+        rc = bkWrite(dest, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc <= 0)
             return rc;
     }
@@ -295,8 +296,13 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         return BKERROR_OUT_OF_MEMORY;
     
     strcpy(newDestDir, destDir);
+#ifdef MINGW_TEST
+    if(destDir[strlen(destDir) - 1] != '\\')
+        strcat(newDestDir, "\\");
+#else
     if(destDir[strlen(destDir) - 1] != '/')
         strcat(newDestDir, "/");
+#endif
     if(nameToUse == NULL)
         strcat(newDestDir, BK_BASE_PTR(srcDir)->name);
     else
@@ -315,7 +321,10 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         free(newDestDir);
         return BKERROR_DUPLICATE_EXTRACT;
     }
-#ifndef MINGW_TEST    
+    
+#ifdef MINGW_TEST    
+    rc = _mkdir(newDestDir);
+#else
     rc = mkdir(newDestDir, destDirPerms);
 #endif
     if(rc == -1)
@@ -360,12 +369,16 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     if(srcFileInTree->onImage)
     {
         srcFile = volInfo->imageForReading;
-        lseek(volInfo->imageForReading, srcFileInTree->position, SEEK_SET);
+        bkSeekSet(volInfo->imageForReading, srcFileInTree->position, SEEK_SET);
         srcFileWasOpened = false;
     }
     else
     {
+#ifdef MINGW_TEST
+        srcFile = open(srcFileInTree->pathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
         srcFile = open(srcFileInTree->pathAndName, O_RDONLY, 0);
+#endif
         if(srcFile == -1)
             return BKERROR_OPEN_READ_FAILED;
         srcFileWasOpened = true;
@@ -413,7 +426,11 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     else
         destFilePerms = volInfo->posixFileDefaults;
     
-    destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
+#ifdef MINGW_TEST
+        destFile = open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC, destFilePerms);
+#else
+        destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
+#endif
     if(destFile == -1)
     {
         if(srcFileWasOpened)

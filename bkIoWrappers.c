@@ -17,6 +17,48 @@
 #include "bkInternal.h"
 #include "bkIoWrappers.h"
 
+size_t bkRead(int file, void* dest, size_t numBytes)
+{
+#ifdef MINGW_TEST
+    return _read(file, dest, numBytes);
+#else
+    return read(file, dest, numBytes);
+#endif
+}
+
+/******************************************************************************
+* bkSeekSet()
+* */
+bk_off_t bkSeekSet(int file, bk_off_t offset, int origin)
+{
+#ifdef MINGW_TEST
+    return _lseeki64(file, offset, origin);
+#else
+    return lseek(file, offset, origin);
+#endif
+}
+
+/******************************************************************************
+* bkSeekTell()
+* */
+bk_off_t bkSeekTell(int file)
+{
+#ifdef MINGW_TEST
+    return _lseeki64(file, 0, SEEK_CUR);
+#else
+    return lseek(file, 0, SEEK_CUR);
+#endif
+}
+
+size_t bkWrite(int file, void* src, size_t numBytes)
+{
+#ifdef MINGW_TEST
+    return _write(file, src, numBytes);
+#else
+    return write(file, src, numBytes);
+#endif
+}
+
 size_t readRead(VolInfo* volInfo, void* dest, size_t numBytes)
 {
 #ifdef MINGW_TEST
