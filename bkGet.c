@@ -125,10 +125,10 @@ const char* bk_get_volume_name(const VolInfo* volInfo)
 * Recursive
 * Estimate the size of the directory trees + file contents on the iso
 * */
-off_t estimateIsoSize(const BkDir* tree, int filenameTypes)
+bk_off_t estimateIsoSize(const BkDir* tree, int filenameTypes)
 {
-    off_t estimateDrSize;
-    off_t thisDirSize;
+    bk_off_t estimateDrSize;
+    bk_off_t thisDirSize;
     int numItems; /* files and directories */
     BkFileBase* child;
     
