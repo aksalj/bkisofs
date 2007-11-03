@@ -20,7 +20,7 @@
 size_t readRead(VolInfo* volInfo, void* dest, size_t numBytes)
 {
 #ifdef MINGW_TEST
-    return fread(dest, 1, numBytes, volInfo->imageForReadingF);
+    return _read(volInfo->imageForReading, dest, numBytes);
 #else
     return read(volInfo->imageForReading, dest, numBytes);
 #endif
@@ -33,8 +33,7 @@ size_t readRead(VolInfo* volInfo, void* dest, size_t numBytes)
 bk_off_t readSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 {
 #ifdef MINGW_TEST
-    //return _fseeki64(volInfo->imageForReadingF, offset, origin);
-    return fseek(volInfo->imageForReadingF, offset, origin);
+    return _lseeki64(volInfo->imageForReading, offset, origin);
 #else
     return lseek(volInfo->imageForReading, offset, origin);
 #endif
@@ -47,8 +46,7 @@ bk_off_t readSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 bk_off_t readSeekTell(VolInfo* volInfo)
 {
 #ifdef MINGW_TEST
-    //return _ftelli64(volInfo->imageForReadingF);
-    return ftell(volInfo->imageForReadingF);
+    return _lseeki64(volInfo->imageForReading, 0, SEEK_CUR);
 #else
     return lseek(volInfo->imageForReading, 0, SEEK_CUR);
 #endif

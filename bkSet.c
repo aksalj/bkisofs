@@ -43,11 +43,10 @@ void bk_destroy_vol_info(VolInfo* volInfo)
     if(volInfo->bootRecordPathAndName != NULL)
         free(volInfo->bootRecordPathAndName);
     
-#ifdef MINGW_TEST
-    if(volInfo->imageForReadingF != NULL)
-        fclose(volInfo->imageForReadingF);
-#else
     if(volInfo->imageForReading > 0)
+#ifdef MINGW_TEST
+        _close(volInfo->imageForReading);
+#else
         close(volInfo->imageForReading);
 #endif
     

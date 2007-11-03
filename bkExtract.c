@@ -239,6 +239,7 @@ int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract,
             }
             else
             {
+                rc = 1;
                 printf("trying to extract something that's not a file, "
                        "symlink or directory, ignored\n");fflush(NULL);
             }

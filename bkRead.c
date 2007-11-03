@@ -70,17 +70,15 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
     size_t len;
     
 #ifdef MINGW_TEST
-    volInfo->imageForReadingF = fopen(filename, "rb");
-    if(volInfo->imageForReadingF == NULL)
-        return BKERROR_OPEN_READ_FAILED;
+    volInfo->imageForReading = open(filename, _O_RDONLY | _O_BINARY, 0);
 #else
     volInfo->imageForReading = open(filename, O_RDONLY, 0);
+#endif
     if(volInfo->imageForReading == -1)
     {
         volInfo->imageForReading = 0;
         return BKERROR_OPEN_READ_FAILED;
     }
-#endif
     
 #ifdef MINGW_TEST
     //!! WIN32 problem detect save overwrite
