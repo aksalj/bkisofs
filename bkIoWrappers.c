@@ -50,7 +50,7 @@ bk_off_t bkSeekTell(int file)
 #endif
 }
 
-size_t bkWrite(int file, void* src, size_t numBytes)
+size_t bkWrite(int file, const void* src, size_t numBytes)
 {
 #ifdef MINGW_TEST
     return _write(file, src, numBytes);

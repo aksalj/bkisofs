@@ -36,6 +36,7 @@
 #include "bkCache.h"
 #include "bkRead7x.h"
 #include "bkLink.h"
+#include "bkIoWrappers.h"
 
 /******************************************************************************
 * bk_write_image()
@@ -47,7 +48,6 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
                    void(*progressFunction)(VolInfo*, double))
 {
     int rc;
-    struct stat statStruct;
     DirToWrite newTree;
     off_t svdOffset;
     off_t pRealRootDrOffset;
@@ -69,9 +69,13 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     volInfo->estimatedIsoSize = bk_estimate_iso_size(volInfo, filenameTypes);
     progressFunction(volInfo, 0);
     
+    //!! WIN32 save overwrite problem
+#ifndef MINGW_TEST
+    struct stat statStruct;
     rc = stat(newImagePathAndName, &statStruct);
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
         return BKERROR_SAVE_OVERWRITE;
+#endif
     
     /* because mangleDir works on dir's children i need to 
     * copy the root manually */
@@ -88,9 +92,15 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     }
     
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
+#ifdef MINGW_TEST
+    volInfo->imageForWriting = _open(newImagePathAndName, 
+                                     _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 
+                                     S_IRUSR | S_IWUSR);
+#else
     volInfo->imageForWriting = open(newImagePathAndName, 
                                     O_WRONLY | O_CREAT | O_TRUNC, 
                                     S_IRUSR | S_IWUSR);
+#endif
     if(volInfo->imageForWriting == -1)
     {
         freeDirToWriteContents(&newTree);
@@ -181,12 +191,16 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(volInfo->bootRecordIsOnImage)
         {
             srcFile = volInfo->imageForReading;
-            lseek(volInfo->imageForReading, volInfo->bootRecordOffset, SEEK_SET);
+            bkSeekSet(volInfo->imageForReading, volInfo->bootRecordOffset, SEEK_SET);
             srcFileOpened = false;
         }
         else
         {
+#ifdef MINGW_TEST
+            srcFile = _open(volInfo->bootRecordPathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
             srcFile = open(volInfo->bootRecordPathAndName, O_RDONLY, 0);
+#endif
             if(srcFile == -1)
             {
                 freeDirToWriteContents(&newTree);
@@ -422,9 +436,9 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     if(file->onImage)
     /* read file from original image */
     {
-        lseek(oldImage, file->offset, SEEK_SET);
+        bkSeekSet(oldImage, file->offset, SEEK_SET);
         
-        rc = read(oldImage, contents, file->size);
+        rc = bkRead(oldImage, contents, file->size);
         if(rc == -1 || rc != (int)(file->size))
         {
             free(contents);
@@ -434,22 +448,34 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     else
     /* read file from fs */
     {
+#ifdef MINGW_TEST
+        srcFile = _open(file->pathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
         srcFile = open(file->pathAndName, O_RDONLY, 0);
+#endif
         if(srcFile == -1)
         {
             free(contents);
             return BKERROR_OPEN_READ_FAILED;
         }
         
-        rc = read(srcFile, contents, file->size);
+        rc = bkRead(srcFile, contents, file->size);
         if(rc == -1 || rc != (int)(file->size))
         {
-            close(srcFile);
+#ifdef MINGW_TEST
+            rc2 = _close(srcFile);
+#else
+            rc2 = close(srcFile);
+#endif
             free(contents);
             return BKERROR_READ_GENERIC;
         }
         
+#ifdef MINGW_TEST
+        rc2 = _close(srcFile);
+#else
         rc2 = close(srcFile);
+#endif
         if(rc2 < 0)
         {
             free(contents);
@@ -607,7 +633,7 @@ int writeByteBlockFromFile(int src, VolInfo* volInfo, unsigned numBytes)
         if(volInfo->stopOperation)
             return BKERROR_OPER_CANCELED_BY_USER;
 
-        rc = read(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
+        rc = bkRead(src, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
         rc = wcWrite(volInfo, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
@@ -617,7 +643,7 @@ int writeByteBlockFromFile(int src, VolInfo* volInfo, unsigned numBytes)
     
     if(sizeLastBlock > 0)
     {
-        rc = read(src, volInfo->readWriteBuffer, sizeLastBlock);
+        rc = bkRead(src, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc != sizeLastBlock)
                 return BKERROR_READ_GENERIC;
         rc = wcWrite(volInfo, volInfo->readWriteBuffer, sizeLastBlock);
@@ -1302,8 +1328,8 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                 if(FILETW_PTR(child)->onImage)
                 /* copy file from original image to new one */
                 {
-                    lseek(volInfo->imageForReading, FILETW_PTR(child)->offset, 
-                          SEEK_SET);
+                    readSeekSet(volInfo, FILETW_PTR(child)->offset, 
+                                SEEK_SET);
                     
                     rc = writeByteBlockFromFile(volInfo->imageForReading, 
                                                 volInfo, FILETW_PTR(child)->size);
@@ -1323,7 +1349,11 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                     FILETW_PTR(child)->size = statStruct.st_size;
                     /* UPDATE the file's size, in case it's changed since we added it */
                     
+#ifdef MINGW_TEST
+                    srcFile = _open(FILETW_PTR(child)->pathAndName, _O_RDONLY, 0);
+#else
                     srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY, 0);
+#endif
                     if(srcFile == -1)
                         return BKERROR_OPEN_READ_FAILED;
                     
@@ -1331,11 +1361,19 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                                                 volInfo, FILETW_PTR(child)->size);
                     if(rc < 0)
                     {
-                        close(srcFile);
+#ifdef MINGW_TEST
+                        rc = _close(srcFile);
+#else
+                        rc = close(srcFile);
+#endif
                         return rc;
                     }
                     
+#ifdef MINGW_TEST
+                    rc = _close(srcFile);
+#else
                     rc = close(srcFile);
+#endif
                     if(rc < 0)
                         return BKERROR_EXOTIC;
                 }
@@ -2236,13 +2274,13 @@ int writeVolDescriptor(VolInfo* volInfo, off_t rootDrLocation,
     
     /* VOLUME space size (number of logical blocks, absolutely everything) */
     /* it's safe to not use wcSeek() here since everything is left as it is */
-    currPos = lseek(volInfo->imageForWriting, 0, SEEK_CUR);
+    currPos = bkSeekTell(volInfo->imageForWriting);
     
-    lseek(volInfo->imageForWriting, 0, SEEK_END);
-    anUnsigned = lseek(volInfo->imageForWriting, 0, SEEK_CUR) / 
+    bkSeekSet(volInfo->imageForWriting, 0, SEEK_END);
+    anUnsigned = bkSeekTell(volInfo->imageForWriting) / 
                  NBYTES_LOGICAL_BLOCK;
     
-    lseek(volInfo->imageForWriting, currPos, SEEK_SET);
+    bkSeekSet(volInfo->imageForWriting, currPos, SEEK_SET);
     
     rc = write733(volInfo, anUnsigned);
     if(rc <= 0)
