@@ -64,11 +64,11 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
     oldHead = destDir->children;
     
 #ifndef MINGW_TEST
+    /* windows doesn't have symbolic links */
     if(volInfo->followSymLinks)
 #endif
         rc = stat(srcPathAndName, &statStruct);
 #ifndef MINGW_TEST
-    /* windows doesn't have symbolic links anyway */
     else
         rc = lstat(srcPathAndName, &statStruct);
 #endif
@@ -211,16 +211,25 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
     srcPathLen = strlen(srcPath);
     
     /* including the new name and the possibly needed trailing '/' */
-    newSrcPathAndName = malloc(srcPathLen + NCHARS_FILE_ID_MAX_STORE + 1);
+    newSrcPathAndName = malloc(srcPathLen + NCHARS_FILE_ID_MAX_STORE + 2);
     if(newSrcPathAndName == NULL)
         return BKERROR_OUT_OF_MEMORY;
     
     strcpy(newSrcPathAndName, srcPath);
+    
+#ifdef MINGW_TEST
+    if(srcPath[srcPathLen - 1] != '\\')
+    {
+        strcat(newSrcPathAndName, "\\");
+        srcPathLen++;
+    }
+#else
     if(srcPath[srcPathLen - 1] != '/')
     {
         strcat(newSrcPathAndName, "/");
         srcPathLen++;
     }
+#endif
     
     srcDir = opendir(srcPath);
     if(srcDir == NULL)
