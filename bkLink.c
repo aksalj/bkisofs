@@ -22,7 +22,7 @@
 #include "bkLink.h"
 #include "bkIoWrappers.h"
 
-int addToHardLinkTable(VolInfo* volInfo, off_t position, char* pathAndName, 
+int addToHardLinkTable(VolInfo* volInfo, bk_off_t position, char* pathAndName, 
                        unsigned size, bool onImage, BkHardLink** newLink)
 {
     int rc;
@@ -62,8 +62,8 @@ int addToHardLinkTable(VolInfo* volInfo, off_t position, char* pathAndName,
 
 /* returns 2 if yes 1 if not
 * works even if file1 == file2 */
-int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1, 
-                 int file2, off_t posFile2, unsigned size)
+int filesAreSame(VolInfo* volInfo, int file1, bk_off_t posFile1, 
+                 int file2, bk_off_t posFile2, unsigned size)
 {
     bk_off_t origPosFile1;
     bk_off_t origPosFile2;
@@ -131,7 +131,7 @@ int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1,
 }
 
 /* returns 2 if found 1 if not found */
-int findInHardLinkTable(VolInfo* volInfo, off_t position, 
+int findInHardLinkTable(VolInfo* volInfo, bk_off_t position, 
                         char* pathAndName, unsigned size,
                         bool onImage, BkHardLink** foundLink)
 {
@@ -160,10 +160,10 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
             {
                 int origFile;
                 int origFileWasOpened;
-                off_t origFileOffset;
+                bk_off_t origFileOffset;
                 int newFile;
                 bool newFileWasOpened;
-                off_t newFileOffset;
+                bk_off_t newFileOffset;
                 
                 /* set up for reading original file */
                 if(currentLink->onImage)
@@ -234,12 +234,12 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
     return 1;
 }
 
-int readFileHead(VolInfo* volInfo, off_t position, char* pathAndName, 
+int readFileHead(VolInfo* volInfo, bk_off_t position, char* pathAndName, 
                  bool onImage, unsigned char* dest, int numBytes)
 {
     int srcFile;
     bool srcFileWasOpened;
-    off_t origPos;
+    bk_off_t origPos;
     int rc;
     
     if(onImage)

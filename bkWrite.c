@@ -49,19 +49,19 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
 {
     int rc;
     DirToWrite newTree;
-    off_t svdOffset;
-    off_t pRealRootDrOffset;
+    bk_off_t svdOffset;
+    bk_off_t pRealRootDrOffset;
     int pRootDirSize;
-    off_t sRealRootDrOffset;
+    bk_off_t sRealRootDrOffset;
     int sRootDirSize;
-    off_t lPathTable9660Loc;
-    off_t mPathTable9660Loc;
+    bk_off_t lPathTable9660Loc;
+    bk_off_t mPathTable9660Loc;
     int pathTable9660Size;
-    off_t lPathTableJolietLoc;
-    off_t mPathTableJolietLoc;
+    bk_off_t lPathTableJolietLoc;
+    bk_off_t mPathTableJolietLoc;
     int pathTableJolietSize;
-    off_t bootCatalogSectorNumberOffset;
-    off_t currPos;
+    bk_off_t bootCatalogSectorNumberOffset;
+    bk_off_t currPos;
     
     volInfo->writeProgressFunction = progressFunction;
     volInfo->stopOperation = false;
@@ -652,9 +652,9 @@ int writeDir(VolInfo* volInfo, DirToWrite* dir, int parentLbNum,
 {
     int rc;
     
-    off_t startPos;
+    bk_off_t startPos;
     int numUnusedBytes;
-    off_t endPos;
+    bk_off_t endPos;
     
     DirToWrite selfDir; /* will have a different filename */
     DirToWrite parentDir;
@@ -901,8 +901,8 @@ int writeDr(VolInfo* volInfo, BaseToWrite* node, time_t recordingTime, bool isAD
     unsigned char byte;
     char aString[256];
     unsigned short aShort;
-    off_t startPos;
-    off_t endPos;
+    bk_off_t startPos;
+    bk_off_t endPos;
     unsigned char lenFileId;
     unsigned char recordLen;
     
@@ -1213,7 +1213,7 @@ int writeElToritoBootCatalog(VolInfo* volInfo,
 * Returns the offset where the boot catalog sector number should 
 * be written (7.3.1).
 * */
-int writeElToritoVd(VolInfo* volInfo, off_t* bootCatalogSectorNumberOffset)
+int writeElToritoVd(VolInfo* volInfo, bk_off_t* bootCatalogSectorNumberOffset)
 {
     char buffer[NBYTES_LOGICAL_BLOCK];
     int rc;
@@ -1260,7 +1260,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
     BaseToWrite* child;
     int numUnusedBytes;
     int srcFile;
-    off_t endPos;
+    bk_off_t endPos;
     
     child = dir->children;
     while(child != NULL)
@@ -1297,7 +1297,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
             /* this file is the boot record. write its sector number in 
             * the boot catalog */
             {
-                off_t currPos;
+                bk_off_t currPos;
                 
                 currPos = wcSeekTell(volInfo);
                 
@@ -1511,12 +1511,12 @@ int writeJolietStringField(VolInfo* volInfo, const char* name, size_t fieldSize)
 /* write NM that won't fit in a directory record */
 int writeLongNM(VolInfo* volInfo, BaseToWrite* node)
 {
-    off_t startPos;
+    bk_off_t startPos;
     size_t fullNameLen;
     unsigned char CErecord[28];
     bool fitsInOneNM;
     size_t firstNMlen;
-    off_t endPos;
+    bk_off_t endPos;
     int rc;
     int lenOfCE;
     
@@ -1626,7 +1626,7 @@ int writePathTable(VolInfo* volInfo, const DirToWrite* tree, bool isTypeL,
     int level;
     int* dirsPerLevel; /* a dynamic array of the number of dirs per level */
     int numDirsSoFar;
-    off_t origPos;
+    bk_off_t origPos;
     int numBytesWritten;
     int rc;
     
@@ -2162,9 +2162,9 @@ int writeVdsetTerminator(VolInfo* volInfo)
 * -rootdr location, size are in bytes
 * -note strings are not terminated on image
 */
-int writeVolDescriptor(VolInfo* volInfo, off_t rootDrLocation,
-                       unsigned rootDrSize, off_t lPathTableLoc, 
-                       off_t mPathTableLoc, unsigned pathTableSize, 
+int writeVolDescriptor(VolInfo* volInfo, bk_off_t rootDrLocation,
+                       unsigned rootDrSize, bk_off_t lPathTableLoc, 
+                       bk_off_t mPathTableLoc, unsigned pathTableSize, 
                        time_t creationTime, bool isPrimary)
 {
     int rc;
@@ -2174,7 +2174,7 @@ int writeVolDescriptor(VolInfo* volInfo, off_t rootDrLocation,
     unsigned char aString[129];
     unsigned anUnsigned;
     unsigned short anUnsignedShort;
-    off_t currPos;
+    bk_off_t currPos;
     
     /* VOLUME descriptor type */
     if(isPrimary)

@@ -58,10 +58,10 @@ typedef struct BaseToWrite
     char nameRock[NCHARS_FILE_ID_MAX_STORE];
     char nameJoliet[NCHARS_FILE_ID_MAX_JOLIET];
     unsigned posixFileMode;
-    off_t extentLocationOffset; /* where on image to write location of extent */
+    bk_off_t extentLocationOffset; /* where on image to write location of extent */
     unsigned extentNumber; /* extent number */
-    off_t extentLocationOffset2; /* for svd (joliet) */
-    off_t offsetForCE; /* if the name won't fit inside the directory record */
+    bk_off_t extentLocationOffset2; /* for svd (joliet) */
+    bk_off_t offsetForCE; /* if the name won't fit inside the directory record */
     
     struct BaseToWrite* next;
     

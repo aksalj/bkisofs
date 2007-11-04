@@ -29,14 +29,14 @@
 #include "bkCache.h"
 #include "bkIoWrappers.h"
 
-int wcSeekForward(VolInfo* volInfo, off_t numBytes)
+int wcSeekForward(VolInfo* volInfo, bk_off_t numBytes)
 {
     bkSeekSet(volInfo->imageForWriting, numBytes, SEEK_CUR);
     
     return 1;
 }
 
-int wcSeekSet(VolInfo* volInfo, off_t position)
+int wcSeekSet(VolInfo* volInfo, bk_off_t position)
 {
     bkSeekSet(volInfo->imageForWriting, position, SEEK_SET);
     

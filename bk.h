@@ -144,7 +144,7 @@ typedef struct BkFile
 {
     BkFileBase base; /* intended to be accessed using a cast */
     
-    unsigned size; /* in bytes, don't need off_t because it's stored 
+    unsigned size; /* in bytes, don't need bk_off_t because it's stored 
                    * in a 32bit unsigned int on the iso */
     BkHardLink* location; /* basically a copy of the following variables */
     bool onImage;
