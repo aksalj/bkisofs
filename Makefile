@@ -8,6 +8,10 @@ CFLAGS  += -Wall -pedantic -std=gnu99 -Wundef -Wcast-align -W -Wpointer-arith -W
 # the _FILE_OFFSET_BITS=64 is to enable stat() for large files
 CPPFLAGS = -D_FILE_OFFSET_BITS=64
 
+ifdef WINDOWS_BUILD
+  CPPFLAGS += -DWINDOWS_BUILD
+endif
+
 bk.a: $(OBJECTS)
 	@echo 'Creating bk.a'
 	@$(AR) -cr bk.a $(OBJECTS)

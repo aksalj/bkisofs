@@ -35,11 +35,7 @@ extern "C"
 
 #include "bkError.h"
 
-#ifdef WIN32
-    #define MINGW_TEST
-#endif
-
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     /* on windows i can't get an off_t to be 64 bits */
     typedef long long bk_off_t;
     #define bk_lseek _lseeki64

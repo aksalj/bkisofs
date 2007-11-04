@@ -70,7 +70,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     progressFunction(volInfo, 0);
     
     //!! WIN32 save overwrite problem
-#ifndef MINGW_TEST
+#ifndef WINDOWS_BUILD
     BkStatStruct statStruct;
     rc = bkStat(newImagePathAndName, &statStruct);
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
@@ -92,7 +92,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     }
     
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     volInfo->imageForWriting = _open(newImagePathAndName, 
                                      _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 
                                      S_IRUSR | S_IWUSR);
@@ -196,7 +196,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         }
         else
         {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
             srcFile = _open(volInfo->bootRecordPathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
             srcFile = open(volInfo->bootRecordPathAndName, O_RDONLY, 0);
@@ -447,7 +447,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     else
     /* read file from fs */
     {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
         srcFile = _open(file->pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
         srcFile = open(file->pathAndName, O_RDONLY, 0);
@@ -1337,7 +1337,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                     FILETW_PTR(child)->size = statStruct.st_size;
                     /* UPDATE the file's size, in case it's changed since we added it */
                     
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
                     srcFile = _open(FILETW_PTR(child)->pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
                     srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY, 0);

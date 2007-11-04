@@ -21,7 +21,7 @@
 
 void bkClose(int file)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     _close(file);
 #else
     close(file);
@@ -30,7 +30,7 @@ void bkClose(int file)
 
 int bkFstat(int file, BkStatStruct* statStruct)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _fstati64(file, statStruct);
 #else
     return fstat(file, statStruct);
@@ -39,7 +39,7 @@ int bkFstat(int file, BkStatStruct* statStruct)
 
 size_t bkRead(int file, void* dest, size_t numBytes)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _read(file, dest, numBytes);
 #else
     return read(file, dest, numBytes);
@@ -51,7 +51,7 @@ size_t bkRead(int file, void* dest, size_t numBytes)
 * */
 bk_off_t bkSeekSet(int file, bk_off_t offset, int origin)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _lseeki64(file, offset, origin);
 #else
     return lseek(file, offset, origin);
@@ -63,7 +63,7 @@ bk_off_t bkSeekSet(int file, bk_off_t offset, int origin)
 * */
 bk_off_t bkSeekTell(int file)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _lseeki64(file, 0, SEEK_CUR);
 #else
     return lseek(file, 0, SEEK_CUR);
@@ -72,7 +72,7 @@ bk_off_t bkSeekTell(int file)
 
 int bkStat(const char* pathAndName, BkStatStruct* statStruct)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _stati64(pathAndName, statStruct);
 #else
     return stat(pathAndName, statStruct);
@@ -81,7 +81,7 @@ int bkStat(const char* pathAndName, BkStatStruct* statStruct)
 
 size_t bkWrite(int file, const void* src, size_t numBytes)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _write(file, src, numBytes);
 #else
     return write(file, src, numBytes);
@@ -90,7 +90,7 @@ size_t bkWrite(int file, const void* src, size_t numBytes)
 
 size_t readRead(VolInfo* volInfo, void* dest, size_t numBytes)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _read(volInfo->imageForReading, dest, numBytes);
 #else
     return read(volInfo->imageForReading, dest, numBytes);
@@ -103,7 +103,7 @@ size_t readRead(VolInfo* volInfo, void* dest, size_t numBytes)
 * */
 bk_off_t readSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _lseeki64(volInfo->imageForReading, offset, origin);
 #else
     return lseek(volInfo->imageForReading, offset, origin);
@@ -116,7 +116,7 @@ bk_off_t readSeekSet(VolInfo* volInfo, bk_off_t offset, int origin)
 * */
 bk_off_t readSeekTell(VolInfo* volInfo)
 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     return _lseeki64(volInfo->imageForReading, 0, SEEK_CUR);
 #else
     return lseek(volInfo->imageForReading, 0, SEEK_CUR);

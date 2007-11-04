@@ -174,7 +174,7 @@ int findInHardLinkTable(VolInfo* volInfo, bk_off_t position,
                 }
                 else
                 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
                     origFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
                     origFile = open(pathAndName, O_RDONLY, 0);
@@ -194,7 +194,7 @@ int findInHardLinkTable(VolInfo* volInfo, bk_off_t position,
                 }
                 else
                 {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
                     newFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
                     newFile = open(pathAndName, O_RDONLY, 0);
@@ -251,7 +251,7 @@ int readFileHead(VolInfo* volInfo, bk_off_t position, char* pathAndName,
     }
     else
     {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
         srcFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
         srcFile = open(pathAndName, O_RDONLY, 0);

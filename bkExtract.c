@@ -62,7 +62,7 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
         }
         else
         {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
             srcFile = _open(volInfo->bootRecordOnImage->pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
             srcFile = open(volInfo->bootRecordOnImage->pathAndName, O_RDONLY, 0);
@@ -83,7 +83,7 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
         }
         else
         {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
             srcFile = _open(volInfo->bootRecordPathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
             srcFile = open(volInfo->bootRecordPathAndName, O_RDONLY, 0);
@@ -95,7 +95,7 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
     }
     /* END SET source file (open if needed) */
     
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     destFile = _open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 
                      destFilePerms);
 #else
@@ -305,7 +305,7 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         return BKERROR_OUT_OF_MEMORY;
     
     strcpy(newDestDir, destDir);
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     if(destDir[strlen(destDir) - 1] != '\\')
         strcat(newDestDir, "\\");
 #else
@@ -331,7 +331,7 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         return BKERROR_DUPLICATE_EXTRACT;
     }
     
-#ifdef MINGW_TEST    
+#ifdef WINDOWS_BUILD    
     rc = _mkdir(newDestDir);
 #else
     rc = mkdir(newDestDir, destDirPerms);
@@ -383,7 +383,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     }
     else
     {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
         srcFile = _open(srcFileInTree->pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
         srcFile = open(srcFileInTree->pathAndName, O_RDONLY, 0);
@@ -436,7 +436,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     else
         destFilePerms = volInfo->posixFileDefaults;
     
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
         destFile = _open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, destFilePerms);
 #else
         destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
@@ -503,7 +503,7 @@ int extractSymlink(BkSymLink* srcLink, const char* destDir,
         free(destPathAndName);
         return BKERROR_DUPLICATE_EXTRACT;
     }
-#ifndef MINGW_TEST    
+#ifndef WINDOWS_BUILD    
     rc = symlink(srcLink->target, destPathAndName);
 #endif
     if(rc == -1)

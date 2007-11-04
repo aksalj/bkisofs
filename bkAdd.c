@@ -64,12 +64,12 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
     
     oldHead = destDir->children;
     
-#ifndef MINGW_TEST
+#ifndef WINDOWS_BUILD
     /* windows doesn't have symbolic links */
     if(volInfo->followSymLinks)
 #endif
         rc = bkStat(srcPathAndName, &statStruct);
-#ifndef MINGW_TEST
+#ifndef WINDOWS_BUILD
     else
         rc = lstat(srcPathAndName, &statStruct);
 #endif
@@ -163,7 +163,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         
         destDir->children = BK_BASE_PTR(newFile);
     }
-#ifndef MINGW_TEST
+#ifndef WINDOWS_BUILD
     else if( IS_SYMLINK(statStruct.st_mode) )
     {
         BkSymLink* newSymLink;
@@ -218,7 +218,7 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
     
     strcpy(newSrcPathAndName, srcPath);
     
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
     if(srcPath[srcPathLen - 1] != '\\')
     {
         strcat(newSrcPathAndName, "\\");

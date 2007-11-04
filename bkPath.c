@@ -170,7 +170,7 @@ int getLastNameFromPath(const char* srcPathAndName, char* lastName)
     lastCharFound = false;
     for(count = srcLen; /* unsigned */; count--)
     {
-#ifdef MINGW_TEST
+#ifdef WINDOWS_BUILD
         if(srcPathAndName[count] != '\\')
 #else
         if(srcPathAndName[count] != '/')
