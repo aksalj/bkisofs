@@ -46,17 +46,17 @@ int bk_delete(VolInfo* volInfo, const char* pathAndName)
     bool dirFound;
     BkDir* parentDir;
     
-    if(path.numChildren == 0)
-    {
-        freePathContents(&path);
-        return BKERROR_DELETE_ROOT;
-    }
-    
     rc = makeNewPathFromString(pathAndName, &path);
     if(rc <= 0)
     {
         freePathContents(&path);
         return rc;
+    }
+    
+    if(path.numChildren == 0)
+    {
+        freePathContents(&path);
+        return BKERROR_DELETE_ROOT;
     }
     
     /* i want the parent directory */
