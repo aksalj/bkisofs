@@ -57,12 +57,16 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
         if(volInfo->bootRecordOnImage->onImage)
         {
             srcFile = volInfo->imageForReading;
-            lseek(volInfo->imageForReading, volInfo->bootRecordOnImage->position, SEEK_SET);
+            readSeekSet(volInfo, volInfo->bootRecordOnImage->position, SEEK_SET);
             srcFileWasOpened = false;
         }
         else
         {
+#ifdef MINGW_TEST
+            srcFile = _open(volInfo->bootRecordOnImage->pathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
             srcFile = open(volInfo->bootRecordOnImage->pathAndName, O_RDONLY, 0);
+#endif
             if(srcFile == -1)
                 return BKERROR_OPEN_READ_FAILED;
             srcFileWasOpened = true;
@@ -74,12 +78,16 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
         if(volInfo->bootRecordIsOnImage)
         {
             srcFile = volInfo->imageForReading;
-            lseek(volInfo->imageForReading, volInfo->bootRecordOffset, SEEK_SET);
+            readSeekSet(volInfo, volInfo->bootRecordOffset, SEEK_SET);
             srcFileWasOpened = false;
         }
         else
         {
+#ifdef MINGW_TEST
+            srcFile = _open(volInfo->bootRecordPathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
             srcFile = open(volInfo->bootRecordPathAndName, O_RDONLY, 0);
+#endif
             if(srcFile == -1)
                 return BKERROR_OPEN_READ_FAILED;
             srcFileWasOpened = true;
@@ -87,27 +95,28 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
     }
     /* END SET source file (open if needed) */
     
+#ifdef MINGW_TEST
+    destFile = _open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 
+                     destFilePerms);
+#else
     destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, 
                     destFilePerms);
+#endif
     if(destFile == -1)
     {
         if(srcFileWasOpened)
-            close(srcFile);
+            bkClose(srcFile);
         return BKERROR_OPEN_WRITE_FAILED;
     }
     
     rc = copyByteBlock(volInfo, srcFile, destFile, volInfo->bootRecordSize);
-    if(rc <= 0)
-    {
-        if(srcFileWasOpened)
-            close(srcFile);
-        return rc;
-    }
     
-    close(destFile);
-    
+    bkClose(destFile);
     if(srcFileWasOpened)
-        close(srcFile);
+        bkClose(srcFile);
+    
+    if(rc <= 0)
+        return rc;
     
     return 1;
 }
@@ -375,7 +384,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     else
     {
 #ifdef MINGW_TEST
-        srcFile = open(srcFileInTree->pathAndName, _O_RDONLY | _O_BINARY, 0);
+        srcFile = _open(srcFileInTree->pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
         srcFile = open(srcFileInTree->pathAndName, O_RDONLY, 0);
 #endif
@@ -400,7 +409,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     if(destPathAndName == NULL)
     {
         if(srcFileWasOpened)
-            close(srcFile);
+            bkClose(srcFile);
         return BKERROR_OUT_OF_MEMORY;
     }
     
@@ -415,7 +424,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     if(access(destPathAndName, F_OK) == 0)
     {
         if(srcFileWasOpened)
-            close(srcFile);
+            bkClose(srcFile);
         free(destPathAndName);
         return BKERROR_DUPLICATE_EXTRACT;
     }
@@ -427,14 +436,14 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
         destFilePerms = volInfo->posixFileDefaults;
     
 #ifdef MINGW_TEST
-        destFile = open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC, destFilePerms);
+        destFile = _open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, destFilePerms);
 #else
         destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
 #endif
     if(destFile == -1)
     {
         if(srcFileWasOpened)
-            close(srcFile);
+            bkClose(srcFile);
         free(destPathAndName);
         return BKERROR_OPEN_WRITE_FAILED;
     }
@@ -444,23 +453,23 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     rc = copyByteBlock(volInfo, srcFile, destFile, srcFileInTree->size);
     if(rc < 0)
     {
-        close(destFile);
+        bkClose(destFile);
         if(srcFileWasOpened)
-            close(srcFile);
+            bkClose(srcFile);
         return rc;
     }
     
-    close(destFile);
+    bkClose(destFile);
     if(destFile == -1)
     {
         if(srcFileWasOpened)
-            close(srcFile);
+            bkClose(srcFile);
         return BKERROR_EXOTIC;
     }
     /* END WRITE file */
     
     if(srcFileWasOpened)
-        close(srcFile);
+        bkClose(srcFile);
     
     return 1;
 }

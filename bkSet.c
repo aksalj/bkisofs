@@ -21,6 +21,7 @@
 #include "bkDelete.h"
 #include "bkPath.h"
 #include "bkError.h"
+#include "bkIoWrappers.h"
 
 void bk_cancel_operation(VolInfo* volInfo)
 {
@@ -44,11 +45,7 @@ void bk_destroy_vol_info(VolInfo* volInfo)
         free(volInfo->bootRecordPathAndName);
     
     if(volInfo->imageForReading > 0)
-#ifdef MINGW_TEST
-        _close(volInfo->imageForReading);
-#else
-        close(volInfo->imageForReading);
-#endif
+        bkClose(volInfo->imageForReading);
     
     currentLink = volInfo->fileLocations;
     while(currentLink != NULL)

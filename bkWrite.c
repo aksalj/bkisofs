@@ -113,7 +113,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(volInfo->imageForWriting);
+        bkClose(volInfo->imageForWriting);
         unlink(newImagePathAndName);
         return rc;
     }
@@ -128,7 +128,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -147,7 +147,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(volInfo->imageForWriting);
+        bkClose(volInfo->imageForWriting);
         unlink(newImagePathAndName);
         return rc;
     }
@@ -161,7 +161,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -172,7 +172,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -204,7 +204,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
             if(srcFile == -1)
             {
                 freeDirToWriteContents(&newTree);
-                close(volInfo->imageForWriting);
+                bkClose(volInfo->imageForWriting);
                 unlink(newImagePathAndName);
                 return BKERROR_OPEN_READ_FAILED;
             }
@@ -220,8 +220,8 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             if(srcFileOpened)
-                close(srcFile);
-            close(volInfo->imageForWriting);
+                bkClose(srcFile);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -233,8 +233,8 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             if(srcFileOpened)
-                close(srcFile);
-            close(volInfo->imageForWriting);
+                bkClose(srcFile);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -248,14 +248,14 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         {
             freeDirToWriteContents(&newTree);
             if(srcFileOpened)
-                close(srcFile);
-            close(volInfo->imageForWriting);
+                bkClose(srcFile);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
         
         if(srcFileOpened)
-            close(srcFile);
+            bkClose(srcFile);
     }
     /* END MAYBE write boot record file now */
     
@@ -271,7 +271,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(volInfo->imageForWriting);
+        bkClose(volInfo->imageForWriting);
         unlink(newImagePathAndName);
         return rc;
     }
@@ -292,7 +292,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -307,7 +307,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(volInfo->imageForWriting);
+        bkClose(volInfo->imageForWriting);
         unlink(newImagePathAndName);
         return rc;
     }
@@ -318,7 +318,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(volInfo->imageForWriting);
+        bkClose(volInfo->imageForWriting);
         unlink(newImagePathAndName);
         return rc;
     }
@@ -331,7 +331,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -342,7 +342,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -355,7 +355,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(volInfo->imageForWriting);
+        bkClose(volInfo->imageForWriting);
         unlink(newImagePathAndName);
         return rc;
     }
@@ -367,7 +367,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -382,7 +382,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     if(rc <= 0)
     {
         freeDirToWriteContents(&newTree);
-        close(volInfo->imageForWriting);
+        bkClose(volInfo->imageForWriting);
         unlink(newImagePathAndName);
         return rc;
     }
@@ -398,7 +398,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         if(rc <= 0)
         {
             freeDirToWriteContents(&newTree);
-            close(volInfo->imageForWriting);
+            bkClose(volInfo->imageForWriting);
             unlink(newImagePathAndName);
             return rc;
         }
@@ -406,7 +406,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     printf("freeing memory\n");fflush(NULL);
     freeDirToWriteContents(&newTree);
-    close(volInfo->imageForWriting);
+    bkClose(volInfo->imageForWriting);
     
     return 1;
 }
@@ -419,7 +419,6 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
 {
     int numTrailingBytes; /* to make sure the file size is divisible by 4 */
     ssize_t rc;
-    int rc2;
     int srcFile;
     unsigned char* contents;
     unsigned count;
@@ -460,26 +459,13 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
         }
         
         rc = bkRead(srcFile, contents, file->size);
+        
+        bkClose(srcFile);
+        
         if(rc == -1 || rc != (int)(file->size))
         {
-#ifdef MINGW_TEST
-            rc2 = _close(srcFile);
-#else
-            rc2 = close(srcFile);
-#endif
             free(contents);
             return BKERROR_READ_GENERIC;
-        }
-        
-#ifdef MINGW_TEST
-        rc2 = _close(srcFile);
-#else
-        rc2 = close(srcFile);
-#endif
-        if(rc2 < 0)
-        {
-            free(contents);
-            return BKERROR_EXOTIC;
         }
     }
     
@@ -1350,7 +1336,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                     /* UPDATE the file's size, in case it's changed since we added it */
                     
 #ifdef MINGW_TEST
-                    srcFile = _open(FILETW_PTR(child)->pathAndName, _O_RDONLY, 0);
+                    srcFile = _open(FILETW_PTR(child)->pathAndName, _O_RDONLY | _O_BINARY, 0);
 #else
                     srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY, 0);
 #endif
@@ -1359,23 +1345,11 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                     
                     rc = writeByteBlockFromFile(srcFile, 
                                                 volInfo, FILETW_PTR(child)->size);
-                    if(rc < 0)
-                    {
-#ifdef MINGW_TEST
-                        rc = _close(srcFile);
-#else
-                        rc = close(srcFile);
-#endif
-                        return rc;
-                    }
                     
-#ifdef MINGW_TEST
-                    rc = _close(srcFile);
-#else
-                    rc = close(srcFile);
-#endif
+                    bkClose(srcFile);
+                    
                     if(rc < 0)
-                        return BKERROR_EXOTIC;
+                        return rc;
                 }
                 
                 /* fill extent with zeroes */

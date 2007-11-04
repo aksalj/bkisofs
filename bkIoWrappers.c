@@ -17,6 +17,15 @@
 #include "bkInternal.h"
 #include "bkIoWrappers.h"
 
+void bkClose(int file)
+{
+#ifdef MINGW_TEST
+    _close(file);
+#else
+    close(file);
+#endif
+}
+
 size_t bkRead(int file, void* dest, size_t numBytes)
 {
 #ifdef MINGW_TEST

@@ -20,6 +20,7 @@
 
 #include "bkInternal.h"
 #include "bkLink.h"
+#include "bkIoWrappers.h"
 
 int addToHardLinkTable(VolInfo* volInfo, off_t position, char* pathAndName, 
                        unsigned size, bool onImage, BkHardLink** newLink)
@@ -64,8 +65,8 @@ int addToHardLinkTable(VolInfo* volInfo, off_t position, char* pathAndName,
 int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1, 
                  int file2, off_t posFile2, unsigned size)
 {
-    off_t origPosFile1;
-    off_t origPosFile2;
+    bk_off_t origPosFile1;
+    bk_off_t origPosFile2;
     int numBlocks;
     int sizeLastBlock;
     int count;
@@ -75,8 +76,8 @@ int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1,
     if(size == 0)
         return 2;
     
-    origPosFile1 = lseek(file1, 0, SEEK_CUR);
-    origPosFile2 = lseek(file2, 0, SEEK_CUR);
+    origPosFile1 = bkSeekTell(file1);
+    origPosFile2 = bkSeekTell(file2);
     
     numBlocks = size / READ_WRITE_BUFFER_SIZE;
     sizeLastBlock = size % READ_WRITE_BUFFER_SIZE;
@@ -84,17 +85,17 @@ int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1,
     sameSoFar = true;
     for(count = 0; count < numBlocks; count++)
     {
-        lseek(file1, posFile1, SEEK_SET);
-        rc = read(file1, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
+        bkSeekSet(file1, posFile1, SEEK_SET);
+        rc = bkRead(file1, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
         if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
-        posFile1 = lseek(file1, 0, SEEK_CUR);
+        posFile1 = bkSeekTell(file1);
         
-        lseek(file2, posFile2, SEEK_SET);
-        rc = read(file2, volInfo->readWriteBuffer2, READ_WRITE_BUFFER_SIZE);
+        bkSeekSet(file2, posFile2, SEEK_SET);
+        rc = bkRead(file2, volInfo->readWriteBuffer2, READ_WRITE_BUFFER_SIZE);
         if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
-        posFile2 = lseek(file2, 0, SEEK_CUR);
+        posFile2 = bkSeekTell(file2);
         
         if( memcmp(volInfo->readWriteBuffer, volInfo->readWriteBuffer2, 
             READ_WRITE_BUFFER_SIZE) != 0 )
@@ -106,13 +107,13 @@ int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1,
     
     if(sameSoFar && sizeLastBlock > 0)
     {
-        lseek(file1, posFile1, SEEK_SET);
-        rc = read(file1, volInfo->readWriteBuffer, sizeLastBlock);
+        bkSeekSet(file1, posFile1, SEEK_SET);
+        rc = bkRead(file1, volInfo->readWriteBuffer, sizeLastBlock);
         if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
         
-        lseek(file2, posFile2, SEEK_SET);
-        rc = read(file2, volInfo->readWriteBuffer2, sizeLastBlock);
+        bkSeekSet(file2, posFile2, SEEK_SET);
+        rc = bkRead(file2, volInfo->readWriteBuffer2, sizeLastBlock);
         if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
         
@@ -120,8 +121,8 @@ int filesAreSame(VolInfo* volInfo, int file1, off_t posFile1,
             sameSoFar = false;
     }
     
-    lseek(file1, origPosFile1, SEEK_SET);
-    lseek(file2, origPosFile2, SEEK_SET);
+    bkSeekSet(file1, origPosFile1, SEEK_SET);
+    bkSeekSet(file2, origPosFile2, SEEK_SET);
     
     if(sameSoFar)
         return 2;
@@ -173,7 +174,11 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
                 }
                 else
                 {
+#ifdef MINGW_TEST
+                    origFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
                     origFile = open(pathAndName, O_RDONLY, 0);
+#endif
                     if(origFile == -1)
                         return BKERROR_OPEN_READ_FAILED;
                     origFileWasOpened = true;
@@ -189,11 +194,15 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
                 }
                 else
                 {
+#ifdef MINGW_TEST
+                    newFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
                     newFile = open(pathAndName, O_RDONLY, 0);
+#endif
                     if(newFile == -1)
                     {
                         if(origFileWasOpened)
-                            close(origFile);
+                            bkClose(origFile);
                         return BKERROR_OPEN_READ_FAILED;
                     }
                     newFileWasOpened = true;
@@ -204,9 +213,9 @@ int findInHardLinkTable(VolInfo* volInfo, off_t position,
                                   newFile, newFileOffset, size);
                 
                 if(origFileWasOpened)
-                    close(origFile);
+                    bkClose(origFile);
                 if(newFileWasOpened)
-                    close(newFile);
+                    bkClose(newFile);
                 
                 if(rc < 0)
                     return rc;
@@ -236,24 +245,28 @@ int readFileHead(VolInfo* volInfo, off_t position, char* pathAndName,
     if(onImage)
     {
         srcFile = volInfo->imageForReading;
-        origPos = lseek(volInfo->imageForReading, 0, SEEK_CUR);
-        lseek(volInfo->imageForReading, position, SEEK_SET);
+        origPos = bkSeekTell(volInfo->imageForReading);
+        bkSeekSet(volInfo->imageForReading, position, SEEK_SET);
         srcFileWasOpened = false;
     }
     else
     {
+#ifdef MINGW_TEST
+        srcFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
+#else
         srcFile = open(pathAndName, O_RDONLY, 0);
+#endif
         if(srcFile == -1)
             return BKERROR_OPEN_READ_FAILED;
         srcFileWasOpened = true;
     }
     
-    rc = read(srcFile, dest, numBytes);
+    rc = bkRead(srcFile, dest, numBytes);
     
-    if(!srcFileWasOpened)
-        lseek(volInfo->imageForReading, origPos, SEEK_SET);
+    if(srcFileWasOpened)
+        bkClose(srcFile);
     else
-        close(srcFile);
+        bkSeekSet(volInfo->imageForReading, origPos, SEEK_SET);
     
     if(rc != numBytes)
         return BKERROR_READ_GENERIC;

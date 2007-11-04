@@ -1,3 +1,4 @@
+void bkClose(int file);
 size_t bkRead(int file, void* dest, size_t numBytes);
 bk_off_t bkSeekSet(int file, bk_off_t offset, int origin);
 bk_off_t bkSeekTell(int file);
