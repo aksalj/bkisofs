@@ -28,6 +28,7 @@
 #include "bkLink.h"
 #include "bkMisc.h"
 #include "bkSet.h"
+#include "bkIoWrappers.h"
 
 int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir, 
         const char* nameToUse)
@@ -35,7 +36,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
     int rc;
     char lastName[NCHARS_FILE_ID_MAX_STORE];
     BkFileBase* oldHead; /* of the children list */
-    struct stat statStruct;
+    BkStatStruct statStruct;
     
     if(volInfo->stopOperation)
         return BKERROR_OPER_CANCELED_BY_USER;
@@ -67,7 +68,7 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
     /* windows doesn't have symbolic links */
     if(volInfo->followSymLinks)
 #endif
-        rc = stat(srcPathAndName, &statStruct);
+        rc = bkStat(srcPathAndName, &statStruct);
 #ifndef MINGW_TEST
     else
         rc = lstat(srcPathAndName, &statStruct);
@@ -360,7 +361,7 @@ int bk_add_as(VolInfo* volInfo, const char* srcPathAndName,
 int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName, 
                        int bootMediaType)
 {
-    struct stat statStruct;
+    BkStatStruct statStruct;
     int rc;
     
     if(bootMediaType != BOOT_MEDIA_NO_EMULATION &&
@@ -371,9 +372,11 @@ int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName,
         return BKERROR_ADD_UNKNOWN_BOOT_MEDIA;
     }
     
-    rc = stat(srcPathAndName, &statStruct);
+    rc = bkStat(srcPathAndName, &statStruct);
     if(rc == -1)
         return BKERROR_STAT_FAILED;
+    
+    //!! make sure the file is not too big, return failure if it is
     
     if( (bootMediaType == BOOT_MEDIA_1_2_FLOPPY &&
          statStruct.st_size != 1228800) ||

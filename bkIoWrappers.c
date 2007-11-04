@@ -13,6 +13,8 @@
 ******************************************************************************/
 
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "bkInternal.h"
 #include "bkIoWrappers.h"
@@ -23,6 +25,15 @@ void bkClose(int file)
     _close(file);
 #else
     close(file);
+#endif
+}
+
+int bkFstat(int file, BkStatStruct* statStruct)
+{
+#ifdef MINGW_TEST
+    return _fstati64(file, statStruct);
+#else
+    return fstat(file, statStruct);
 #endif
 }
 
@@ -56,6 +67,15 @@ bk_off_t bkSeekTell(int file)
     return _lseeki64(file, 0, SEEK_CUR);
 #else
     return lseek(file, 0, SEEK_CUR);
+#endif
+}
+
+int bkStat(const char* pathAndName, BkStatStruct* statStruct)
+{
+#ifdef MINGW_TEST
+    return _stati64(pathAndName, statStruct);
+#else
+    return stat(pathAndName, statStruct);
 #endif
 }
 

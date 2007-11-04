@@ -43,9 +43,11 @@ extern "C"
     /* on windows i can't get an off_t to be 64 bits */
     typedef long long bk_off_t;
     #define bk_lseek _lseeki64
+    typedef struct _stati64 BkStatStruct;
 #else
     typedef off_t bk_off_t;
     #define bk_lseek lseek
+    typedef struct stat BkStatStruct;
 #endif
 
 /* can be |ed */

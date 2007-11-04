@@ -373,7 +373,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     unsigned destFilePerms;
     int destFile; /* returned by open() */
     int rc;
-    struct stat statStruct;
+    BkStatStruct statStruct;
 
     if(srcFileInTree->onImage)
     {
@@ -393,7 +393,8 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
         srcFileWasOpened = true;
         
         /* UPDATE the file's size, in case it's changed since we added it */
-        rc = stat(srcFileInTree->pathAndName, &statStruct);
+        //!! need to make sure the new size isn't too big, and return failure if it is
+        rc = bkStat(srcFileInTree->pathAndName, &statStruct);
         if(rc != 0)
             return BKERROR_STAT_FAILED;
         

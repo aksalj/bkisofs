@@ -71,8 +71,8 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     //!! WIN32 save overwrite problem
 #ifndef MINGW_TEST
-    struct stat statStruct;
-    rc = stat(newImagePathAndName, &statStruct);
+    BkStatStruct statStruct;
+    rc = bkStat(newImagePathAndName, &statStruct);
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
         return BKERROR_SAVE_OVERWRITE;
 #endif
@@ -1326,11 +1326,13 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                 /* copy file from fs to new image */
                 {
                     /* UPDATE the file's size, in case it's changed since we added it */
-                    struct stat statStruct;
+                    BkStatStruct statStruct;
                     
-                    rc = stat(FILETW_PTR(child)->pathAndName, &statStruct);
+                    rc = bkStat(FILETW_PTR(child)->pathAndName, &statStruct);
                     if(rc != 0)
                         return BKERROR_STAT_FAILED;
+                    
+                    //!! make sure the file isn't too big, return failure otherwise
                     
                     FILETW_PTR(child)->size = statStruct.st_size;
                     /* UPDATE the file's size, in case it's changed since we added it */

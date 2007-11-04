@@ -85,10 +85,10 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
     
 #else
     int rc;
-    struct stat statStruct;
+    BkStatStruct statStruct;
     
     /* record inode number */
-    rc = stat(filename, &statStruct);
+    rc = bkStat(filename, &statStruct);
     if(rc == -1)
         return BKERROR_STAT_FAILED;
     

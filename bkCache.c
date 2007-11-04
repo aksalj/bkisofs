@@ -63,9 +63,10 @@ int wcWrite(VolInfo* volInfo, const char* block, size_t numBytes)
         if(timeNow.time - volInfo->lastTimeCalledProgress.time >= 1 ||
            timeNow.millitm - volInfo->lastTimeCalledProgress.millitm >= 100)
         {
-            struct stat statStruct;
+            BkStatStruct statStruct;
             double percentComplete;
-            fstat(volInfo->imageForWriting, &statStruct);
+            
+            bkFstat(volInfo->imageForWriting, &statStruct);
             percentComplete = (double)statStruct.st_size * 100 / 
                               volInfo->estimatedIsoSize + 1;
             
