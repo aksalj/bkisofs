@@ -69,21 +69,13 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
 {
     size_t len;
     
-#ifdef WINDOWS_BUILD
-    volInfo->imageForReading = _open(filename, _O_RDONLY | _O_BINARY, 0);
-#else
     volInfo->imageForReading = open(filename, O_RDONLY, 0);
-#endif
     if(volInfo->imageForReading == -1)
     {
         volInfo->imageForReading = 0;
         return BKERROR_OPEN_READ_FAILED;
     }
     
-#ifdef WINDOWS_BUILD
-    //!! WIN32 problem detect save overwrite
-    
-#else
     int rc;
     BkStatStruct statStruct;
     
@@ -93,7 +85,6 @@ int bk_open_image(VolInfo* volInfo, const char* filename)
         return BKERROR_STAT_FAILED;
     
     volInfo->imageForReadingInode = statStruct.st_ino;
-#endif
     
     /* skip the first 150 sectors if the image is an NRG */
     len = strlen(filename);

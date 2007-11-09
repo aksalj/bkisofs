@@ -69,13 +69,10 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     volInfo->estimatedIsoSize = bk_estimate_iso_size(volInfo, filenameTypes);
     progressFunction(volInfo, 0);
     
-    //!! WIN32 save overwrite problem
-#ifndef WINDOWS_BUILD
     BkStatStruct statStruct;
     rc = bkStat(newImagePathAndName, &statStruct);
     if(rc == 0 && statStruct.st_ino == volInfo->imageForReadingInode)
         return BKERROR_SAVE_OVERWRITE;
-#endif
     
     /* because mangleDir works on dir's children i need to 
     * copy the root manually */
@@ -92,15 +89,9 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     }
     
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
-#ifdef WINDOWS_BUILD
-    volInfo->imageForWriting = _open(newImagePathAndName, 
-                                     _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 
-                                     S_IRUSR | S_IWUSR);
-#else
     volInfo->imageForWriting = open(newImagePathAndName, 
                                     O_WRONLY | O_CREAT | O_TRUNC, 
                                     S_IRUSR | S_IWUSR);
-#endif
     if(volInfo->imageForWriting == -1)
     {
         freeDirToWriteContents(&newTree);
@@ -196,11 +187,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
         }
         else
         {
-#ifdef WINDOWS_BUILD
-            srcFile = _open(volInfo->bootRecordPathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
             srcFile = open(volInfo->bootRecordPathAndName, O_RDONLY, 0);
-#endif
             if(srcFile == -1)
             {
                 freeDirToWriteContents(&newTree);
@@ -447,11 +434,7 @@ int bootInfoTableChecksum(int oldImage, FileToWrite* file, unsigned* checksum)
     else
     /* read file from fs */
     {
-#ifdef WINDOWS_BUILD
-        srcFile = _open(file->pathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
         srcFile = open(file->pathAndName, O_RDONLY, 0);
-#endif
         if(srcFile == -1)
         {
             free(contents);
@@ -1337,11 +1320,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                     FILETW_PTR(child)->size = statStruct.st_size;
                     /* UPDATE the file's size, in case it's changed since we added it */
                     
-#ifdef WINDOWS_BUILD
-                    srcFile = _open(FILETW_PTR(child)->pathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
                     srcFile = open(FILETW_PTR(child)->pathAndName, O_RDONLY, 0);
-#endif
                     if(srcFile == -1)
                         return BKERROR_OPEN_READ_FAILED;
                     

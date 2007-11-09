@@ -64,15 +64,11 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
     
     oldHead = destDir->children;
     
-#ifndef WINDOWS_BUILD
     /* windows doesn't have symbolic links */
     if(volInfo->followSymLinks)
-#endif
         rc = bkStat(srcPathAndName, &statStruct);
-#ifndef WINDOWS_BUILD
     else
         rc = lstat(srcPathAndName, &statStruct);
-#endif
     if(rc == -1)
         return BKERROR_STAT_FAILED;
     
@@ -163,7 +159,6 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         
         destDir->children = BK_BASE_PTR(newFile);
     }
-#ifndef WINDOWS_BUILD
     else if( IS_SYMLINK(statStruct.st_mode) )
     {
         BkSymLink* newSymLink;
@@ -192,7 +187,6 @@ int add(VolInfo* volInfo, const char* srcPathAndName, BkDir* destDir,
         
         destDir->children = BK_BASE_PTR(newSymLink);
     }
-#endif
     else
         return BKERROR_NO_SPECIAL_FILES;
     
@@ -218,19 +212,11 @@ int addDirContents(VolInfo* volInfo, const char* srcPath, BkDir* destDir)
     
     strcpy(newSrcPathAndName, srcPath);
     
-#ifdef WINDOWS_BUILD
-    if(srcPath[srcPathLen - 1] != '\\')
-    {
-        strcat(newSrcPathAndName, "\\");
-        srcPathLen++;
-    }
-#else
     if(srcPath[srcPathLen - 1] != '/')
     {
         strcat(newSrcPathAndName, "/");
         srcPathLen++;
     }
-#endif
     
     srcDir = opendir(srcPath);
     if(srcDir == NULL)

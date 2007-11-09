@@ -62,11 +62,7 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
         }
         else
         {
-#ifdef WINDOWS_BUILD
-            srcFile = _open(volInfo->bootRecordOnImage->pathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
             srcFile = open(volInfo->bootRecordOnImage->pathAndName, O_RDONLY, 0);
-#endif
             if(srcFile == -1)
                 return BKERROR_OPEN_READ_FAILED;
             srcFileWasOpened = true;
@@ -83,11 +79,7 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
         }
         else
         {
-#ifdef WINDOWS_BUILD
-            srcFile = _open(volInfo->bootRecordPathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
             srcFile = open(volInfo->bootRecordPathAndName, O_RDONLY, 0);
-#endif
             if(srcFile == -1)
                 return BKERROR_OPEN_READ_FAILED;
             srcFileWasOpened = true;
@@ -95,13 +87,8 @@ int bk_extract_boot_record(VolInfo* volInfo, const char* destPathAndName,
     }
     /* END SET source file (open if needed) */
     
-#ifdef WINDOWS_BUILD
-    destFile = _open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 
-                     destFilePerms);
-#else
     destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, 
                     destFilePerms);
-#endif
     if(destFile == -1)
     {
         if(srcFileWasOpened)
@@ -305,13 +292,9 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         return BKERROR_OUT_OF_MEMORY;
     
     strcpy(newDestDir, destDir);
-#ifdef WINDOWS_BUILD
-    if(destDir[strlen(destDir) - 1] != '\\')
-        strcat(newDestDir, "\\");
-#else
     if(destDir[strlen(destDir) - 1] != '/')
         strcat(newDestDir, "/");
-#endif
+    
     if(nameToUse == NULL)
         strcat(newDestDir, BK_BASE_PTR(srcDir)->name);
     else
@@ -331,11 +314,7 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
         return BKERROR_DUPLICATE_EXTRACT;
     }
     
-#ifdef WINDOWS_BUILD    
-    rc = _mkdir(newDestDir);
-#else
     rc = mkdir(newDestDir, destDirPerms);
-#endif
     if(rc == -1)
     {
         free(newDestDir);
@@ -383,11 +362,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     }
     else
     {
-#ifdef WINDOWS_BUILD
-        srcFile = _open(srcFileInTree->pathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
         srcFile = open(srcFileInTree->pathAndName, O_RDONLY, 0);
-#endif
         if(srcFile == -1)
             return BKERROR_OPEN_READ_FAILED;
         srcFileWasOpened = true;
@@ -436,11 +411,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     else
         destFilePerms = volInfo->posixFileDefaults;
     
-#ifdef WINDOWS_BUILD
-        destFile = _open(destPathAndName, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, destFilePerms);
-#else
-        destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
-#endif
+    destFile = open(destPathAndName, O_WRONLY | O_CREAT | O_TRUNC, destFilePerms);
     if(destFile == -1)
     {
         if(srcFileWasOpened)
@@ -475,7 +446,6 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     return 1;
 }
 
-// !!WIN32 windows doesn't have symlimks, just touch the destination instead
 int extractSymlink(BkSymLink* srcLink, const char* destDir, 
                    const char* nameToUse)
 {
@@ -503,9 +473,8 @@ int extractSymlink(BkSymLink* srcLink, const char* destDir,
         free(destPathAndName);
         return BKERROR_DUPLICATE_EXTRACT;
     }
-#ifndef WINDOWS_BUILD    
+    
     rc = symlink(srcLink->target, destPathAndName);
-#endif
     if(rc == -1)
     {
         free(destPathAndName);

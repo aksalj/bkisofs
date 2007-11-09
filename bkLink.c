@@ -174,11 +174,7 @@ int findInHardLinkTable(VolInfo* volInfo, bk_off_t position,
                 }
                 else
                 {
-#ifdef WINDOWS_BUILD
-                    origFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
                     origFile = open(pathAndName, O_RDONLY, 0);
-#endif
                     if(origFile == -1)
                         return BKERROR_OPEN_READ_FAILED;
                     origFileWasOpened = true;
@@ -194,11 +190,7 @@ int findInHardLinkTable(VolInfo* volInfo, bk_off_t position,
                 }
                 else
                 {
-#ifdef WINDOWS_BUILD
-                    newFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
                     newFile = open(pathAndName, O_RDONLY, 0);
-#endif
                     if(newFile == -1)
                     {
                         if(origFileWasOpened)
@@ -251,11 +243,7 @@ int readFileHead(VolInfo* volInfo, bk_off_t position, char* pathAndName,
     }
     else
     {
-#ifdef WINDOWS_BUILD
-        srcFile = _open(pathAndName, _O_RDONLY | _O_BINARY, 0);
-#else
         srcFile = open(pathAndName, O_RDONLY, 0);
-#endif
         if(srcFile == -1)
             return BKERROR_OPEN_READ_FAILED;
         srcFileWasOpened = true;
