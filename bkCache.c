@@ -43,7 +43,7 @@ int wcSeekSet(VolInfo* volInfo, bk_off_t position)
     return 1;
 }
 
-off_t wcSeekTell(VolInfo* volInfo)
+bk_off_t wcSeekTell(VolInfo* volInfo)
 {
     return bkSeekTell(volInfo->imageForWriting);
 }
