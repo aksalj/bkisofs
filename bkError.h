@@ -118,6 +118,8 @@
 #define BKERROR_GET_PERM_BAD_PARAM_TEXT          "bk_get_permissions() called with NULL mode_t*"
 #define BKERROR_EDITED_EXTRACT_TOO_BIG           -1052
 #define BKERROR_EDITED_EXTRACT_TOO_BIG_TEXT      "You edited the file and it's now too big for the .iso format to handle, so can't extract it"
+#define BKERROR_EDITED_WRITE_TOO_BIG             -1053
+#define BKERROR_EDITED_WRITE_TOO_BIG_TEXT        "You edited the file and it's now too big for the .iso format to handle, so can't write it"
 
 #define BKWARNING_OPER_PARTLY_FAILED             -10001
 #define BKWARNING_OPER_PARTLY_FAILED_TEXT        "Operation was only partially successful or perhaps completely unsuccessful"

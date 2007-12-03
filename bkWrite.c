@@ -1315,7 +1315,9 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
                     if(rc != 0)
                         return BKERROR_STAT_FAILED;
                     
-                    //!! make sure the file isn't too big, return failure otherwise
+                    if(statStruct.st_size > 0xFFFFFFFF)
+                    /* size won't fit in a 32bit variable on the iso */
+                        return BKERROR_EDITED_WRITE_TOO_BIG;
                     
                     FILETW_PTR(child)->size = statStruct.st_size;
                     /* UPDATE the file's size, in case it's changed since we added it */
@@ -1347,7 +1349,7 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
             rc = wroteIsolinuxBootRecord(volInfo, FILETW_PTR(child), &isIsolinux);
             if(rc < 0)
                 return rc;
-            printf("isisolinux %d\n", isIsolinux);
+            
             if(isIsolinux)
             /* write the boot info table for the isolinux boot record */
             {
