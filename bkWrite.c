@@ -90,7 +90,7 @@ int bk_write_image(const char* newImagePathAndName, VolInfo* volInfo,
     
     printf("opening '%s' for writing\n", newImagePathAndName);fflush(NULL);
     volInfo->imageForWriting = open(newImagePathAndName, 
-                                    O_WRONLY | O_CREAT | O_TRUNC, 
+                                    O_RDWR | O_CREAT | O_TRUNC, 
                                     S_IRUSR | S_IWUSR);
     if(volInfo->imageForWriting == -1)
     {
@@ -1343,11 +1343,13 @@ int writeFileContents(VolInfo* volInfo, DirToWrite* dir, int filenameTypes)
             
             endPos = wcSeekTell(volInfo);
             
-            if(volInfo->bootMediaType != BOOT_MEDIA_NONE && 
-               volInfo->bootRecordIsVisible &&
-               FILETW_PTR(child)->origFile == volInfo->bootRecordOnImage)
-            /* this file is the boot record. assume it's isolinux and write the 
-            * boot info table */
+            bool isIsolinux;
+            rc = wroteIsolinuxBootRecord(volInfo, FILETW_PTR(child), &isIsolinux);
+            if(rc < 0)
+                return rc;
+            printf("isisolinux %d\n", isIsolinux);
+            if(isIsolinux)
+            /* write the boot info table for the isolinux boot record */
             {
                 unsigned char bootInfoTable[56];
                 unsigned checksum;
@@ -2500,6 +2502,44 @@ int writeVolDescriptor(VolInfo* volInfo, bk_off_t rootDrLocation,
     rc = writeByteBlock(volInfo, 0, 1166);
     if(rc < 0)
         return rc;
+    
+    return 1;
+}
+
+/******************************************************************************
+* wroteIsolinuxBootRecord()
+* Check whether the file already written to the new iso was a boot record.
+* */
+int wroteIsolinuxBootRecord(VolInfo* volInfo, FileToWrite* file, 
+                            bool* isIsolinux)
+{
+    *isIsolinux = false;
+    
+    if(volInfo->bootMediaType == BOOT_MEDIA_NO_EMULATION && 
+       volInfo->bootRecordIsVisible &&
+       file->origFile == volInfo->bootRecordOnImage)
+    /* Likely true, do one more check to make sure. The extra check
+    * is needed for Windows XP isos with SP2 added by c't slipstreamer */
+    {
+        bk_off_t origPos;
+        int rc;
+        char fourBytes[4];
+        
+        origPos = wcSeekTell(volInfo);
+        
+        wcSeekSet(volInfo, BASETW_PTR(file)->extentNumber * 
+                  NBYTES_LOGICAL_BLOCK + 8);
+        
+        rc = bkRead(volInfo->imageForWriting, fourBytes, 4);
+        if(rc != 4)
+            return BKERROR_READ_GENERIC;
+        
+        if(fourBytes[0] == 16 && fourBytes[1] == 0 && 
+           fourBytes[2] == 0 && fourBytes[3] == 0)
+            *isIsolinux = true;
+        
+        wcSeekSet(volInfo, origPos);
+    }
     
     return 1;
 }

@@ -35,5 +35,7 @@ int writeVolDescriptor(VolInfo* volInfo, bk_off_t rootDrLocation,
                        unsigned rootDrSize, bk_off_t lPathTableLoc, 
                        bk_off_t mPathTableLoc, unsigned pathTableSize, 
                        time_t creationTime, bool isPrimary);
+int wroteIsolinuxBootRecord(VolInfo* volInfo, FileToWrite* file, 
+                            bool* isIsolinux);
 
 #endif
