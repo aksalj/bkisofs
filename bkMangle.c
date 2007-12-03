@@ -346,7 +346,6 @@ void mangleNameFor9660(const char* origName, char* newName, bool isADir)
     /* make sure base doesn't contain part of the extension */
     if(dot_p != NULL)
     {
-        /* !! test this */
         if(i > dot_p - origName)
             i = dot_p - origName;
     }
@@ -584,7 +583,6 @@ void shortenNameFor9660(const char* origName, char* newName)
     /* make sure base doesn't contain part of the extension */
     if(dot_p != NULL)
     {
-        /* !! test this to make sure it works */
         if(i > dot_p - origName)
             i = dot_p - origName;
     }

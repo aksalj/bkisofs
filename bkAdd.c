@@ -362,7 +362,9 @@ int bk_add_boot_record(VolInfo* volInfo, const char* srcPathAndName,
     if(rc == -1)
         return BKERROR_STAT_FAILED;
     
-    //!! make sure the file is not too big, return failure if it is
+    if(statStruct.st_size > 0xFFFFFFFF)
+    /* size won't fit in a 32bit variable on the iso */
+        return BKERROR_ADD_FILE_TOO_BIG;
     
     if( (bootMediaType == BOOT_MEDIA_1_2_FLOPPY &&
          statStruct.st_size != 1228800) ||

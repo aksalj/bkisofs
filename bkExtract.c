@@ -368,10 +368,13 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
         srcFileWasOpened = true;
         
         /* UPDATE the file's size, in case it's changed since we added it */
-        //!! need to make sure the new size isn't too big, and return failure if it is
         rc = bkStat(srcFileInTree->pathAndName, &statStruct);
         if(rc != 0)
             return BKERROR_STAT_FAILED;
+        
+        if(statStruct.st_size > 0xFFFFFFFF)
+        /* size won't fit in a 32bit variable on the iso */
+            return BKERROR_EDITED_EXTRACT_TOO_BIG;
         
         srcFileInTree->size = statStruct.st_size;
         /* UPDATE the file's size, in case it's changed since we added it */
