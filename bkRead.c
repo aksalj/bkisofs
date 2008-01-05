@@ -917,7 +917,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     readSeekSet(volInfo, lenSU, SEEK_CUR);
     
     file->onImage = true;
-    file->position = locExtent * NBYTES_LOGICAL_BLOCK;
+    file->position = ((bk_off_t)locExtent) * ((bk_off_t)NBYTES_LOGICAL_BLOCK);
     file->size = lenExtent;
     
     return recordLength;
