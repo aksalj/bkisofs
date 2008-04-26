@@ -805,14 +805,14 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
         return BKERROR_READ_GENERIC;
     nameAsOnDisk[lenFileId9660] = '\0';
     
-    /* removeCrapFromFilename(nameAsOnDisk, lenFileId9660); */
+    /* record 9660 name for writing later */
+    strncpy(BK_BASE_PTR(file)->original9660name, nameAsOnDisk, 14);
+    BK_BASE_PTR(file)->original9660name[14] = '\0';
+    
+    removeCrapFromFilename(nameAsOnDisk, lenFileId9660);
     
     strncpy(BK_BASE_PTR(file)->name, nameAsOnDisk, NCHARS_FILE_ID_MAX_STORE - 1);
     BK_BASE_PTR(file)->name[NCHARS_FILE_ID_MAX_STORE - 1] = '\0';
-    
-    /* record 9660 name for writing later */
-    strncpy(BK_BASE_PTR(file)->original9660name, BK_BASE_PTR(file)->name, 14);
-    BK_BASE_PTR(file)->original9660name[14] = '\0';
     
     /* padding field */
     if(lenFileId9660 % 2 == 0)
