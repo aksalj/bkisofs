@@ -879,7 +879,7 @@ int readFileInfo(VolInfo* volInfo, BkFile* file, int filenameType,
     {
         BK_BASE_PTR(file)->posixFileMode = volInfo->posixFileDefaults;
     }
-    
+    //~ printf("'%s' %X\n", BK_BASE_PTR(file)->name, BK_BASE_PTR(file)->posixFileMode);
     rc = readRockridgeSymlink(volInfo, (BkSymLink**)specialFile, lenSU);
     if(rc < 0)
         return rc;
@@ -961,6 +961,7 @@ int readPosixFileMode(VolInfo* volInfo, unsigned* posixFileMode, int lenSU)
         
         if(suFields[count] == 'P' && suFields[count + 1] == 'X')
         {
+            //~ printf("%X %X %X %X\n", *(suFields + count + 4), *(suFields + count + 5), *(suFields + count + 6), *(suFields + count + 7));
             read733FromCharArray(suFields + count + 4, posixFileMode);
             
             /* not interested in anything else from this field */
