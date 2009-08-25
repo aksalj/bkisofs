@@ -1,4 +1,5 @@
 int copyByteBlock(VolInfo* volInfo, int src, int dest, unsigned numBytes);
+bool existsOnFs(const char* pathAndName);
 int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract, 
             const char* destDir, const char* nameToUse, bool keepPermissions);
 int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir, 

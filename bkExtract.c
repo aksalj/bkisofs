@@ -188,8 +188,8 @@ int copyByteBlock(VolInfo* volInfo, int src, int dest, unsigned numBytes)
         if(rc != READ_WRITE_BUFFER_SIZE)
             return BKERROR_READ_GENERIC;
         rc = bkWrite(dest, volInfo->readWriteBuffer, READ_WRITE_BUFFER_SIZE);
-        if(rc <= 0)
-            return rc;
+        if(rc == -1)
+            return BKERROR_WRITE_GENERIC;
     }
     
     if(sizeLastBlock > 0)
@@ -198,11 +198,21 @@ int copyByteBlock(VolInfo* volInfo, int src, int dest, unsigned numBytes)
         if(rc != sizeLastBlock)
             return BKERROR_READ_GENERIC;
         rc = bkWrite(dest, volInfo->readWriteBuffer, sizeLastBlock);
-        if(rc <= 0)
-            return rc;
+        if(rc == -1)
+            return BKERROR_WRITE_GENERIC;
     }
     
     return 1;
+}
+
+bool existsOnFs(const char* pathAndName)
+{
+    struct stat statStruct;
+    
+    if(lstat(pathAndName, &statStruct) == 0)
+        return true;
+    else
+        return false;
 }
 
 int extract(VolInfo* volInfo, BkDir* parentDir, char* nameToExtract, 
@@ -308,7 +318,7 @@ int extractDir(VolInfo* volInfo, BkDir* srcDir, const char* destDir,
     * so that can extract stuff into it */
     destDirPerms |= 0300;
     
-    if(access(newDestDir, F_OK) == 0)
+    if(existsOnFs(newDestDir))
     {
         free(newDestDir);
         return BKERROR_DUPLICATE_EXTRACT;
@@ -400,7 +410,7 @@ int extractFile(VolInfo* volInfo, BkFile* srcFileInTree, const char* destDir,
     else
         strcat(destPathAndName, nameToUse);
     
-    if(access(destPathAndName, F_OK) == 0)
+    if(existsOnFs(destPathAndName))
     {
         if(srcFileWasOpened)
             bkClose(srcFile);
@@ -471,7 +481,7 @@ int extractSymlink(BkSymLink* srcLink, const char* destDir,
     else
         strcat(destPathAndName, nameToUse);
     
-    if(access(destPathAndName, F_OK) == 0)
+    if(existsOnFs(destPathAndName))
     {
         free(destPathAndName);
         return BKERROR_DUPLICATE_EXTRACT;
