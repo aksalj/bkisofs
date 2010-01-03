@@ -581,7 +581,7 @@ int readDir(VolInfo* volInfo, BkDir* dir, int filenameType,
             readSeekSet(volInfo, locExtent * NBYTES_LOGICAL_BLOCK, SEEK_SET);
             
             /* read record length */
-            readRead(volInfo, &realRootRecordLen, 1);
+            rc = readRead(volInfo, &realRootRecordLen, 1);
             if(rc != 1)
                 return BKERROR_READ_GENERIC;
             
