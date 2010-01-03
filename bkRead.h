@@ -1,6 +1,6 @@
 size_t appendStringIfHaveRoom(char* dest, const char* src, size_t destMaxLen, 
                               size_t destCharsAlreadyUsed, int maxSrcLen);
-bool dirDrFollows(VolInfo* volInfo);
+int dirDrFollows(VolInfo* volInfo);
 bool haveNextRecordInSector(VolInfo* volInfo);
 int readDir(VolInfo* volInfo, BkDir* dir, int filenameType, 
             bool keepPosixPermissions);
