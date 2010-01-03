@@ -174,7 +174,7 @@ int findInHardLinkTable(VolInfo* volInfo, bk_off_t position,
                 }
                 else
                 {
-                    origFile = open(pathAndName, O_RDONLY, 0);
+                    origFile = open(currentLink->pathAndName, O_RDONLY, 0);
                     if(origFile == -1)
                         return BKERROR_OPEN_READ_FAILED;
                     origFileWasOpened = true;
