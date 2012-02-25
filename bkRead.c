@@ -1116,6 +1116,9 @@ int readRockridgeSymlink(VolInfo* volInfo, BkSymLink** dest, int lenSU)
     int count;
     int count2;
     
+    if (lenSU <= 0)
+        return 1;
+    
     suFields = malloc(lenSU);
     if(suFields == NULL)
         return BKERROR_OUT_OF_MEMORY;
